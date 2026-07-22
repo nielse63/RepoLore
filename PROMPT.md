@@ -23,7 +23,7 @@ Whenever you propose a design or implementation decision, consider not only whet
 
 Our core belief is:
 
-**Software should be understandable. Engineering knowledge should belong to the organization, not only to the individuals who happened to build the system.**
+**We believe software should be understandable, and that engineering knowledge should belong to the organization — not only to the people who happened to build it.**
 
 ## Primary outcome
 

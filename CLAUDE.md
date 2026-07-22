@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository is pre-code: it currently contains only a README, `.gitignore`, and two Claude Code subagent definitions under `.claude/agents/`. There is no package manifest, build system, linter, or test suite yet — do not assume any exist. Once a toolchain is added, this file should be updated with the actual build/lint/test commands.
+This repository has a product and architecture foundation (see `docs/`) but no application code yet — no package manifest, build system, linter, or test suite exists. Do not assume any exist. Phase 2 (scaffolding) starts at implementation session 1; see `docs/architecture/implementation-plan.md` for the exact next task and progress log. Once a toolchain is added, this file should be updated with the actual build/lint/test commands.
 
 ## Product
 
-RepoLore's working product name (per the subagents below) is **RepoLore**: it builds an automatically refreshed, readable "atlas" of a repository at a stable URL, helping an engineer build an accurate mental model of an unfamiliar codebase within one day, without relying on tribal knowledge.
+Repo Lore (referred to as **RepoLore** in the subagents below) builds an automatically refreshed, evidence-backed "lore" of a repository at a stable URL (`/lore/{owner}/{repo}`), helping an engineer build an accurate mental model of an unfamiliar codebase within one day, without relying on tribal knowledge. Full mission: `docs/product/mission.md`.
 
-Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist):
+Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/product/mvp.md` and `docs/product/non-goals.md`):
 
 - Maintained by one engineer as a side project (~5–8 hrs/week, never more than 10).
 - Initial customer: startups / small-to-medium engineering orgs.
@@ -18,6 +18,10 @@ Constraints that should shape any proposed feature or dependency (see `product-s
 - Prefer managed services, standard libraries, deterministic analysis, and reversible decisions.
 - Reject speculative scalability, enterprise requirements, and premature customization.
 - AI explains evidence-backed analysis; it does not replace deterministic code analysis.
+
+## Architecture
+
+First-slice architecture and the reasoning behind it live in `docs/architecture/decisions/` (ADR-0001 through ADR-0005): a single Next.js deployable with a separate worker entrypoint, GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis, a Postgres-backed job queue, and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)`. Read these before proposing a different shape for ingestion, analysis, or job execution.
 
 ## Custom subagents
 
