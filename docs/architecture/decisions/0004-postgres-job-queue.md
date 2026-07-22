@@ -2,11 +2,13 @@
 
 ## Status
 
-Accepted
+Accepted, **implementation deferred** — see Revision below.
 
 ## Context
 
 Analysis jobs need to be queued, claimed by a worker, retried on failure, and recovered if a worker crashes mid-job. This requires some form of job queue between the web process (which enqueues jobs on repo submission or manual re-analysis) and the worker process (which claims and runs them).
+
+**Revision (product-scope review, 2026-07-22):** the MVP architecture (ADR-0001) runs a single worker — there is no concurrent-worker scenario yet, and no analysis code exists yet to generate real data on job duration or failure modes. Building `SELECT ... FOR UPDATE SKIP LOCKED` claiming and a stuck-job reaper now is hardening against failure modes that haven't been observed, ahead of proving the analyzer itself is useful. The design below remains the intended shape for when async dispatch is needed; **the first vertical slice instead runs analysis synchronously and in-process** (see `docs/architecture/implementation-plan.md`), with a `status` column on `repos`/`analysis_runs` sufficient to show queued/running/done/failed state. This table is built once a real reason appears — an HTTP timeout, a desire for non-blocking submission, or actually running more than one worker — not preemptively.
 
 ## Decision
 
@@ -24,9 +26,9 @@ A SQL polling queue is a well-understood, boring pattern that avoids operating a
 
 ## Consequences
 
-- Managed Postgres (e.g., Neon or Railway Postgres) is a hard dependency from the first implementation session; this is consistent with also using it for `repos`/`analysis_runs`, so no new service is added purely for the queue.
-- The claim/lock and reaper logic must be implemented correctly from the start (session 4) since they are what make this safe under worker crashes — they are not deferred hardening.
-- Job throughput is bounded by polling interval; this is acceptable for MVP volumes and is the traded-off cost of avoiding a second managed service.
+- Managed Postgres provisioning is deferred until persistence is actually being built (see the resequenced implementation plan) — local Postgres (or SQLite, or no DB at all for the very first analyzer-proving session) is sufficient before that.
+- The claim/lock and reaper logic are designed here but implemented only when the synchronous path is replaced with async dispatch — they are not a session-1–4 requirement.
+- Job throughput is bounded by polling interval once built; this is acceptable for MVP volumes and is the traded-off cost of avoiding a second managed service.
 
 ## Alternatives considered
 

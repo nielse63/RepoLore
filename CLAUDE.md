@@ -8,7 +8,7 @@ This repository has a product and architecture foundation (see `docs/`) but no a
 
 ## Product
 
-Repo Lore (referred to as **RepoLore** in the subagents below) builds an automatically refreshed, evidence-backed "lore" of a repository at a stable URL (`/lore/{owner}/{repo}`), helping an engineer build an accurate mental model of an unfamiliar codebase within one day, without relying on tribal knowledge. Full mission: `docs/product/mission.md`.
+Repo Lore (referred to as **Repo Lore** in the subagents below) builds an automatically refreshed, evidence-backed "lore" of a repository at a stable URL (`/lore/{owner}/{repo}`), helping an engineer build an accurate mental model of an unfamiliar codebase within one day, without relying on tribal knowledge. Full mission: `docs/product/mission.md`.
 
 Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/product/mvp.md` and `docs/product/non-goals.md`):
 

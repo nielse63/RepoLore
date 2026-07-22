@@ -1,0 +1,24 @@
+{
+  "name": "repolore",
+  "version": "1.0.0",
+  "description": "Repo Lore builds a living mental model of your software, so every engineer can understand it with confidence — without relying on tribal knowledge.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nielse63/Repo Lore.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nielse63/Repo Lore/issues"
+  },
+  "homepage": "https://github.com/nielse63/Repo Lore#readme"
+}

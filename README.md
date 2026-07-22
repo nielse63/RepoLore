@@ -1,6 +1,6 @@
 # Repo Lore
 
-Repo Lore builds a living mental model of your software, so every engineer can understand it with confidence — without relying on tribal knowledge.
+> Repo Lore builds a living mental model of your software, so every engineer can understand it with confidence — without relying on tribal knowledge.
 
 Paste a public GitHub repository URL and Repo Lore produces a stable, readable "lore" page for it at `/lore/{owner}/{repo}`: what the system does, its important concepts and boundaries, how its major pieces relate, where execution begins, and what to read first. The lore refreshes automatically against the repository's default branch, and every claim it makes links back to the source evidence it came from.
 

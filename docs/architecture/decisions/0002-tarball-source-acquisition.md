@@ -25,7 +25,7 @@ A tarball fetch plus tar extraction is fewer moving parts than shelling out to `
 
 - The worker needs a temp-directory lifecycle: create, extract into, analyze, then always clean up (including on failure/timeout).
 - Extraction limits mean some very large repositories will be honestly reported as unsupported/too-large rather than analyzed — an explicit, disclosed limitation rather than a silent failure.
-- Authenticated GitHub API access (a PAT to start) is required from the first implementation session, not added later — unauthenticated access is capped at 60 requests/hour, which real usage would exceed quickly even in prototype.
+- Authenticated GitHub API access (a PAT) is required once acquisition code is built — unauthenticated access is capped at 60 requests/hour, which real usage would exceed quickly. This is not needed for the very first implementation session: the analyzer is proven against local fixture files before any GitHub API call is made (see the resequenced `docs/architecture/implementation-plan.md`), so PAT provisioning happens when acquisition work actually starts, not before.
 
 ## Alternatives considered
 
