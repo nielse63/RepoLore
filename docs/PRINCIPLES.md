@@ -1,178 +1,173 @@
 # Repo Lore Product Principles
 
-Repo Lore builds a living, evidence-backed mental model of a software system.
+Repo Lore builds a living, evidence-backed mental model of a software repository. These principles govern product, design, and technical decisions.
 
-These principles govern product decisions. A proposed capability should not enter the roadmap merely because it is useful, technically interesting, or requested by one customer. It must strengthen Repo Lore’s central promise: helping people understand unfamiliar software and make changes with justified confidence.
+The MVP specification defines current scope. These principles explain how to make decisions within and beyond that scope.
 
-## 1. Improve the Mental Model
+## 1. Optimize for Time to Confidence
 
-Every core product feature must help the user understand something meaningful about the software system.
+Repo Lore should shorten the time required for an unfamiliar engineer to form a correct orientation and choose a justified next step.
 
-A feature should help answer a question such as:
+The MVP targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a sensible place to begin investigating a change.
 
-- What are the major parts of this system?
-- How do they relate?
-- Why does this component matter?
-- How did it evolve?
-- What depends on it?
-- What could be affected if it changes?
-- Where should I investigate next?
+The product should not maximize the amount of extracted data. It should select the information that most improves the user’s mental model.
 
-Displaying more repository data is not sufficient. If a feature increases information without increasing understanding, it does not belong in Repo Lore.
+**Decision test:** What will the user understand or decide faster because this exists?
 
-Complexity should be revealed progressively. Begin with the clearest useful explanation, then let users follow relationships and evidence into deeper detail.
+## 2. Make “Start Here” the Primary Experience
 
-**Feature test:** What will the user understand after using this that they did not understand before?
+An unfamiliar engineer needs a purposeful reading path, not a ranking of large, central, or frequently imported files.
 
-## 2. Support Conclusions With Evidence and Honest Confidence
+The Start Here path should use multiple evidence signals and provide useful coverage across:
 
-Important claims must be supported by observable evidence.
+- probable execution or package entry points;
+- composition and configuration;
+- major structural areas;
+- important public contracts;
+- representative tests when useful.
 
-Evidence may include:
+Every recommendation must explain why the user should inspect it. If an item has no evidence-backed reason, it does not belong in the path.
 
-- source code
-- imports and dependencies
-- project configuration
-- repository structure
-- tests
-- framework conventions
-- commit history
-- pull-request history, when available
-- other version-control evidence
+**Decision test:** Does this improve the order, coverage, or explanation of what the user should inspect first?
 
-Repository history is a first-class source of understanding. Code can show what the system does today; history can reveal how it evolved and provide evidence about why decisions were made.
+## 3. Improve the Mental Model, Not the Inventory
 
-History must still be interpreted carefully. A commit, message, or code change may provide strong evidence without conclusively proving its author’s intent. Repo Lore must distinguish between facts, strong inferences, weak signals, and unknowns.
+Individual files and symbols matter because of how they participate in a larger system.
 
-AI may explain, summarize, and connect evidence. It must not present invented reasoning or unsupported architectural conclusions as fact.
+Prioritize questions such as:
 
-**Feature test:** Can users inspect the supporting evidence and understand how confident they should be in the conclusion?
+- What are the major areas?
+- Where does execution begin?
+- Which boundaries are declared or strongly supported?
+- How do areas depend on one another?
+- What public contracts connect them?
+- Where are important behaviors verified?
+- Where should investigation continue?
 
-## 3. Explain Relationships, Not Just Things
+Avoid features that expose data without helping the user decide what matters.
 
-Understanding a system comes primarily from understanding relationships.
+**Decision test:** Does this reveal structure or meaning, or merely add another list?
 
-Repo Lore should prioritize:
+## 4. Evidence Before AI
 
-- dependency paths
-- architectural boundaries
-- data flow
-- entry points
-- ownership relationships
-- historical relationships
-- connections between implementation and tests
+Important conclusions must begin with observable evidence from source, imports, exports, configuration, repository structure, tests, framework conventions, metadata, and—later—version-control history.
 
-over inventories of files, symbols, metrics, or generated descriptions.
+AI may summarize or explain a verified model when doing so improves comprehension. It must not replace deterministic extraction, invent architectural intent, or present speculation as fact.
 
-Individual components matter because of how they participate in the larger system.
+The MVP does not require AI-generated prose. Deterministic, template-based explanations are preferable when they are clear and trustworthy.
 
-**Feature test:** Does the feature explain how something fits into the system, or merely describe it in isolation?
+**Decision test:** Can the conclusion be produced and verified without trusting a model’s unsupported interpretation?
 
-## 4. Make Change Impact Understandable
+## 5. Make Certainty Explicit
 
-Repo Lore should help users investigate a proposed change before they implement it.
+Repo Lore should distinguish:
 
-Users should be able to identify:
+- **Detected:** directly supported by deterministic evidence;
+- **Inferred:** supported by a stated heuristic or combination of signals;
+- **Unknown:** not determined confidently;
+- **Unsupported:** outside current analysis capability.
 
-- direct and indirect dependencies
-- likely affected components
-- architectural boundaries being crossed
-- related tests
-- historical changes in the same area
-- evidence that supports the predicted impact
-- uncertainty or gaps in the analysis
+Do not use pseudo-precise confidence percentages. A useful certainty label, clear reasoning, and accessible evidence are more honest.
 
-Change-impact analysis must not imply guarantees that the available evidence cannot support. Its purpose is to help users act with justified confidence and recognize where further investigation is required.
+High confidence in a wrong answer is worse than a visible gap.
 
-A user should be able to consult Repo Lore before changing an unfamiliar system and leave with a clearer understanding of where the risks are.
+**Decision test:** Can the user tell why Repo Lore believes this and how the analysis could be wrong or incomplete?
 
-**Feature test:** Does the feature help users predict the consequences of a change and determine what they should inspect before proceeding?
+## 6. Explain Relationships Selectively
 
-## 5. Stay Automatic, Current, and Shared
+Understanding comes from relationships, but showing every extracted edge creates noise.
 
-Core understanding should be produced and maintained without requiring users to become documentation stewards.
+Prioritize relationships that explain:
 
-Avoid features that depend on:
+- direct dependencies between major areas;
+- widely depended-upon areas;
+- public surfaces;
+- implementation-to-test connections;
+- dependencies that cross apparent boundaries;
+- statically observable cross-language connections.
 
-- manual documentation
-- handwritten configuration
-- custom scripts
-- repository-specific maintenance
-- developers remembering to keep information current
+Plain tables and lists are sufficient until a graph materially improves comprehension.
 
-Repo Lore’s core knowledge model and evidence-backed explanations should persist at the repository level and be shared by default with every authorized user.
+**Decision test:** Will this relationship help the user understand the system or choose where to investigate?
 
-Individual users may have personalized searches, navigation, and learning paths, but the underlying understanding should not be trapped in private sessions or disappear when someone leaves the organization.
+## 7. Prefer Declared Boundaries and Conservative Inference
 
-Repo Lore should automatically maintain this shared model as the repository changes. When information may be incomplete or stale, that condition should be visible.
+Use the strongest available boundary evidence in this order:
 
-**Feature test:** Will this capability create durable, current organizational knowledge without requiring ongoing manual maintenance?
+1. declared packages, workspaces, source roots, applications, manifests, and public exports;
+2. established language and framework conventions;
+3. relationship-supported groupings derived from imports and exports;
+4. clear structural fallback when semantic meaning cannot be justified.
 
-## 6. Make Complex Systems Approachable
+Do not invent business-domain names or responsibilities. A directory named `billing` supports a billing area; it does not prove a broader revenue-management architecture.
 
-Repo Lore should reduce cognitive load without hiding meaningful complexity.
+**Decision test:** Is the boundary supported by repository evidence, and is any semantic interpretation appropriately limited?
 
-The product should:
+## 8. One Lore Model, Multiple Languages
 
-- begin with the most useful overview
-- use clear language
-- establish recognizable system boundaries
-- guide users toward the next useful question
-- allow supporting evidence to be inspected on demand
-- avoid dashboards filled with disconnected facts or metrics
+TypeScript, JavaScript, and Python should populate a shared language-neutral Lore model. They should not produce unrelated report formats or inconsistent value.
 
-The goal is not to make a complex system appear simple. It is to make that complexity navigable.
+Every advertised language must satisfy the same minimum contract: orientation, a meaningful Start Here path, major areas, probable entry points, direct relationships, and evidence with gaps.
 
-**Feature test:** Does the feature help users decide what matters and where to investigate next?
+Mixed-language repositories should be presented as one repository-level model, but cross-language runtime relationships must not be invented from coexistence alone.
 
-## 7. Remain Sustainable and Scalable
+**Decision test:** Does this strengthen the shared product model while preserving language-specific evidence?
 
-Repo Lore must remain maintainable by a very small team while scaling to serve more repositories and customers reliably.
+## 9. Keep the Experience Automatic and Calm
 
-Prefer capabilities that:
+For the public MVP, pasting a GitHub repository URL should be enough. Do not require accounts, repository configuration, GitHub Actions, webhooks, scripts, CI integration, or manual documentation.
 
-- deepen the core product rather than expand its surface area
-- avoid support-intensive configuration
-- do not require operational effort proportional to customer growth
-- use boring, reliable technology
-- control compute and AI costs
-- can be maintained without specialized teams
-- strengthen TypeScript, React, and modern web application support before expanding to additional ecosystems
+Use progressive disclosure. Lead with a readable overview and short reading path, then let users inspect relationships and evidence. Avoid dense dashboards, arbitrary metrics, and visual complexity that does not improve comprehension.
 
-Scalability does not mean building infrastructure before it is needed. It means avoiding product and technical decisions that make healthy growth unnecessarily expensive or fragile.
+**Decision test:** Does this reduce setup or cognitive load without hiding meaningful uncertainty?
 
-**Feature test:** Can this capability grow with customer usage without weakening product quality or creating disproportionate maintenance, support, or operational costs?
+## 10. Build for a Sustainable Small Business
+
+Repo Lore must remain operable by one engineer working roughly 5–8 focused hours per week, with no more than 10 hours of ongoing weekly maintenance.
+
+Prefer:
+
+- depth over breadth;
+- mature libraries and managed services;
+- one clear workflow over many configurable workflows;
+- full recomputation before premature incremental complexity;
+- boring, observable infrastructure;
+- explicit limits on repository size, file count, time, and concurrency;
+- reversible decisions until evidence justifies commitment.
+
+Do not build enterprise requirements, speculative scalability, or support-intensive customization before customer evidence demands them.
+
+**Decision test:** Can one person operate, debug, and evolve this capability for years?
 
 ## Product Preferences
 
-When multiple solutions satisfy the seven principles, Repo Lore should prefer:
+When several approaches satisfy the principles, prefer:
 
-- deterministic analysis before AI interpretation
-- depth of understanding over breadth of coverage
-- shared organizational knowledge over isolated personal insight
-- relationships over inventories
-- stable concepts over transient metrics
-- progressive disclosure over dense dashboards
-- sensible defaults over configuration
-- one clear workflow over many flexible workflows
-- the simplest version that delivers meaningful understanding
+- trustworthy orientation over exhaustive analysis;
+- coverage in the reading path over raw importance ranking;
+- deterministic evidence over AI interpretation;
+- relationships over inventories;
+- honest gaps over forced conclusions;
+- shared terminology over audience-specific truth;
+- stable concepts over transient metrics;
+- progressive disclosure over dense dashboards;
+- simple tables over premature visualization;
+- sensible defaults over configuration;
+- the smallest complete vertical slice over a broad partial platform.
 
 ## Feature Decision Checklist
 
-Before committing a feature to the roadmap, answer:
+Before adding a feature, dependency, service, abstraction, or integration, answer:
 
-1. What important user question does it answer?
-2. How does it improve the user’s mental model?
-3. What evidence supports its conclusions?
-4. Does it use repository history where history could materially improve understanding?
-5. How will uncertainty be communicated?
-6. What relationships or context does it reveal?
-7. How does it help users understand or safely investigate change impact?
-8. How will its output remain current?
-9. Will its conclusions become durable organizational knowledge, or disappear with an individual session?
-10. What setup or maintenance does it require from the customer?
-11. What ongoing maintenance and operational cost does it create for Repo Lore?
-12. Does it deepen the initial product focus or dilute it?
-13. What is the simplest version that delivers the intended understanding?
+1. Which current user question does it answer?
+2. How does it reduce time to confidence?
+3. Does it strengthen Start Here, major areas, entry points, relationships, or evidence?
+4. What observable evidence supports its conclusions?
+5. How will certainty and limitations be communicated?
+6. What is the simplest version that delivers the outcome?
+7. What customer setup or maintenance does it require?
+8. What ongoing operational burden and cost does it create?
+9. Can it be deferred until customer demand is demonstrated?
+10. Would removing it make the current product promise substantially weaker?
 
-If these questions do not have convincing answers, the feature should be postponed, reduced in scope, or rejected.
+If the answers are not convincing, reduce the idea, classify it as Soon/Later/Maybe Never, or reject it.

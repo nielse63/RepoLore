@@ -1,93 +1,98 @@
 # The Repo Lore Manifesto
 
-## Software should be understandable
+## Software Should Be Understandable
 
-Every software system begins with intent.
+Every software system contains accumulated decisions: boundaries, contracts, dependencies, conventions, and tradeoffs.
 
-Someone made a decision.
-Someone chose a boundary.
-Someone connected one part of the system to another for a reason.
-
-But as software grows, that understanding fades.
-
-The code remains. The context around it does not.
-
-Architecture becomes something a few people remember. Important relationships hide across files and repositories. Decisions survive only in old pull requests, forgotten conversations, or the minds of engineers who may no longer be there.
-
-Eventually, the system still works—but fewer people understand why.
+As the system changes, the code survives more reliably than the shared understanding around it. Architecture becomes something a few people remember. Important context hides in configuration, tests, pull requests, and conversations. Eventually the system still works, but fewer people can explain how it fits together or where a safe change should begin.
 
 We believe software deserves better.
 
-## Understanding is more than information
+## Information Is Not Understanding
 
-Modern development tools give us extraordinary access to information.
+Engineers already have abundant repository information. They can search every file, list every dependency, inspect every commit, and generate summaries in seconds.
 
-We can search every file, inspect every dependency, trace every commit, and generate explanations in seconds.
+More information does not automatically create a useful mental model.
 
-Yet access to information is not the same as understanding.
+A file tree does not explain what matters. A dependency graph does not identify the best reading path. A fluent summary does not deserve trust merely because it sounds convincing.
 
-A list of files does not explain a system.
-A dependency graph does not automatically reveal architecture.
-A generated summary does not create confidence.
+Understanding comes from selecting and explaining relationships:
 
-Understanding comes from relationships:
+- where execution likely begins;
+- which areas form meaningful boundaries;
+- how those areas depend on one another;
+- which contracts connect them;
+- where representative behavior is tested;
+- what evidence supports each conclusion;
+- what remains unknown.
 
-- which components matter
-- how they depend on one another
-- where responsibilities begin and end
-- how information moves through the system
-- what may be affected when something changes
-- what evidence supports each conclusion
+The goal is not to know everything about a repository. The goal is to know enough of the right things to investigate it with confidence.
 
-The goal is not to know everything about a repository.
+## Evidence Before Explanation
 
-The goal is to build the right mental model of it.
+Source code is not text waiting to be summarized. It is evidence.
 
-## Code is evidence
+Imports reveal direct dependencies. Exports reveal public surfaces. Configuration reveals declared structure and entry points. Tests reveal expected behavior and important seams. Repository history can reveal evolution and authored context.
 
-Source code is not merely text to be summarized. It is evidence.
+Repo Lore begins with deterministic analysis and explicit heuristics. AI may later make verified findings easier to understand, but it does not get to invent the findings.
 
-Imports reveal dependencies.
-Types reveal contracts.
-Configuration reveals structure.
-Tests reveal expected behavior.
-Version history reveals how the system evolved.
-
-These signals should form the foundation of understanding.
-
-Artificial intelligence can help explain what the evidence means, but it should not replace the evidence itself. A confident-sounding answer is not trustworthy simply because it is clear.
-
-When Repo Lore makes an important claim about a system, that claim should be traceable to something real.
+An important claim should be traceable to something real. A limitation should be visible. An inference should look different from a detection.
 
 Evidence first. Explanation second.
 
-## Documentation is a representation, not the destination
+## Confidence Must Be Justified
 
-Documentation is valuable, but documents alone cannot preserve understanding.
+Confidence is the product, but confidence alone is not success.
 
-They become incomplete.
-They fall out of date.
-They describe components without capturing the relationships between them.
-They depend on someone remembering to maintain them.
+High confidence paired with an incorrect mental model is a product failure. Repo Lore must help users understand not only a conclusion, but why they should believe it and where the analysis may be incomplete.
 
-Repo Lore is not trying to produce more pages for engineers to read.
+We prefer:
 
-It is building a living model of the software system—one that can be explored, questioned, and represented in different ways.
+- “detected” to implied certainty;
+- “inferred” to disguised speculation;
+- “unknown” to a fabricated answer;
+- “unsupported” to a misleadingly complete report.
 
-A document may be one view of that model.
-A diagram may be another.
-An answer to a specific question may be another.
+Honesty about gaps is part of the experience, not an error state to hide.
 
-The model is the durable asset.
+## The Reading Path Matters
 
-## Engineering knowledge belongs to the organization
+An unfamiliar engineer rarely needs every repository fact at once. They need to know where to start, what to read next, and why that sequence will build a useful mental model.
 
-No company should depend on one person to explain how a critical system works.
+Repo Lore’s first job is editorial: select a small, evidence-backed path through the repository. A good path covers execution, assembly, major areas, contracts, and representative tests without becoming a ranking of large or highly connected files.
 
-When knowledge exists only in an engineer’s memory, the organization does not truly possess it. It is borrowing it.
+Progressive disclosure is how complex systems become approachable. Begin with orientation. Reveal relationships and evidence as the reader needs them.
 
-That creates fragile teams, difficult handoffs, slow onboarding, and fear around change. It also places an unfair burden on the people who become the only reliable source of context.
+## The Model Is the Durable Asset
 
-Understanding should survive reorganizations, departures, and the passage of time.
+Repo Lore is not a documentation generator.
 
-The knowledge encoded in a software system belongs to the organization that depends on it. Repo Lore exists to help recover, preserve,
+Documents become stale when their maintenance depends on memory and discipline. Repo Lore instead builds a structured model that can be regenerated from repository evidence as the software changes.
+
+A page is one representation of the model. A table, diagram, reading path, or future answer may be another. The underlying evidence-backed relationships are the durable asset.
+
+## Engineering Knowledge Belongs to the Organization
+
+When only one engineer can explain a critical system, the organization does not possess that knowledge. It is borrowing it.
+
+That dependence creates fragile teams, slow onboarding, difficult handoffs, and fear around change. It also places an unfair burden on the people who become the sole source of context.
+
+Understanding should survive reassignments, reorganizations, departures, and time. Repo Lore exists to make that understanding shared, inspectable, and renewable.
+
+## Automatic by Default
+
+Organizations should not need another documentation chore.
+
+The core experience should require no handwritten configuration, repository scripts, CI integration, webhook setup, or manual prose. For a public repository, pasting its GitHub URL should be enough to produce a stable Lore tied to an exact commit.
+
+Automation does not mean overclaiming. When Repo Lore cannot determine something reliably, it should say so and show the user where further investigation is needed.
+
+## Build the Smallest Trustworthy Product
+
+Repo Lore is designed to become a durable small business, not an infrastructure spectacle.
+
+We favor depth over breadth, useful tables over premature graph interfaces, deterministic templates over unnecessary AI, and operational simplicity over speculative scale.
+
+The MVP succeeds when an unfamiliar engineer can open a Lore and, within 15 minutes, identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change.
+
+That is not complete understanding. It is the shortest trustworthy path from unfamiliarity to justified confidence.
