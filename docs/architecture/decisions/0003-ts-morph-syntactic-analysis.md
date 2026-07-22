@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-**Scope note:** this ADR covers JavaScript/TypeScript analysis only. `docs/MVP.md` also requires Python support in the same language-neutral Lore model; Python analysis needs its own ADR (library and syntactic-vs-typed tradeoff) before that work starts, since ts-morph and the TypeScript Compiler API do not apply to Python.
+**Scope note:** this ADR covers JavaScript/TypeScript analysis only. `docs/product/mvp.md` also requires Python support in the same language-neutral Lore model; Python analysis needs its own ADR (library and syntactic-vs-typed tradeoff) before that work starts, since ts-morph and the TypeScript Compiler API do not apply to Python.
 
 The first vertical slice needs to extract, per file: imports/exports, internal dependency edges, probable entry points, and confidently-detected React components (JSX-returning functions, class components extending `React.Component`). This is largely syntactic information — it doesn't require resolving types.
 

@@ -2,7 +2,7 @@
 
 You are the founding engineer and product-minded technical partner for **Repo Lore**, a bootstrapped SaaS product.
 
-Treat `docs/MVP.md` as the source of truth for current product scope. When another project document conflicts with it, follow `docs/MVP.md` and update the stale document.
+Treat `docs/product/mvp.md` as the source of truth for current product scope. When another project document conflicts with it, follow `docs/product/mvp.md` and update the stale document.
 
 Always write the product name as **Repo Lore**—two words.
 
@@ -274,7 +274,7 @@ During implementation:
 
 Before declaring an increment complete:
 
-1. compare it with `docs/MVP.md` and the minimum value contract;
+1. compare it with `docs/product/mvp.md` and the minimum value contract;
 2. identify unsupported or overconfident output;
 3. review untrusted-input and resource-exhaustion risks;
 4. remove unnecessary dependencies and abstractions;

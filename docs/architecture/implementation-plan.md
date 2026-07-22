@@ -2,7 +2,7 @@
 
 This is a living tracking document. Update it at the end of every meaningful session: record what was completed, the exact next smallest task, and any unresolved decisions.
 
-See `docs/MVP.md` for what the slice must do and `docs/architecture/decisions/` for why it's built this way.
+See `docs/product/mvp.md` for what the slice must do and `docs/architecture/decisions/` for why it's built this way.
 
 ## Architecture recap
 
@@ -10,7 +10,7 @@ Single Next.js (TypeScript) app, deployed on Fly.io or Railway once a public dep
 
 ## Sequencing (revised 2026-07-22 for TypeScript/JavaScript/Python scope)
 
-`docs/MVP.md` expanded the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model, removed scheduled/automatic refresh and health scores/findings from MVP scope, and introduced explicit Detected/Inferred/Unknown/Unsupported certainty categories. `docs/MVP.md`'s own recommended sequence is: define the shared Lore model, build JavaScript/TypeScript extraction, validate Start Here and major-area detection against representative repositories, add Python extraction against the same contract, validate Python at the same threshold, test mixed-language repositories, then launch only when every advertised language meets the minimum value contract. This plan follows that sequence.
+`docs/product/mvp.md` expanded the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model, removed scheduled/automatic refresh and health scores/findings from MVP scope, and introduced explicit Detected/Inferred/Unknown/Unsupported certainty categories. `docs/product/mvp.md`'s own recommended sequence is: define the shared Lore model, build JavaScript/TypeScript extraction, validate Start Here and major-area detection against representative repositories, add Python extraction against the same contract, validate Python at the same threshold, test mixed-language repositories, then launch only when every advertised language meets the minimum value contract. This plan follows that sequence.
 
 It also preserves the resequencing from the earlier product-scope review (2026-07-22), which found that building acquisition, persistence, and async-job plumbing before proving the analyzer produces a useful lore inverted the "smallest end-to-end slice" principle. ADR-0001 and ADR-0004 mark the worker/job-queue design as deferred-until-needed rather than a session-1–4 requirement; ADR-0002 defers PAT provisioning to the session that first calls the GitHub API. Managed Postgres provisioning and hosting account setup remain deferred to the sessions that first need them.
 
@@ -44,7 +44,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 
 ## Sessions (~60–120 min each)
 
-- [ ] 1. Scaffold Next.js + TypeScript app, lint/format config, minimal local env config, liveness-only health-check route (no DB, no PAT, no hosting decisions).
+- [x] 1. Scaffold Next.js + TypeScript app, lint/format config, minimal local env config, liveness-only health-check route (no DB, no PAT, no hosting decisions).
 - [ ] 2. Define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
 - [ ] 3. Build the two JS/TS local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
 - [ ] 4. ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, public surface, test relationships, React component detection.
@@ -61,7 +61,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 - [ ] 15. Automated tests: analyzer correctness against all fixtures (JS/TS, Python, mixed, unsupported), evidence traceability, failure handling (malformed, oversized, path-traversal attempt).
 - [ ] 16. _(Only if needed by then)_ Async dispatch: `analysis_jobs` table, worker entrypoint, `FOR UPDATE SKIP LOCKED` claim, stuck-job reaper (ADR-0004's deferred design).
 - [ ] 17. Deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
-- [ ] 18. Local dev docs, run-through against fixtures + pinned public repos across all three languages, self-review against `docs/MVP.md`'s minimum value contract and success test (Phase 3 of the founding brief).
+- [ ] 18. Local dev docs, run-through against fixtures + pinned public repos across all three languages, self-review against `docs/product/mvp.md`'s minimum value contract and success test (Phase 3 of the founding brief).
 
 ## Progress log
 
@@ -75,12 +75,18 @@ A second `product-scope-guardian` review of the completed foundation found the o
 
 ### 2026-07-22 — MVP scope expanded to TypeScript, JavaScript, and Python; plan rewritten
 
-`docs/MVP.md`, `docs/MANIFESTO.md`, `docs/PRINCIPLES.md`, `docs/MODEL_OUTPUT.md`, and `PROMPT.md` were rewritten as the new product-foundation source of truth, expanding the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model; removing scheduled/automatic refresh and health scores/generalized health findings from MVP scope; and introducing explicit Detected/Inferred/Unknown/Unsupported certainty categories. This implementation plan, `CLAUDE.md`, `README.md`, `docs/product/mvp.md`, ADR-0003, and the `.claude/agents/` subagents were rewritten to match. ADR-0003 now explicitly scopes ts-morph analysis to JavaScript/TypeScript only; Python analysis requires its own ADR before session 12 begins. The session breakdown was resequenced to prove JS/TS Start Here/major-area detection first, then add Python against the same contract, per `docs/MVP.md`'s recommended implementation sequence. The cron-triggered scheduled-refresh session was removed entirely, since scheduled refresh is now an explicit MVP exclusion rather than a deferred feature.
+`docs/product/mvp.md`, `docs/MANIFESTO.md`, `docs/PRINCIPLES.md`, `docs/MODEL_OUTPUT.md`, and `PROMPT.md` were rewritten as the new product-foundation source of truth, expanding the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model; removing scheduled/automatic refresh and health scores/generalized health findings from MVP scope; and introducing explicit Detected/Inferred/Unknown/Unsupported certainty categories. This implementation plan, `CLAUDE.md`, `README.md`, `docs/product/mvp.md`, ADR-0003, and the `.claude/agents/` subagents were rewritten to match. ADR-0003 now explicitly scopes ts-morph analysis to JavaScript/TypeScript only; Python analysis requires its own ADR before session 12 begins. The session breakdown was resequenced to prove JS/TS Start Here/major-area detection first, then add Python against the same contract, per `docs/product/mvp.md`'s recommended implementation sequence. The cron-triggered scheduled-refresh session was removed entirely, since scheduled refresh is now an explicit MVP exclusion rather than a deferred feature.
 
 ### 2026-07-22 — Correction: Session 1 was not actually complete
 
 A previous entry in this log claimed Session 1 (Next.js scaffold with `create-next-app`, App Router, TypeScript, ESLint, a liveness-only `/api/health` route) was complete. That claim did not match the working tree: no `src/`, `next.config`, lockfile, or `node_modules` exist, and no `next` dependency is declared anywhere. The only file present was a stray, dependency-free stub `package.json` (apparently left over from an unrelated `npm init`), whose `repository`/`bugs`/`homepage` URLs were also malformed (a literal space where the repo slug belongs). That log entry has been removed as inaccurate; the stub `package.json`'s URLs were corrected to point at the real remote (`nielse63/RepoLore`) but no scaffold, dependencies, or scripts were added. Session 1 is the actual next task.
 
-**Next smallest task:** Session 1 — scaffold the Next.js (TypeScript) app (`create-next-app`, App Router, TypeScript, ESLint), add `.env.example` (empty for now — no secrets needed yet), and add a liveness-only `/api/health` route with no DB check. Verify locally that `npm run build` succeeds and `npm run dev` serves `/api/health` with a 200 response.
+### 2026-07-22 — Session 1 complete: Next.js scaffold
+
+Scaffolded via `create-next-app` (App Router, TypeScript, ESLint, no Tailwind, `src/` dir, `@/*` import alias) into an isolated temp directory, then merged into the repo root rather than running the generator in place, since the repo already had a real `package.json`, `README.md`, and `.gitignore` that a direct in-place run would have conflicted with or overwritten. The pre-existing `.gitignore` already covered `node_modules/`, `.next`, and `.env*` (with a `!.env.example` exception), so it needed no changes. `package.json`'s prior metadata (`name`, `description`, `repository`, `author`, `license`, `bugs`, `homepage`) was preserved; the stub `main`/`directories`/`type: commonjs` fields and the failing placeholder `test` script were dropped, and `dev`/`build`/`start`/`lint` scripts plus the generated `next`/`react`/`typescript`/`eslint` dependencies were added. Added `.env.example` (empty) and a liveness-only `src/app/api/health/route.ts` (no DB check). Verified locally: `npm run build` succeeds, `npm run lint` passes clean, and `npm run dev` serves `GET /api/health` with `200 {"status":"ok"}`.
+
+`npm install` reports 3 pre-existing transitive vulnerabilities (moderate/high) in `postcss`/`sharp`, pulled in by Next.js itself; `npm audit fix --force`'s only offered fix is downgrading to `next@9.3.3`, which is not a real fix. Left as-is; revisit if `npm audit` offers a real fix at the current Next major version.
+
+**Next smallest task:** Session 2 — define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
 
 **Unresolved decisions (deferred on purpose, not blocking):** exact hosting provider (Fly.io vs. Railway) and managed Postgres provider (Neon vs. Railway Postgres) — deferred to session 17 (deploy); Python analysis library/approach — deferred to session 12's ADR.

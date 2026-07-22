@@ -4,13 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This repository has a product and architecture foundation (see `docs/`) but no application code yet. A placeholder `package.json` exists but is not a real scaffold — no build system, linter, or test suite is configured. Do not assume any exist. Phase 2 (scaffolding) starts at implementation session 1; see `docs/architecture/implementation-plan.md` for the exact next task and progress log. Once a toolchain is added, this file should be updated with the actual build/lint/test commands.
+Phase 2 (scaffolding) is underway. Session 1 is complete: a real Next.js (App Router, TypeScript) app lives at the repo root, scaffolded with `create-next-app`. No test suite is configured yet (see session 15 in the implementation plan). See `docs/architecture/implementation-plan.md` for the exact next task and progress log.
+
+- `npm run dev` — start the dev server (serves `/api/health` as a liveness-only check, no DB)
+- `npm run build` — production build
+- `npm run start` — run the production build
+- `npm run lint` — ESLint (flat config, `eslint-config-next`)
 
 ## Product
 
-**Repo Lore** (always two words) builds a living, evidence-backed mental model of a software repository so an unfamiliar engineer can understand it with justified confidence, without relying on tribal knowledge — at a stable URL (`/lore/{owner}/{repo}`). The MVP targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change. Full mission: `docs/product/mission.md`. `docs/MVP.md` is the source-of-truth MVP specification — treat every other product document as subordinate to it and update it if it conflicts.
+**Repo Lore** (always two words) builds a living, evidence-backed mental model of a software repository so an unfamiliar engineer can understand it with justified confidence, without relying on tribal knowledge — at a stable URL (`/lore/{owner}/{repo}`). The MVP targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change. Full mission: `docs/product/mission.md`. `docs/product/mvp.md` is the source-of-truth MVP specification — treat every other product document as subordinate to it and update it if it conflicts.
 
-Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/MVP.md` and `docs/product/non-goals.md`):
+Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/product/mvp.md` and `docs/product/non-goals.md`):
 
 - Maintained by one engineer as a side project (~5–8 hrs/week, never more than 10), targeting roughly $2,000 MRR.
 - Initial customer: startups / small-to-medium engineering orgs.
