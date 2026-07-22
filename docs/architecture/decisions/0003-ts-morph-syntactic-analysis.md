@@ -6,6 +6,8 @@ Accepted
 
 ## Context
 
+**Scope note:** this ADR covers JavaScript/TypeScript analysis only. `docs/MVP.md` also requires Python support in the same language-neutral Lore model; Python analysis needs its own ADR (library and syntactic-vs-typed tradeoff) before that work starts, since ts-morph and the TypeScript Compiler API do not apply to Python.
+
 The first vertical slice needs to extract, per file: imports/exports, internal dependency edges, probable entry points, and confidently-detected React components (JSX-returning functions, class components extending `React.Component`). This is largely syntactic information — it doesn't require resolving types.
 
 Two questions were in play:
@@ -23,7 +25,8 @@ ts-morph is a mature, well-documented wrapper over the TypeScript Compiler API w
 
 ## Consequences
 
-- Health findings and dependency edges in v1 are based on syntactic import/export statements, not resolved types — this is disclosed as the basis for those claims, per the evidence-hierarchy principle in `docs/product/mission.md`.
+- JavaScript/TypeScript dependency edges, entry points, and public-surface conclusions in v1 are based on syntactic import/export statements, not resolved types — this is disclosed as the basis for those claims (labeled Detected or Inferred), per the evidence-hierarchy principle in `docs/product/mission.md`.
+- This decision does not extend to Python. Python source discovery, import resolution, and entry-point/public-surface detection require a separate ADR and, likely, a separate library (e.g., Python's own `ast` module) before implementation session 12 begins.
 - Some path-aliased imports may not resolve to a file without additional (non-type-checker) alias-resolution logic reading `tsconfig.json` `paths` directly; this is scoped into source file discovery/config reading (implementation session 6), not the type checker.
 - If a later feature genuinely requires resolved types (e.g., more precise "likely React component" detection, or type-aware impact analysis), that's an additive, isolated change — swapping in a type-checked `Program` for specific queries — not a rewrite of the analysis approach.
 

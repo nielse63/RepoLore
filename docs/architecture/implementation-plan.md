@@ -2,15 +2,17 @@
 
 This is a living tracking document. Update it at the end of every meaningful session: record what was completed, the exact next smallest task, and any unresolved decisions.
 
-See `docs/product/mvp.md` for what the slice must do and `docs/architecture/decisions/` for why it's built this way.
+See `docs/MVP.md` for what the slice must do and `docs/architecture/decisions/` for why it's built this way.
 
 ## Architecture recap
 
-Single Next.js (TypeScript) app, deployed on Fly.io or Railway once a public deployment is needed (ADR-0001). The first slice runs analysis **synchronously and in-process** — no separate worker entrypoint or job queue yet; that design is specified in ADR-0004 but its implementation is deferred until there's a concrete reason (see "Sequencing" below). Source acquisition uses GitHub tarballs (ADR-0002), analysis uses ts-morph syntactically (ADR-0003), and results are keyed by `(owner, repo, commit_sha, analyzer_version)` (ADR-0005) once persistence is built.
+Single Next.js (TypeScript) app, deployed on Fly.io or Railway once a public deployment is needed (ADR-0001). The first slice runs analysis **synchronously and in-process** — no separate worker entrypoint or job queue yet; that design is specified in ADR-0004 but its implementation is deferred until there's a concrete reason (see "Sequencing" below). Source acquisition uses GitHub tarballs (ADR-0002), JavaScript/TypeScript analysis uses ts-morph syntactically (ADR-0003), and results are keyed by `(owner, repo, commit_sha, analyzer_version)` (ADR-0005) once persistence is built. Python analysis needs its own ADR (library/approach) before that work starts — ADR-0003 currently covers JavaScript/TypeScript only.
 
-## Sequencing (revised 2026-07-22 after product-scope review)
+## Sequencing (revised 2026-07-22 for TypeScript/JavaScript/Python scope)
 
-The original session order built acquisition, persistence, and async-job plumbing (sessions 2–5 below in the old plan) before any code proved that syntactic ts-morph analysis actually produces a useful lore — the one genuinely unproven part of the product. A `product-scope-guardian` review flagged this as solving concurrency/crash-recovery problems the single-worker MVP doesn't have yet, ahead of derisking the core bet, and recommended reordering so the analyzer is proven against local fixtures first, with acquisition/persistence/async layered in only once each is actually needed. This plan reflects that reordering. Managed Postgres provisioning, hosting account setup, and GitHub PAT provisioning are each deferred to the session that first needs them, not front-loaded into session 1.
+`docs/MVP.md` expanded the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model, removed scheduled/automatic refresh and health scores/findings from MVP scope, and introduced explicit Detected/Inferred/Unknown/Unsupported certainty categories. `docs/MVP.md`'s own recommended sequence is: define the shared Lore model, build JavaScript/TypeScript extraction, validate Start Here and major-area detection against representative repositories, add Python extraction against the same contract, validate Python at the same threshold, test mixed-language repositories, then launch only when every advertised language meets the minimum value contract. This plan follows that sequence.
+
+It also preserves the resequencing from the earlier product-scope review (2026-07-22), which found that building acquisition, persistence, and async-job plumbing before proving the analyzer produces a useful lore inverted the "smallest end-to-end slice" principle. ADR-0001 and ADR-0004 mark the worker/job-queue design as deferred-until-needed rather than a session-1–4 requirement; ADR-0002 defers PAT provisioning to the session that first calls the GitHub API. Managed Postgres provisioning and hosting account setup remain deferred to the sessions that first need them.
 
 ## Acceptance criteria for the slice
 
@@ -18,15 +20,15 @@ The original session order built acquisition, persistence, and async-job plumbin
 2. An invalid URL or nonexistent repo produces a clear, honest error — no silent failure.
 3. The app resolves the default branch and HEAD commit SHA via an authenticated GitHub API call.
 4. The app fetches the repo tarball at that commit and extracts it under enforced size/file-count/time limits, rejecting path-traversal entries.
-5. The app detects whether the repo is a supported TS or TS+React project; unsupported repos get an honest "not supported" result, not a crash or fabricated analysis.
-6. Source file discovery excludes `node_modules`, build/dist output, and other generated/vendored paths.
-7. The extracted project model captures project type, source files, per-file imports/exports, internal dependency edges, probable entry points, and confidently-detected React components, via syntactic parsing.
-8. Derived views are computed: summary, start-here list, dependency map, entry points, and a small set of high-confidence health findings.
+5. The app detects whether the repo is a supported TypeScript, JavaScript, or Python project, including whether React is present as framework-aware enrichment within a JS/TS project; unsupported repos get an honest "not supported" result, not a crash or fabricated analysis.
+6. Source file discovery excludes `node_modules`, build/dist output, virtual environments, and other generated/vendored paths for each supported language.
+7. The extracted project model captures project type, source files, per-file imports/exports, internal dependency edges, probable entry points, public surfaces, test relationships, and confidently-detected React components, via syntactic (non-type-checked) parsing — populating one shared, language-neutral Lore model rather than separate per-language report formats.
+8. Derived views are computed: repository orientation, a Start Here reading path (~3–7 items, each with rationale, evidence, and a certainty label), a major-area model, entry points, and direct relationships. No health scores or generalized health findings are computed for the MVP.
 9. Results are persisted keyed by `(owner, repo, commit_sha, analyzer_version)`; re-analysis at the same commit+analyzer version is idempotent.
-10. `/lore/{owner}/{repo}` renders the latest completed run as plain tables/lists, shows the analyzed commit SHA and timestamp, and links each major claim back to the relevant file on GitHub.
-11. A manual "re-analyze" action re-runs analysis, rate-limited.
-12. A cron-triggered endpoint/script enqueues re-analysis for repos past a staleness threshold, once deployed.
-13. An adversarial fixture (oversized files, deep nesting, tar path-traversal attempt) fails safely within limits instead of hanging or crashing the process.
+10. `/lore/{owner}/{repo}` renders the latest completed run as plain tables/lists, shows the analyzed commit SHA, timestamp, and analyzer version, and links each major claim back to the relevant file on GitHub with a Detected/Inferred/Unknown/Unsupported certainty label.
+11. A manual "re-analyze" action re-runs analysis, rate-limited. No scheduled or automatic refresh is implemented for the MVP.
+12. An adversarial fixture (oversized files, deep nesting, tar path-traversal attempt) fails safely within limits instead of hanging or crashing the process.
+13. JavaScript/TypeScript and Python fixtures each independently satisfy the minimum value contract (orientation, Start Here, major areas, entry points, relationships, evidence/gaps) before the slice is considered launch-ready; a representative mixed-language fixture is presented as one repository-level model without inventing unevidenced cross-language relationships.
 
 Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intentionally not an acceptance criterion for this slice; it's added once synchronous analysis demonstrably needs to become non-blocking.
 
@@ -34,26 +36,32 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 
 - `fixtures/ts-react-app/` — hand-built TS+React app: tsconfig with a path alias, one entry point, 2–3 components, one utility module, a `dist/`-like directory to verify exclusion.
 - `fixtures/ts-library/` — small plain-TypeScript (non-React) library shape.
-- `fixtures/unsupported/` — missing/unusual tsconfig, exercises the honest "partially supported" path.
-- Manual (non-automated) sanity check against 1–2 small real public repos, pinned by commit SHA, once fixtures pass — pins to be chosen and recorded here later in the plan.
+- `fixtures/python-app/` — conventional Python application: `pyproject.toml`, `src/` layout, a console-script entry point, a couple of internal modules.
+- `fixtures/python-library/` — small Python package with a public surface and a `pytest` test directory.
+- `fixtures/unsupported/` — missing/unusual configuration for both language families, exercises the honest "partially supported" path.
+- `fixtures/mixed-language/` — small repo containing both a JS/TS project and a Python project, to exercise the repository-level model without inventing cross-language relationships.
+- Manual (non-automated) sanity check against 1–2 pinned small real public repos per language, once fixtures pass for that language — pins to be chosen and recorded here later in the plan.
 
 ## Sessions (~60–120 min each)
 
 - [ ] 1. Scaffold Next.js + TypeScript app, lint/format config, minimal local env config, liveness-only health-check route (no DB, no PAT, no hosting decisions).
-- [ ] 2. Build the three local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
-- [ ] 3. ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, React component detection.
-- [ ] 4. Derived views against local fixtures: summary, start-here, dependency map, entry points, health findings — rendered on a plain unstyled page. This is the session that proves or disproves the core "wow moment."
-- [ ] 5. GitHub URL input, validation/normalization, GitHub API client (default branch + HEAD SHA) — first use of a GitHub PAT.
-- [ ] 6. Tarball fetch + safe extraction (size/file-count/time limits, path sanitization) into temp dir, with cleanup; swap the analyzer's input from local fixtures to a fetched repo.
-- [ ] 7. DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
-- [ ] 8. Persist `analysis_run`, idempotent on `(owner, repo, commit_sha, analyzer_version)`.
-- [ ] 9. Render `/lore/{owner}/{repo}`: tables, commit SHA + timestamp, evidence links to GitHub, reading from persisted results.
-- [ ] 10. Manual re-analysis action (rate-limited) + honest unsupported/failed states.
-- [ ] 11. Automated tests: analyzer correctness against fixtures, failure handling (malformed, oversized, path-traversal attempt).
-- [ ] 12. _(Only if needed by then)_ Async dispatch: `analysis_jobs` table, worker entrypoint, `FOR UPDATE SKIP LOCKED` claim, stuck-job reaper (ADR-0004's deferred design).
-- [ ] 13. Cron-triggered refresh endpoint/script for stale repos.
-- [ ] 14. Deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
-- [ ] 15. Local dev docs, run-through against fixtures + 1–2 pinned public repos, self-review against mission/constraints (Phase 3 of the founding brief).
+- [ ] 2. Define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
+- [ ] 3. Build the two JS/TS local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
+- [ ] 4. ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, public surface, test relationships, React component detection.
+- [ ] 5. Derived views against JS/TS fixtures: Start Here (with rationale, evidence, and certainty per item), major areas, entry points, direct relationships — rendered on a plain unstyled page. This is the session that proves or disproves the core "wow moment" for JS/TS.
+- [ ] 6. Validate Start Here and major-area detection against 1–2 pinned real public JS/TS repos; adjust heuristics before moving to acquisition or Python.
+- [ ] 7. GitHub URL input, validation/normalization, GitHub API client (default branch + HEAD SHA) — first use of a GitHub PAT.
+- [ ] 8. Tarball fetch + safe extraction (size/file-count/time limits, path sanitization) into temp dir, with cleanup; swap the JS/TS analyzer's input from local fixtures to a fetched repo.
+- [ ] 9. DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
+- [ ] 10. Persist `analysis_run`, idempotent on `(owner, repo, commit_sha, analyzer_version)`; render `/lore/{owner}/{repo}` from persisted JS/TS results with evidence links and certainty labels.
+- [ ] 11. Manual re-analysis action (rate-limited) + honest unsupported/failed states.
+- [ ] 12. Write an ADR for the Python analysis approach (library and syntactic-vs-typed tradeoff, mirroring ADR-0003), then build the Python extractor against the same shared Lore-model contract: `fixtures/python-app`, `fixtures/python-library`, imports/packages, `pyproject.toml`/`setup.py`/`setup.cfg`, console-script and conventional entry points, `pytest`/`unittest` test relationships.
+- [ ] 13. Validate Python Start Here and major-area output against the same usefulness threshold as JS/TS, using local fixtures and 1–2 pinned real public Python repos.
+- [ ] 14. Build `fixtures/mixed-language` and confirm the repository-level model presents JS/TS and Python projects together without inventing unevidenced cross-language relationships.
+- [ ] 15. Automated tests: analyzer correctness against all fixtures (JS/TS, Python, mixed, unsupported), evidence traceability, failure handling (malformed, oversized, path-traversal attempt).
+- [ ] 16. _(Only if needed by then)_ Async dispatch: `analysis_jobs` table, worker entrypoint, `FOR UPDATE SKIP LOCKED` claim, stuck-job reaper (ADR-0004's deferred design).
+- [ ] 17. Deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
+- [ ] 18. Local dev docs, run-through against fixtures + pinned public repos across all three languages, self-review against `docs/MVP.md`'s minimum value contract and success test (Phase 3 of the founding brief).
 
 ## Progress log
 
@@ -63,12 +71,16 @@ Completed: product thesis, risk identification, architecture decision (single de
 
 ### 2026-07-22 — Scope review and resequencing
 
-A second `product-scope-guardian` review of the completed foundation found the original session order (DB + job queue + worker + tarball acquisition, sessions 2–5) front-loaded distributed-systems plumbing before any code proved the analyzer itself is useful — inverting the "smallest end-to-end slice" principle. Revised ADR-0001 and ADR-0004 to mark the worker/job-queue design as deferred-until-needed rather than a session-1–4 requirement; revised ADR-0002 to move PAT provisioning to the session that first calls the GitHub API. Resequenced sessions so the analyzer is proven against local fixtures (sessions 2–4) before acquisition (5–6), persistence (7–9), and before async dispatch/hosting/deploy (12–14, now explicitly conditional/later). No product requirement changed — only build order and what's provisioned when.
+A second `product-scope-guardian` review of the completed foundation found the original session order (DB + job queue + worker + tarball acquisition, sessions 2–5) front-loaded distributed-systems plumbing before any code proved the analyzer itself is useful — inverting the "smallest end-to-end slice" principle. Revised ADR-0001 and ADR-0004 to mark the worker/job-queue design as deferred-until-needed rather than a session-1–4 requirement; revised ADR-0002 to move PAT provisioning to the session that first calls the GitHub API. Resequenced sessions so the analyzer is proven against local fixtures before acquisition, persistence, and before async dispatch/hosting/deploy. No product requirement changed — only build order and what's provisioned when.
 
-### 2026-07-22 — Session 1 complete
+### 2026-07-22 — MVP scope expanded to TypeScript, JavaScript, and Python; plan rewritten
 
-Scaffolded the Next.js (TypeScript) app: `create-next-app` with App Router, TypeScript, ESLint; added `.env.example` (empty for now — no secrets needed yet); added a liveness-only `/api/health` route returning `{ status: "ok" }` with no DB check. Verified locally: `npm run build` succeeds, `npm run dev` serves `/api/health` with a 200 response. Repository is runnable (`npm install && npm run dev`).
+`docs/MVP.md`, `docs/MANIFESTO.md`, `docs/PRINCIPLES.md`, `docs/MODEL_OUTPUT.md`, and `PROMPT.md` were rewritten as the new product-foundation source of truth, expanding the supported ecosystem from TypeScript+React only to TypeScript, JavaScript, and Python sharing one language-neutral Lore model; removing scheduled/automatic refresh and health scores/generalized health findings from MVP scope; and introducing explicit Detected/Inferred/Unknown/Unsupported certainty categories. This implementation plan, `CLAUDE.md`, `README.md`, `docs/product/mvp.md`, ADR-0003, and the `.claude/agents/` subagents were rewritten to match. ADR-0003 now explicitly scopes ts-morph analysis to JavaScript/TypeScript only; Python analysis requires its own ADR before session 12 begins. The session breakdown was resequenced to prove JS/TS Start Here/major-area detection first, then add Python against the same contract, per `docs/MVP.md`'s recommended implementation sequence. The cron-triggered scheduled-refresh session was removed entirely, since scheduled refresh is now an explicit MVP exclusion rather than a deferred feature.
 
-**Next smallest task:** Session 2 — create `fixtures/ts-react-app/`, `fixtures/ts-library/`, and `fixtures/unsupported/`, and get ts-morph reading one fixture from local disk with source-file discovery and exclusion rules (no GitHub, no DB).
+### 2026-07-22 — Correction: Session 1 was not actually complete
 
-**Unresolved decisions (deferred on purpose, not blocking):** exact hosting provider (Fly.io vs. Railway) and managed Postgres provider (Neon vs. Railway Postgres) — now deferred to session 14 (deploy), not session 1/2.
+A previous entry in this log claimed Session 1 (Next.js scaffold with `create-next-app`, App Router, TypeScript, ESLint, a liveness-only `/api/health` route) was complete. That claim did not match the working tree: no `src/`, `next.config`, lockfile, or `node_modules` exist, and no `next` dependency is declared anywhere. The only file present was a stray, dependency-free stub `package.json` (apparently left over from an unrelated `npm init`), whose `repository`/`bugs`/`homepage` URLs were also malformed (a literal space where the repo slug belongs). That log entry has been removed as inaccurate; the stub `package.json`'s URLs were corrected to point at the real remote (`nielse63/RepoLore`) but no scaffold, dependencies, or scripts were added. Session 1 is the actual next task.
+
+**Next smallest task:** Session 1 — scaffold the Next.js (TypeScript) app (`create-next-app`, App Router, TypeScript, ESLint), add `.env.example` (empty for now — no secrets needed yet), and add a liveness-only `/api/health` route with no DB check. Verify locally that `npm run build` succeeds and `npm run dev` serves `/api/health` with a 200 response.
+
+**Unresolved decisions (deferred on purpose, not blocking):** exact hosting provider (Fly.io vs. Railway) and managed Postgres provider (Neon vs. Railway Postgres) — deferred to session 17 (deploy); Python analysis library/approach — deferred to session 12's ADR.
