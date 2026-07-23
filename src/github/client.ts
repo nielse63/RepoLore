@@ -1,10 +1,10 @@
 /**
- * Minimal GitHub REST API client covering only what the MVP core user
- * journey needs so far (docs/product/mvp.md, steps 2–3): resolve a
- * repository's default branch and the HEAD commit SHA on that branch. This
- * is the first code path that calls the GitHub API, so it's also the first
- * to require a PAT (ADR-0002's consequence: unauthenticated access is capped
- * at 60 requests/hour). Tarball fetch (ADR-0002) is a later session.
+ * Minimal GitHub REST API client covering what the MVP core user journey
+ * needs so far (docs/product/mvp.md, steps 2–5): resolve a repository's
+ * default branch and HEAD commit SHA, and fetch the source tarball at a
+ * given ref (ADR-0002). This is the first code path that calls the GitHub
+ * API, so it's also the first to require a PAT (ADR-0002's consequence:
+ * unauthenticated access is capped at 60 requests/hour).
  */
 
 const API_BASE = 'https://api.github.com';
@@ -33,14 +33,19 @@ function getGitHubToken(): string {
   return token;
 }
 
-async function githubApiFetch(path: string): Promise<Response> {
+async function githubApiFetch(
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const token = getGitHubToken();
   return fetch(`${API_BASE}${path}`, {
+    ...init,
     headers: {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'repo-lore',
+      ...init.headers,
     },
   });
 }
@@ -119,4 +124,31 @@ export async function resolveRepositoryHead(
   }
 
   return { defaultBranch, headSha: commitData.sha };
+}
+
+/**
+ * Fetches a repository's source tarball at `ref` (ADR-0002). Returns the
+ * raw `Response` so the caller can stream `.body` straight to disk rather
+ * than buffering the whole archive in memory. GitHub redirects this
+ * endpoint to codeload.github.com, which `fetch` follows automatically and
+ * which serves public-repo archives unauthenticated, so the redirect
+ * working without carrying the `Authorization` header over is expected.
+ */
+export async function fetchRepositoryTarball(
+  owner: string,
+  repo: string,
+  ref: string,
+  signal?: AbortSignal
+): Promise<Response> {
+  const res = await githubApiFetch(
+    `/repos/${owner}/${repo}/tarball/${encodeURIComponent(ref)}`,
+    { signal }
+  );
+  if (!res.ok) {
+    await throwForResponse(
+      res,
+      `Tarball for ${owner}/${repo}@${ref} not found`
+    );
+  }
+  return res;
 }
