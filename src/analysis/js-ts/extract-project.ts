@@ -73,27 +73,29 @@ function inferProjectKind(entryPoints: EntryPoint[]): {
   kind: LoreProject['kind'];
   evidence?: Evidence;
 } {
-  const hasApplicationEntry = entryPoints.some(
+  const applicationEntry = entryPoints.find(
     (ep) => ep.kind === 'bootstrap' || ep.kind === 'cli'
   );
-  if (hasApplicationEntry) {
+  if (applicationEntry) {
     return {
       kind: 'application',
       evidence: {
         kind: 'entry-point-shape',
         certainty: 'inferred',
+        location: applicationEntry.location,
         description: 'A runtime bootstrap or CLI entry point was detected.',
       },
     };
   }
 
-  const hasLibraryEntry = entryPoints.some((ep) => ep.kind === 'library');
-  if (hasLibraryEntry) {
+  const libraryEntry = entryPoints.find((ep) => ep.kind === 'library');
+  if (libraryEntry) {
     return {
       kind: 'library',
       evidence: {
         kind: 'entry-point-shape',
         certainty: 'inferred',
+        location: libraryEntry.location,
         description:
           'A package.json library entry field (main/module) was declared, with no runtime bootstrap detected.',
       },
@@ -133,7 +135,8 @@ export function extractJsTsProject(
     projectEvidence.push({
       kind: 'react-component-detection',
       certainty: 'detected',
-      description: `Detected ${reactComponents.length} React component(s) via JSX-returning functions or class components extending Component.`,
+      location: reactComponents[0].location,
+      description: `Detected ${reactComponents.length} React component(s) via JSX-returning functions or class components extending Component (e.g. '${reactComponents[0].location.filePath}').`,
     });
   }
   if (kindEvidence) projectEvidence.push(kindEvidence);

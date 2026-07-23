@@ -82,6 +82,8 @@ async function throwForResponse(
 export interface RepositoryHead {
   defaultBranch: string;
   headSha: string;
+  /** GitHub's own repository description, when set — surfaced as-is, not inferred. */
+  description?: string;
 }
 
 /**
@@ -97,7 +99,10 @@ export async function resolveRepositoryHead(
   if (!repoRes.ok) {
     await throwForResponse(repoRes, `Repository ${owner}/${repo} not found`);
   }
-  const repoData = (await repoRes.json()) as { default_branch?: string };
+  const repoData = (await repoRes.json()) as {
+    default_branch?: string;
+    description?: string | null;
+  };
   const defaultBranch = repoData.default_branch;
   if (!defaultBranch) {
     throw new GitHubApiError(
@@ -123,7 +128,11 @@ export async function resolveRepositoryHead(
     );
   }
 
-  return { defaultBranch, headSha: commitData.sha };
+  return {
+    defaultBranch,
+    headSha: commitData.sha,
+    description: repoData.description ?? undefined,
+  };
 }
 
 /**

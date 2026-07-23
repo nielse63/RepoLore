@@ -6,11 +6,11 @@ import { resolveRepository, type ResolveRepositoryState } from './actions';
 const initialState: ResolveRepositoryState = { status: 'idle' };
 
 /**
- * Plain, unstyled home page: paste a public GitHub repository URL and
- * resolve its default branch + HEAD commit SHA (MVP core user journey steps
- * 1–5, docs/product/mvp.md). Acquisition, analysis, and the persisted
- * `/lore/{owner}/{repo}` page are later sessions — this proves the
- * input-validation-to-GitHub-API path end to end first.
+ * Plain, unstyled home page: paste a public GitHub repository URL, analyze
+ * and persist it, and land on its stable `/lore/{owner}/{repo}` page (MVP
+ * core user journey, docs/product/mvp.md). On success the Server Action
+ * redirects there directly, so this page only ever needs to show an error
+ * for failures that happen before a run exists to redirect to.
  */
 export default function Home() {
   const [state, formAction, isPending] = useActionState(
@@ -34,7 +34,7 @@ export default function Home() {
           size={50}
         />{' '}
         <button type="submit" disabled={isPending}>
-          {isPending ? 'Resolving…' : 'Resolve'}
+          {isPending ? 'Analyzing…' : 'Analyze'}
         </button>
       </form>
 
@@ -42,21 +42,6 @@ export default function Home() {
         <p role="alert">
           <strong>Error:</strong> {state.message}
         </p>
-      )}
-
-      {state.status === 'success' && (
-        <section>
-          <h2>Resolved</h2>
-          <ul>
-            <li>
-              Repository: {state.owner}/{state.repo}
-            </li>
-            <li>Default branch: {state.defaultBranch}</li>
-            <li>
-              HEAD commit: <code>{state.headSha}</code>
-            </li>
-          </ul>
-        </section>
       )}
     </main>
   );

@@ -1,25 +1,20 @@
 'use server';
 
-import { GitHubApiError, resolveRepositoryHead } from '@/github/client';
+import { redirect } from 'next/navigation';
+import { analyzeAndPersistRepository } from '@/analysis/analyze-and-persist';
+import { GitHubApiError } from '@/github/client';
 import { parseGitHubRepoUrl } from '@/github/parse-repo-url';
 
 export type ResolveRepositoryState =
-  | { status: 'idle' }
-  | { status: 'error'; message: string }
-  | {
-      status: 'success';
-      owner: string;
-      repo: string;
-      defaultBranch: string;
-      headSha: string;
-    };
+  { status: 'idle' } | { status: 'error'; message: string };
 
 /**
  * Server Action backing the home page's URL form: validates/normalizes the
- * pasted URL, then resolves the repository's default branch and HEAD commit
- * SHA (MVP core user journey steps 1–5). Analysis, acquisition, and
- * persistence are later sessions — this proves the input-to-GitHub-API path
- * end to end with an honest error for every failure mode.
+ * pasted URL, analyzes and persists the repository (MVP core user journey
+ * steps 1–6), and redirects to the stable `/lore/{owner}/{repo}` page. A
+ * failed/partial analysis still redirects — it has a persisted run to render
+ * honestly; only pre-analysis failures (bad URL, repo doesn't exist) stay on
+ * this page as an inline error, since there's no run to redirect to yet.
  */
 export async function resolveRepository(
   _prevState: ResolveRepositoryState,
@@ -33,15 +28,16 @@ export async function resolveRepository(
 
   const { owner, repo } = parsed.value;
   try {
-    const { defaultBranch, headSha } = await resolveRepositoryHead(owner, repo);
-    return { status: 'success', owner, repo, defaultBranch, headSha };
+    await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
     if (error instanceof GitHubApiError) {
       return { status: 'error', message: error.message };
     }
     return {
       status: 'error',
-      message: 'Something went wrong resolving that repository.',
+      message: 'Something went wrong analyzing that repository.',
     };
   }
+
+  redirect(`/lore/${owner}/${repo}`);
 }

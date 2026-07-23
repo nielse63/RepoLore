@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components — validated against local fixtures and four real public repositories. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) render on a plain, unstyled page at `/fixtures/{name}`. The home page (`/`) accepts a pasted GitHub repository URL, validates/normalizes it, and resolves its default branch and HEAD commit SHA via the GitHub API (`src/github/`), requiring a `GITHUB_TOKEN`. Source acquisition (`src/acquisition/`) can now fetch a repository's tarball at that commit and safely extract it into a temp directory — enforcing hard caps on download size, extracted size, and file count, rejecting unsafe tar entries (symlinks, path traversal) — and the JS/TS analyzer runs unmodified against that fetched directory (`npm run analyze-repo`). The Postgres schema (`src/db/migrations/`) for `repos` and `analysis_runs` exists and is migrated via `npm run migrate`, but nothing writes to it yet — no persistence or `/lore/{owner}/{repo}` page. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway, and the first end-to-end slice works for JavaScript/TypeScript: paste a public GitHub repository URL on the home page (`/`) and Repo Lore validates it, resolves its default branch and HEAD commit via the GitHub API (`src/github/`), fetches and safely extracts its tarball (`src/acquisition/`), runs the JS/TS analyzer (`src/analysis/js-ts/`) — imports/exports, internal dependency edges, entry points, public surface, test relationships, React components, Start Here and major-area derived views — persists the result to Postgres (`src/db/`, idempotent per ADR-0005), and redirects to a stable `/lore/{owner}/{repo}` page rendering it with a Detected/Inferred/Unknown/Unsupported certainty label on every claim and a GitHub link back to its source. A failed or partially-supported analysis still renders honestly there rather than silently disappearing. Requires `GITHUB_TOKEN` and `DATABASE_URL`. Local fixtures render through the same `Lore` shape at `/fixtures/{name}`. Python analysis, a manual re-analyze action, and a styled UI don't exist yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -59,14 +59,16 @@ With `npm run dev` running, the same derived views render on a plain, unstyled p
 
 ## Analyzing a real repository from the command line
 
-Before persistence and the `/lore/{owner}/{repo}` page exist, `npm run analyze-repo` proves the fetch-and-extract-and-analyze path end to end against any real public GitHub repository:
+`npm run analyze-repo` runs the fetch-extract-analyze path against any real public GitHub repository without touching the database — useful for quickly checking analyzer output on a new repo:
 
 ```
 npm run analyze-repo -- https://github.com/sindresorhus/globby
 ```
 
-This resolves the repository's default branch and HEAD commit, downloads and safely extracts its tarball into a temp directory (`src/acquisition/`), runs the same JS/TS extraction and derived-view logic used for local fixtures against it, prints Start Here / major areas / entry points / gaps, and always cleans up the temp directory afterward. Requires `GITHUB_TOKEN`.
+This resolves the repository's default branch and HEAD commit, downloads and safely extracts its tarball into a temp directory (`src/acquisition/`), runs the same JS/TS extraction and derived-view logic used for local fixtures against it, prints Start Here / major areas / entry points / gaps, and always cleans up the temp directory afterward. Requires `GITHUB_TOKEN`. The real web flow (home page → `/lore/{owner}/{repo}`) additionally persists the result — see below.
 
 ## Database
 
 `repos` and `analysis_runs` (ADR-0004, ADR-0005) are plain hand-written SQL files under `src/db/migrations/`, applied in filename order by `npm run migrate` (`scripts/migrate.ts`), which tracks what's already applied in a `schema_migrations` table — no migration framework yet, since a couple of tables don't justify one. `analysis_runs` is keyed by `(repo_id, commit_sha, analyzer_version)` (ADR-0005) and stores the full serialized `Lore` (`src/lore/model.ts`) as `result jsonb` on success, or `error_message` on failure; `status` matches `AnalysisSnapshot['status']` (`completed`/`partial`/`failed`) exactly. Requires `DATABASE_URL` (see .env.example); `docker compose up -d db` runs a matching local Postgres.
+
+Submitting the home page's form (`src/app/actions.ts`) calls `analyzeAndPersistRepository` (`src/analysis/analyze-and-persist.ts`), which resolves the repo's HEAD, short-circuits if that exact commit+analyzer-version has already been analyzed (ADR-0005 idempotency — no redundant tarball fetch on repeat submissions), and otherwise acquires, analyzes, persists, and redirects to `/lore/{owner}/{repo}`. Every outcome — success, partial, or failed — is persisted and rendered there; nothing is silently dropped.
