@@ -1,13 +1,73 @@
+@import 'tailwindcss';
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfcfa;
+  --surface: #ffffff;
+  --sidebar: #fbfaf8;
+  --border: #e6e4de;
+  --foreground: #20272a;
+  --muted: #5b6466;
+  --primary: #08594f;
+  --primary-foreground: #ffffff;
+  --primary-hover: #064840;
+  --tile-core-bg: #e3eae7;
+  --tile-core-fg: #2f5850;
+  --tile-supporting-bg: #f2e9d8;
+  --tile-supporting-fg: #7a5b28;
+  --tile-data-bg: #f2e9d8;
+  --tile-data-fg: #8a5a3a;
+  --tile-alert-bg: #f6e2df;
+  --tile-alert-fg: #a1483c;
+  --success: #2f7d5e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #131615;
+    --surface: #191d1c;
+    --sidebar: #101312;
+    --border: #2a2f2d;
+    --foreground: #e9ebe8;
+    --muted: #9aa3a0;
+    --primary: #35a88d;
+    --primary-foreground: #0a1211;
+    --primary-hover: #45bb9f;
+    --tile-core-bg: #1e2d29;
+    --tile-core-fg: #7fc2ac;
+    --tile-supporting-bg: #2c2620;
+    --tile-supporting-fg: #d9b877;
+    --tile-data-bg: #2c2620;
+    --tile-data-fg: #d99a70;
+    --tile-alert-bg: #2f201e;
+    --tile-alert-fg: #e08b7d;
+    --success: #45bb9f;
   }
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-display-serif), ui-serif, Georgia, serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-sidebar: var(--sidebar);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-success: var(--success);
+
+  --color-tile-core-bg: var(--tile-core-bg);
+  --color-tile-core-fg: var(--tile-core-fg);
+  --color-tile-supporting-bg: var(--tile-supporting-bg);
+  --color-tile-supporting-fg: var(--tile-supporting-fg);
+  --color-tile-data-bg: var(--tile-data-bg);
+  --color-tile-data-fg: var(--tile-data-fg);
+  --color-tile-alert-bg: var(--tile-alert-bg);
+  --color-tile-alert-fg: var(--tile-alert-fg);
 }
 
 html {
@@ -26,20 +86,16 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
   color: inherit;
-  text-decoration: none;
 }
 
 @media (prefers-color-scheme: dark) {

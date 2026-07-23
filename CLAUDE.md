@@ -26,6 +26,10 @@ Constraints that should shape any proposed feature or dependency (see `product-s
 - Reject speculative scalability, enterprise requirements, and premature customization.
 - AI explains evidence-backed analysis; it does not replace deterministic code analysis, and it is not required for the MVP.
 
+## Design
+
+`docs/designs/` holds UI mockup images (`architecture.png`, `change-impact.png`, `data-flow.png`, `dependencies.png`, `evidence-library.png`, `history.png`, `home.png`, `repository-settings.png`, `search.png`, `system-overview.png`, `systems.png`, `systems-subview.png`), each representing a distinct UI view. **Any UI work (layout, components, styling, information hierarchy, navigation) must be based on these mockups** — check the relevant image(s) before implementing or changing a view. File names do not map directly to URL routes; match a mockup to the view it depicts by its contents, not by assuming its filename is a path.
+
 ## Architecture
 
 First-slice architecture and the reasoning behind it live in `docs/architecture/decisions/` (ADR-0001 through ADR-0005): a single Next.js deployable (the worker entrypoint and job queue are deferred until a synchronous path proves insufficient — see ADR-0001 and ADR-0004), GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis for JavaScript/TypeScript, and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)`. ADR-0003 currently scopes ts-morph analysis to JavaScript/TypeScript only; Python analysis needs its own ADR before that work begins (see `docs/architecture/implementation-plan.md`). Read these before proposing a different shape for ingestion, analysis, or job execution.

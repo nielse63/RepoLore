@@ -1,0 +1,21 @@
+export function LorePageFrame({
+  topBar,
+  rightRail,
+  children,
+}: {
+  topBar: React.ReactNode;
+  rightRail?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col">
+      {topBar}
+      <div className="flex min-h-0 flex-1">
+        <main className="min-w-0 flex-1 overflow-y-auto px-8 py-8">
+          {children}
+        </main>
+        {rightRail}
+      </div>
+    </div>
+  );
+}
