@@ -46,7 +46,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 
 - [x] 1. Scaffold Next.js + TypeScript app, lint/format config, minimal local env config, liveness-only health-check route (no DB, no PAT, no hosting decisions).
 - [x] 2. Define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
-- [ ] 3. Build the two JS/TS local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
+- [x] 3. Build the two JS/TS local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
 - [ ] 4. ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, public surface, test relationships, React component detection.
 - [ ] 5. Derived views against JS/TS fixtures: Start Here (with rationale, evidence, and certainty per item), major areas, entry points, direct relationships — rendered on a plain unstyled page. This is the session that proves or disproves the core "wow moment" for JS/TS.
 - [ ] 6. Validate Start Here and major-area detection against 1–2 pinned real public JS/TS repos; adjust heuristics before moving to acquisition or Python.
@@ -98,3 +98,15 @@ Added `src/lore/model.ts` with the full shared, language-neutral domain model de
 Also encoded the MVP's minimum value contract (`docs/product/mvp.md`, "Minimum Value Contract") as a `MinimumValueContract` type plus `evaluateMinimumValueContract(lore)`, which checks repository orientation, a Start Here path of 3–7 items each with evidence, a major-area model, entry points, direct relationships, and traceable evidence (every piece of evidence has a source location). This gives session 15 (automated tests) and session 13 (Python validation against the same threshold) a concrete, checkable contract rather than only a documented one. `npx tsc --noEmit` and `npm run lint` both pass clean.
 
 **Next smallest task:** Session 3 — build the two JS/TS local fixture repos (`fixtures/ts-react-app/`, `fixtures/ts-library/`); get ts-morph reading a fixture directly from local disk, with source file discovery and exclusion rules (`node_modules`, build/dist output).
+
+### 2026-07-23 — Session 3 complete: JS/TS fixtures + ts-morph source discovery
+
+Added `ts-morph` (dependency) and `tsx` (devDependency, for running TypeScript scripts without a build step ahead of session 15's test suite).
+
+Built `fixtures/ts-react-app/` (own `tsconfig.json` with a `@/*` path alias, `src/index.tsx` entry point, `App.tsx` composing two components under `src/components/`, `src/utils/format.ts`, and a `dist/bundle.js` stub to verify build-output exclusion) and `fixtures/ts-library/` (plain TypeScript, no React: `src/index.ts` re-exporting a public surface from `src/math.ts`, which itself depends on an internal, non-exported `src/internal/round.ts` — giving session 4 both a public/internal boundary and an internal dependency edge to extract). Each fixture has its own standalone `package.json`/`tsconfig.json` and is excluded from the root app's TypeScript program (`tsconfig.json` `exclude`) since it's a fixture, not application code.
+
+Added `src/analysis/js-ts/discovery.ts`: `discoverSourceFiles(rootDir)` builds a ts-morph `Project` directly from a glob over `rootDir` (`.ts`/`.tsx`/`.js`/`.jsx`), with glob-negation plus a defensive filename-segment check excluding `node_modules`, `dist`, `build`, `out`, `.next`, `coverage`, and `.git` at any depth. Per ADR-0003, this stays syntactic-only — no `tsConfigFilePath`-driven, type-checked `Program` is constructed; only the minimal compiler options needed to parse JSX/TS syntax.
+
+Verified manually (no test suite yet — session 15) via `npm run discover -- <fixture-path>` (`scripts/discover-fixture.ts`): `ts-react-app` correctly discovers all 5 source files and excludes `dist/bundle.js`; `ts-library` correctly discovers all 3 source files. `npx tsc --noEmit` (root and each fixture's own `tsconfig.json`) and `npm run lint` all pass clean.
+
+**Next smallest task:** Session 4 — ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, public surface, test relationships, React component detection.

@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, and the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined — no language extractor, persistence, or UI reads from it yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and JS/TS source file discovery (`src/analysis/js-ts/discovery.ts`) reads a project from local disk against two hand-built fixtures — no extraction, persistence, or UI reads from it yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -29,3 +29,12 @@ npm run lint   # ESLint
 ```
 
 No database, GitHub PAT, or hosting account is required yet — those are provisioned in the sessions that first need them (see `docs/architecture/implementation-plan.md`).
+
+## Fixtures
+
+`fixtures/` holds small, hand-built local repos used to develop and sanity-check each language analyzer before it's run against real repositories (see `docs/architecture/implementation-plan.md`, "Fixture strategy"). No automated test suite exists yet (session 15), so `npm run discover -- <fixture-path>` runs JS/TS source discovery against a fixture and prints the files it found, e.g.:
+
+```
+npm run discover -- fixtures/ts-react-app
+npm run discover -- fixtures/ts-library
+```

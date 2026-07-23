@@ -1,0 +1,13 @@
+{
+  "name": "ts-react-app-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Fixture: a small conventional TypeScript + React application, for JS/TS analyzer development (docs/architecture/implementation-plan.md, session 3).",
+  "dependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
