@@ -4,8 +4,9 @@
  * dependency `Relationship`s, `EntryPoint`s, `PublicContract`s,
  * `TestRelationship`s, detected React components, and `Gap`s.
  *
- * This does not yet assemble a full `Lore` (structural areas, Start Here,
- * findings) — that's derived-view work (implementation session 5+).
+ * This does not yet assemble a full `Lore` (findings, snapshot metadata) —
+ * structural areas and Start Here are derived from this output separately,
+ * in `./derive-views`.
  */
 
 import fs from "node:fs";
@@ -31,6 +32,7 @@ import { extractTestRelationships } from "./tests";
 
 export interface JsTsExtraction {
   project: LoreProject;
+  sourceFilePaths: string[];
   relationships: Relationship[];
   entryPoints: EntryPoint[];
   publicContracts: PublicContract[];
@@ -138,6 +140,7 @@ export function extractJsTsProject(rootDir: string, projectId = "."): JsTsExtrac
 
   return {
     project,
+    sourceFilePaths,
     relationships: importResult.relationships,
     entryPoints,
     publicContracts,

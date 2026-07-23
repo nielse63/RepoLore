@@ -30,10 +30,13 @@ function findSourceFileByRelativePath(
   );
 }
 
+type ExportsField = string | Record<string, unknown>;
+
 interface PackageJson {
   main?: string;
   module?: string;
   bin?: string | Record<string, string>;
+  exports?: ExportsField;
 }
 
 function readPackageJson(rootDir: string): PackageJson | undefined {
@@ -44,6 +47,33 @@ function readPackageJson(rootDir: string): PackageJson | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Resolves a `package.json` `exports` field to a single specifier, for the
+ * common single-entry-point package shape: a bare string, a subpath map with
+ * a "." key, or a conditions object (preferring "import"/"default" over
+ * "require", and skipping "types", since ts-morph parses source, not
+ * declaration files).
+ */
+function resolveExportsField(exportsField: ExportsField): string | undefined {
+  if (typeof exportsField === "string") return exportsField;
+
+  const dotExport = exportsField["."];
+  if (typeof dotExport === "string") return dotExport;
+  if (dotExport && typeof dotExport === "object") {
+    return resolveExportsField(dotExport as Record<string, unknown>);
+  }
+
+  for (const condition of ["import", "default"]) {
+    const value = exportsField[condition];
+    if (typeof value === "string") return value;
+  }
+  for (const [key, value] of Object.entries(exportsField)) {
+    if (key === "types" || typeof value !== "string") continue;
+    return value;
+  }
+  return undefined;
 }
 
 /** True if a file calls `ReactDOM`'s (or `react-dom/client`'s) `render`/`createRoot(...).render`. */
@@ -74,6 +104,7 @@ export function extractEntryPoints(
     const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, relativeValue);
     if (!resolved) return;
     const filePath = toRelative(rootDir, resolved.getFilePath());
+    if (claimedPaths.has(filePath)) return;
     claimedPaths.add(filePath);
     entryPoints.push({
       id: `js-ts-entry-package-${field}`,
@@ -89,6 +120,36 @@ export function extractEntryPoints(
         },
       ],
     });
+  }
+
+  // The modern `exports` field takes precedence over `main`/`module` when a
+  // package declares one (Node and bundlers resolve it first).
+  if (pkg?.exports !== undefined) {
+    const resolvedSpecifier = resolveExportsField(pkg.exports);
+    if (resolvedSpecifier) {
+      const relativeValue = resolvedSpecifier.startsWith("./")
+        ? resolvedSpecifier.slice(2)
+        : resolvedSpecifier;
+      const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, relativeValue);
+      if (resolved) {
+        const filePath = toRelative(rootDir, resolved.getFilePath());
+        claimedPaths.add(filePath);
+        entryPoints.push({
+          id: "js-ts-entry-package-exports",
+          kind: "library",
+          location: { filePath },
+          certainty: "detected",
+          evidence: [
+            {
+              kind: "package-json-field",
+              certainty: "detected",
+              location: { filePath: "package.json", configKey: "exports" },
+              description: `package.json declares "exports" resolving to "${resolvedSpecifier}".`,
+            },
+          ],
+        });
+      }
+    }
   }
 
   addManifestEntry("main", "library");
@@ -145,7 +206,16 @@ export function extractEntryPoints(
   // Conventional fallback: a top-level or src/ "index" file, when nothing
   // more specific was found.
   if (entryPoints.length === 0) {
-    const conventionalCandidates = ["src/index.ts", "src/index.tsx", "index.ts", "index.tsx"];
+    const conventionalCandidates = [
+      "src/index.ts",
+      "src/index.tsx",
+      "src/index.js",
+      "src/index.jsx",
+      "index.ts",
+      "index.tsx",
+      "index.js",
+      "index.jsx",
+    ];
     for (const candidate of conventionalCandidates) {
       const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, candidate);
       if (!resolved) continue;

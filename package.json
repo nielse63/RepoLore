@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "discover": "tsx scripts/discover-fixture.ts",
-    "extract": "tsx scripts/extract-fixture.ts"
+    "extract": "tsx scripts/extract-fixture.ts",
+    "derive": "tsx scripts/derive-fixture.ts"
   },
   "dependencies": {
     "next": "16.2.11",

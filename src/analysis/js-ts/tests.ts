@@ -3,6 +3,13 @@
  * import of its subject (detected); fall back to filename convention
  * (`foo.test.ts` / `foo.spec.ts` -> `foo.ts`) when no such import exists
  * (inferred).
+ *
+ * A file also counts as a test file when it lives under a top-level `test/`
+ * or `tests/` directory (mocha/tape/ava-style layouts, e.g. `test/foo.js`,
+ * as opposed to Jest's `foo.test.js` co-located convention) — validated
+ * against a real repository (`sindresorhus/globby`) in implementation
+ * session 6, where every test lived under `tests/` with no matching
+ * filename suffix.
  */
 
 import path from "node:path";
@@ -17,9 +24,12 @@ function toRelative(rootDir: string, absoluteFilePath: string): string {
 }
 
 export function isTestFile(relativeFilePath: string): boolean {
+  const segments = relativeFilePath.split("/");
   return (
     TEST_FILE_PATTERN.test(relativeFilePath) ||
-    relativeFilePath.split("/").includes("__tests__")
+    segments.includes("__tests__") ||
+    segments[0] === "test" ||
+    segments[0] === "tests"
   );
 }
 

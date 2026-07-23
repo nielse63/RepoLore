@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from local disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components against two hand-built fixtures — no derived views (Start Here, major areas), persistence, or UI reads from it yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from local disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components against two hand-built fixtures. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) are now computed from that extraction and rendered on a plain, unstyled page at `/fixtures/{name}` — no acquisition, persistence, or styling yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -37,6 +37,10 @@ No database, GitHub PAT, or hosting account is required yet — those are provis
 ```
 npm run discover -- fixtures/ts-react-app   # source file discovery + exclusion rules
 npm run extract -- fixtures/ts-react-app    # full JS/TS project extraction
+npm run derive -- fixtures/ts-react-app     # Start Here + major-area derived views
 npm run discover -- fixtures/ts-library
 npm run extract -- fixtures/ts-library
+npm run derive -- fixtures/ts-library
 ```
+
+With `npm run dev` running, the same derived views render on a plain, unstyled page at `/fixtures/ts-react-app` and `/fixtures/ts-library` (index at `/fixtures`).
