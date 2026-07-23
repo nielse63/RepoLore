@@ -6,24 +6,24 @@
  * to parse `.ts`/`.tsx`/`.js`/`.jsx` ASTs.
  */
 
-import path from "node:path";
-import { Project, ScriptTarget, ts, type SourceFile } from "ts-morph";
+import path from 'node:path';
+import { Project, ScriptTarget, ts, type SourceFile } from 'ts-morph';
 
 /**
  * Directory names excluded from source discovery regardless of depth:
  * dependency, build/output, and version-control directories.
  */
 export const EXCLUDED_DIRECTORY_NAMES = new Set([
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  "coverage",
-  ".git",
+  'node_modules',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  'coverage',
+  '.git',
 ]);
 
-const SOURCE_GLOB_EXTENSIONS = "{ts,tsx,js,jsx}";
+const SOURCE_GLOB_EXTENSIONS = '{ts,tsx,js,jsx}';
 
 /** True if any path segment is an excluded directory name. */
 export function isExcludedPath(relativePath: string): boolean {
@@ -54,12 +54,12 @@ export function discoverSourceFiles(rootDir: string): DiscoveredProject {
   });
 
   const absoluteRoot = path.resolve(rootDir);
-  const toPosix = (p: string) => p.split(path.sep).join("/");
+  const toPosix = (p: string) => p.split(path.sep).join('/');
 
   project.addSourceFilesAtPaths([
     toPosix(path.join(absoluteRoot, `**/*.${SOURCE_GLOB_EXTENSIONS}`)),
     ...[...EXCLUDED_DIRECTORY_NAMES].map(
-      (dir) => `!${toPosix(path.join(absoluteRoot, "**", dir, "**"))}`,
+      (dir) => `!${toPosix(path.join(absoluteRoot, '**', dir, '**'))}`
     ),
   ]);
 

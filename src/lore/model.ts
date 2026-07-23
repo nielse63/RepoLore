@@ -5,17 +5,14 @@
  * to any one extractor.
  */
 
-export type Language = "typescript" | "javascript" | "python";
+export type Language = 'typescript' | 'javascript' | 'python';
 
 /**
  * The four certainty categories every important conclusion must expose
  * (docs/MODEL_OUTPUT.md, "Evidence and Gaps"). No numeric confidence scores.
  */
 export type CertaintyCategory =
-  | "detected"
-  | "inferred"
-  | "unknown"
-  | "unsupported";
+  'detected' | 'inferred' | 'unknown' | 'unsupported';
 
 export type EntityId = string;
 
@@ -46,7 +43,7 @@ export interface Evidence {
 
 /** An unknown, unsupported construct, or other material analysis limitation. */
 export interface Gap {
-  certainty: Extract<CertaintyCategory, "unknown" | "unsupported">;
+  certainty: Extract<CertaintyCategory, 'unknown' | 'unsupported'>;
   description: string;
   location?: SourceLocation;
   /** IDs of model entities this gap limits the interpretation of, if any. */
@@ -69,14 +66,14 @@ export interface AnalysisSnapshot {
   commitSha: string;
   analyzedAt: string;
   analyzerVersion: string;
-  status: "completed" | "partial" | "failed";
+  status: 'completed' | 'partial' | 'failed';
 }
 
 /** A detected application, package, or library within the repository. */
 export interface Project {
   id: EntityId;
   name: string;
-  kind: "application" | "library" | "package" | "unknown";
+  kind: 'application' | 'library' | 'package' | 'unknown';
   languages: Language[];
   /** Repo-root-relative path to the project's root. */
   rootPath: string;
@@ -106,13 +103,13 @@ export interface StructuralArea {
 }
 
 export type EntryPointKind =
-  | "runtime"
-  | "bootstrap"
-  | "library"
-  | "public-export"
-  | "cli"
-  | "framework"
-  | "test";
+  | 'runtime'
+  | 'bootstrap'
+  | 'library'
+  | 'public-export'
+  | 'cli'
+  | 'framework'
+  | 'test';
 
 /** A probable start of execution or exposed public surface. */
 export interface EntryPoint {
@@ -126,10 +123,7 @@ export interface EntryPoint {
 }
 
 export type RelationshipKind =
-  | "depends-on"
-  | "depended-on-by"
-  | "exports-to"
-  | "cross-language";
+  'depends-on' | 'depended-on-by' | 'exports-to' | 'cross-language';
 
 /** A directed, evidence-backed connection between model entities (projects, areas, entry points, contracts). */
 export interface Relationship {
@@ -146,7 +140,7 @@ export interface PublicContract {
   id: EntityId;
   areaId: EntityId;
   name: string;
-  kind: "export" | "cli-command" | "api-route" | "other";
+  kind: 'export' | 'cli-command' | 'api-route' | 'other';
   location: SourceLocation;
   evidence: Evidence[];
 }
@@ -220,9 +214,7 @@ export interface MinimumValueContract {
  * but cannot create a useful reading path, it has not satisfied the product
  * promise.").
  */
-export function evaluateMinimumValueContract(
-  lore: Lore,
-): MinimumValueContract {
+export function evaluateMinimumValueContract(lore: Lore): MinimumValueContract {
   const hasMeaningfulStartHere =
     lore.startHere.length >= START_HERE_MIN_ITEMS &&
     lore.startHere.length <= START_HERE_MAX_ITEMS &&

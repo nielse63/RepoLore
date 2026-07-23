@@ -4,28 +4,28 @@
  * `export { add } from "./math"`), using ts-morph's declaration resolution.
  */
 
-import path from "node:path";
-import type { SourceFile } from "ts-morph";
-import type { EntryPoint, PublicContract } from "@/lore/model";
+import path from 'node:path';
+import type { SourceFile } from 'ts-morph';
+import type { EntryPoint, PublicContract } from '@/lore/model';
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
-  return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
+  return path.relative(rootDir, absoluteFilePath).split(path.sep).join('/');
 }
 
-const SURFACE_ENTRY_KINDS: ReadonlyArray<EntryPoint["kind"]> = [
-  "library",
-  "runtime",
-  "public-export",
+const SURFACE_ENTRY_KINDS: ReadonlyArray<EntryPoint['kind']> = [
+  'library',
+  'runtime',
+  'public-export',
 ];
 
 export function extractPublicSurface(
   entryPoints: EntryPoint[],
   sourceFiles: SourceFile[],
-  rootDir: string,
+  rootDir: string
 ): PublicContract[] {
   const contracts: PublicContract[] = [];
   const byRelativePath = new Map(
-    sourceFiles.map((sf) => [toRelative(rootDir, sf.getFilePath()), sf]),
+    sourceFiles.map((sf) => [toRelative(rootDir, sf.getFilePath()), sf])
   );
 
   for (const entryPoint of entryPoints) {
@@ -44,12 +44,12 @@ export function extractPublicSurface(
         id: `js-ts-public-${entryPoint.location.filePath}-${name}`,
         areaId: entryPoint.location.filePath,
         name,
-        kind: "export",
+        kind: 'export',
         location: { filePath: entryPoint.location.filePath, symbolName: name },
         evidence: [
           {
-            kind: "export-declaration",
-            certainty: "detected",
+            kind: 'export-declaration',
+            certainty: 'detected',
             location: { filePath: declaredIn, symbolName: name },
             description:
               declaredIn === entryPoint.location.filePath
