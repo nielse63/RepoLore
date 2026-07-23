@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components — validated against local fixtures and four real public repositories. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) render on a plain, unstyled page at `/fixtures/{name}`. The home page (`/`) accepts a pasted GitHub repository URL, validates/normalizes it, and resolves its default branch and HEAD commit SHA via the GitHub API (`src/github/`), requiring a `GITHUB_TOKEN`. Source acquisition (`src/acquisition/`) can now fetch a repository's tarball at that commit and safely extract it into a temp directory — enforcing hard caps on download size, extracted size, and file count, rejecting unsafe tar entries (symlinks, path traversal) — and the JS/TS analyzer runs unmodified against that fetched directory (`npm run analyze-repo`). No persistence or `/lore/{owner}/{repo}` page yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components — validated against local fixtures and four real public repositories. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) render on a plain, unstyled page at `/fixtures/{name}`. The home page (`/`) accepts a pasted GitHub repository URL, validates/normalizes it, and resolves its default branch and HEAD commit SHA via the GitHub API (`src/github/`), requiring a `GITHUB_TOKEN`. Source acquisition (`src/acquisition/`) can now fetch a repository's tarball at that commit and safely extract it into a temp directory — enforcing hard caps on download size, extracted size, and file count, rejecting unsafe tar entries (symlinks, path traversal) — and the JS/TS analyzer runs unmodified against that fetched directory (`npm run analyze-repo`). The Postgres schema (`src/db/migrations/`) for `repos` and `analysis_runs` exists and is migrated via `npm run migrate`, but nothing writes to it yet — no persistence or `/lore/{owner}/{repo}` page. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -35,7 +35,12 @@ cp .env.example .env.local
 # fill in GITHUB_TOKEN in .env.local
 ```
 
-No database or hosting account is required yet — those are provisioned in the sessions that first need them (see `docs/architecture/implementation-plan.md`).
+A local Postgres database is required for the DB schema/migrations (`src/db/`); a managed hosting account is not needed yet (see `docs/architecture/implementation-plan.md`):
+
+```
+docker compose up -d db   # starts local Postgres (see docker-compose.yml)
+npm run migrate           # applies src/db/migrations/
+```
 
 ## Fixtures
 
@@ -61,3 +66,7 @@ npm run analyze-repo -- https://github.com/sindresorhus/globby
 ```
 
 This resolves the repository's default branch and HEAD commit, downloads and safely extracts its tarball into a temp directory (`src/acquisition/`), runs the same JS/TS extraction and derived-view logic used for local fixtures against it, prints Start Here / major areas / entry points / gaps, and always cleans up the temp directory afterward. Requires `GITHUB_TOKEN`.
+
+## Database
+
+`repos` and `analysis_runs` (ADR-0004, ADR-0005) are plain hand-written SQL files under `src/db/migrations/`, applied in filename order by `npm run migrate` (`scripts/migrate.ts`), which tracks what's already applied in a `schema_migrations` table — no migration framework yet, since a couple of tables don't justify one. `analysis_runs` is keyed by `(repo_id, commit_sha, analyzer_version)` (ADR-0005) and stores the full serialized `Lore` (`src/lore/model.ts`) as `result jsonb` on success, or `error_message` on failure; `status` matches `AnalysisSnapshot['status']` (`completed`/`partial`/`failed`) exactly. Requires `DATABASE_URL` (see .env.example); `docker compose up -d db` runs a matching local Postgres.

@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: repolore
+      POSTGRES_PASSWORD: repolore
+      POSTGRES_DB: repolore
+    ports:
+      - '5432:5432'
+    volumes:
+      - repolore-db-data:/var/lib/postgresql/data
+
+volumes:
+  repolore-db-data:

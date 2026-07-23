@@ -56,7 +56,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
   - https://github.com/Adedoyin-Emmanuel/react-weather-app
 - [x] 7. GitHub URL input, validation/normalization, GitHub API client (default branch + HEAD SHA) — first use of a GitHub PAT.
 - [x] 8. Tarball fetch + safe extraction (size/file-count/time limits, path sanitization) into temp dir, with cleanup; swap the JS/TS analyzer's input from local fixtures to a fetched repo.
-- [ ] 9. DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
+- [x] 9. DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
 - [ ] 10. Persist `analysis_run`, idempotent on `(owner, repo, commit_sha, analyzer_version)`; render `/lore/{owner}/{repo}` from persisted JS/TS results with evidence links and certainty labels.
 - [ ] 11. Manual re-analysis action (rate-limited) + honest unsupported/failed states.
 - [ ] 12. Write an ADR for the Python analysis approach (library and syntactic-vs-typed tradeoff, mirroring ADR-0003), then build the Python extractor against the same shared Lore-model contract: `fixtures/python-app`, `fixtures/python-library`, imports/packages, `pyproject.toml`/`setup.py`/`setup.cfg`, console-script and conventional entry points, `pytest`/`unittest` test relationships.
@@ -240,3 +240,22 @@ Verified manually (no test suite yet — session 15):
 `npx tsc --noEmit`, `npm run lint`, `npm run build`, and `prettier --check` all pass clean.
 
 **Next smallest task:** Session 9 — DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
+
+### 2026-07-23 — Session 9 complete: DB schema + migrations (Postgres)
+
+**Decision:** the plan left the engine choice open ("local Postgres or SQLite is enough"). Chose local Postgres over SQLite: production (ADR-0004, ADR-0005) is written assuming Postgres — `analysis_jobs`' future `SELECT ... FOR UPDATE SKIP LOCKED` claim and `analysis_runs.result` as JSONB both assume it — so building the real schema now avoids a dialect rewrite at deploy time (session 17), a more costly reversal than the extra local setup step. Docker was available, so the setup cost is one `docker compose up -d db`.
+
+Added:
+
+- `docker-compose.yml` — a single `db` (`postgres:17-alpine`) service with a named volume, credentials matching `.env.example`'s `DATABASE_URL`.
+- `src/db/migrations/0001_init.sql` — hand-written SQL, not a migration framework (node-pg-migrate/Prisma/Drizzle): two tables don't yet justify one, and this is a reversible, low-dependency choice consistent with the project's existing scripts-over-frameworks pattern. `repos (id, owner, name, created_at)`, unique on `(owner, name)`. `analysis_runs (id, repo_id, commit_sha, analyzer_version, status, result jsonb, error_message, created_at)`, unique on `(repo_id, commit_sha, analyzer_version)` — ADR-0005's idempotency key, enforced by the database itself, not just application logic. `result` stores the full serialized `Lore` (`src/lore/model.ts`) rather than normalizing every nested entity (structural areas, relationships, evidence, ...) into its own table: an MVP that renders one immutable, read-mostly document per run doesn't need that relational complexity yet, and it's a reversible decision — materialized columns/indexes on `jsonb` paths can be added later without changing the key. `status` intentionally matches `AnalysisSnapshot['status']` (`completed`/`partial`/`failed`, session 2) exactly rather than ADR-0004's older "queued/running/done/failed" language: since analysis runs synchronously and in-process, a row is only ever inserted once a result or failure already exists, so no persisted "running" state is needed yet — that gap is reopened only if session 16's async dispatch needs one. A partial index on `(repo_id, created_at DESC) WHERE status IN ('completed','partial')` supports acceptance criterion 10's "render the latest completed run" lookup directly.
+- `src/db/client.ts` — `getDbPool()`, a lazily-created singleton `pg.Pool` reading `DATABASE_URL`, shared by the migration runner now and application persistence code from session 10 on.
+- `scripts/migrate.ts` (`npm run migrate`) — applies pending `.sql` files in filename order inside a transaction each, tracking applied filenames in a `schema_migrations` table; re-running is a no-op.
+- `package.json` — `db:up`/`db:down` (`docker compose up -d db` / `down`), `migrate`; added `pg` + `@types/pg`.
+- `.env.example`/`.env.local` — added `DATABASE_URL`.
+
+This session is schema/migrations only, per its scope — no application code reads or writes these tables yet (session 10).
+
+Verified manually (no test suite yet — session 15): started the local Postgres container, ran `npm run migrate` (applied `0001_init.sql`; confirmed re-running is a no-op), then exercised the constraints directly against the running database — duplicate `(owner, name)` rejected, duplicate `(repo_id, commit_sha, analyzer_version)` rejected (ADR-0005 idempotency), an invalid `status` value rejected by the check constraint, a `failed` run with `result = NULL` and an `error_message` insert succeeded, `EXPLAIN` confirmed the partial index is used for the latest-active-run query shape, and deleting a `repos` row cascade-deleted its `analysis_runs`. Reset both tables to empty afterward. `npx tsc --noEmit`, `npm run lint`, and `prettier --check` all pass clean.
+
+**Next smallest task:** Session 10 — persist `analysis_run`, idempotent on `(owner, repo, commit_sha, analyzer_version)`; render `/lore/{owner}/{repo}` from persisted JS/TS results with evidence links and certainty labels.
