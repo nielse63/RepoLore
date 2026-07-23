@@ -7,11 +7,16 @@
  * extract, derive views, and persist the result. Failures at every stage
  * are persisted as an honest `'failed'` run rather than left unrecorded, so
  * `/lore/{owner}/{repo}` always has something evidence-backed to render.
+ *
+ * Every call (the initial home-page submission and session 11's manual
+ * re-analyze action both go through this one function) is rate-limited per
+ * repo before anything else happens — see `claimReanalysisAttempt`.
  */
 
 import { acquireRepositorySource } from '@/acquisition/fetch-repo-source';
 import { deriveJsTsViews } from '@/analysis/js-ts/derive-views';
 import { extractJsTsProject } from '@/analysis/js-ts/extract-project';
+import { claimReanalysisAttempt } from '@/analysis/reanalysis-rate-limit';
 import { JS_TS_ANALYZER_VERSION } from '@/analysis/js-ts/version';
 import {
   getAnalysisRunByKey,
@@ -31,6 +36,7 @@ export async function analyzeAndPersistRepository(
   repo: string
 ): Promise<AnalysisRunRow> {
   const repoRow = await upsertRepo(owner, repo);
+  await claimReanalysisAttempt(repoRow.id);
 
   // Resolution failures (repo doesn't exist, bad token, ...) have no commit
   // to key a run on, so they're left to the caller rather than persisted.

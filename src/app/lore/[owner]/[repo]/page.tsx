@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getLatestAnalysisRunForRepo } from '@/db/analysis-runs';
 import { githubBlobUrl, githubTreeUrl } from '@/github/urls';
 import { LoreView } from '@/components/LoreView';
+import { ReanalyzeButton } from '@/components/ReanalyzeButton';
 
 /**
  * Renders the latest persisted analysis run for a repository (acceptance
@@ -30,6 +31,7 @@ export default async function LorePage({
           {run.analyzerVersion}, {new Date(run.createdAt).toLocaleString()}).
         </p>
         <p role="alert">{run.errorMessage ?? 'Unknown error.'}</p>
+        <ReanalyzeButton owner={owner} repo={repo} />
       </main>
     );
   }
@@ -44,6 +46,7 @@ export default async function LorePage({
       areaUrl={(location) =>
         githubTreeUrl(owner, repo, lore.snapshot.commitSha, location)
       }
+      actions={<ReanalyzeButton owner={owner} repo={repo} />}
     />
   );
 }

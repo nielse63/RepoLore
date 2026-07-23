@@ -1,0 +1,11 @@
+-- Session 11: the manual re-analyze action (acceptance criterion 11) needs to
+-- be rate-limited. ADR-0005's idempotency already skips the expensive
+-- tarball fetch/extraction when a repo's HEAD commit hasn't changed since its
+-- last analyzed commit+analyzer-version, but it still calls the GitHub API to
+-- resolve HEAD on every attempt — a scripted rapid re-analyze click could
+-- burn through the shared GitHub token's rate limit even when every call
+-- short-circuits before touching the tarball. Tracked per-repo, independent
+-- of whether an attempt actually produced a new analysis_runs row (a
+-- resolution failure or a short-circuited no-op is still an attempt worth
+-- throttling).
+ALTER TABLE repos ADD COLUMN last_analysis_requested_at timestamptz;

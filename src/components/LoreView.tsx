@@ -37,12 +37,15 @@ export interface LoreViewProps {
   sourceUrl?: (location: SourceLocation) => string;
   /** Builds a GitHub tree (directory) URL for a structural area's location. Defaults to `sourceUrl` if omitted. */
   areaUrl?: (location: SourceLocation) => string;
+  /** Rendered next to analysis metadata, e.g. the real page's re-analyze button. Omitted for `/fixtures`, which have no real repository to re-analyze. */
+  actions?: React.ReactNode;
 }
 
 export function LoreView({
   lore,
   sourceUrl,
   areaUrl = sourceUrl,
+  actions,
 }: LoreViewProps) {
   const { snapshot } = lore;
   const project = lore.projects[0];
@@ -75,6 +78,7 @@ export function LoreView({
           <li>Analyzed: {new Date(snapshot.analyzedAt).toLocaleString()}</li>
           <li>Analyzer version: {snapshot.analyzerVersion}</li>
         </ul>
+        {actions}
       </section>
 
       {project && (

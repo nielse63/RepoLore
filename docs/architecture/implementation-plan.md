@@ -58,7 +58,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 - [x] 8. Tarball fetch + safe extraction (size/file-count/time limits, path sanitization) into temp dir, with cleanup; swap the JS/TS analyzer's input from local fixtures to a fetched repo.
 - [x] 9. DB schema + migrations: `repos`, `analysis_runs` (local Postgres or SQLite is enough; managed provider not needed yet).
 - [x] 10. Persist `analysis_run`, idempotent on `(owner, repo, commit_sha, analyzer_version)`; render `/lore/{owner}/{repo}` from persisted JS/TS results with evidence links and certainty labels.
-- [ ] 11. Manual re-analysis action (rate-limited) + honest unsupported/failed states.
+- [x] 11. Manual re-analysis action (rate-limited) + honest unsupported/failed states.
 - [ ] 12. Write an ADR for the Python analysis approach (library and syntactic-vs-typed tradeoff, mirroring ADR-0003), then build the Python extractor against the same shared Lore-model contract: `fixtures/python-app`, `fixtures/python-library`, imports/packages, `pyproject.toml`/`setup.py`/`setup.cfg`, console-script and conventional entry points, `pytest`/`unittest` test relationships.
 - [ ] 13. Validate Python Start Here and major-area output against the same usefulness threshold as JS/TS, using local fixtures and 1–2 pinned real public Python repos.
 - [ ] 14. Build `fixtures/mixed-language` and confirm the repository-level model presents JS/TS and Python projects together without inventing unevidenced cross-language relationships.
@@ -288,3 +288,24 @@ Verified manually end to end (no test suite yet — session 15) with the local P
 Reset both tables to empty afterward. `npx tsc --noEmit`, `npm run lint`, `npm run build` (including static generation of both fixture routes), and `prettier --check` all pass clean.
 
 **Next smallest task:** Session 11 — manual re-analysis action (rate-limited) + honest unsupported/failed states. The failed-run rendering path already exists (this session); session 11's job is the rate-limited manual trigger and any UI for it.
+
+### 2026-07-23 — Session 11 complete: rate-limited manual re-analysis action
+
+Added the pieces for acceptance criterion 11. The failed-run rendering path (session 10) already covered the "honest failed state" half of this session's checklist item; true "unsupported project type" detection remains correctly out of scope until Python analysis exists (session 12+) to know what "unsupported" actually means — a repo with zero JS/TS files today already renders honestly as `partial` with empty sections (no fabrication), just not yet labeled "unsupported" specifically.
+
+- `src/db/migrations/0003_repos_reanalysis_rate_limit.sql` — adds `repos.last_analysis_requested_at`.
+- `src/analysis/reanalysis-rate-limit.ts` — `claimReanalysisAttempt(repoId)`, a single atomic `UPDATE ... WHERE ... RETURNING` claim (`REANALYSIS_COOLDOWN_SECONDS = 60`, a disclosed/tunable default matching the precedent set by session 8's `DEFAULT_EXTRACTION_LIMITS`) throwing a typed `RateLimitedError` (with `retryAfterSeconds`) if claimed too recently. Gates the attempt _before_ `resolveRepositoryHead`'s GitHub API calls, not just the tarball fetch/extraction ADR-0005's idempotency already skips at an unchanged commit — a scripted rapid click could otherwise burn the shared token's rate limit even when every call short-circuits before touching the tarball.
+- `src/analysis/analyze-and-persist.ts` — `analyzeAndPersistRepository` now calls `claimReanalysisAttempt` right after `upsertRepo`, so both the home-page submission and this session's new re-analyze action share one rate-limited choke point rather than two divergent implementations.
+- `src/app/actions.ts` — added `reanalyzeRepository(owner, repo, prevState, formData)`, a Server Action bound to `owner`/`repo` via `.bind()` (the button has no form fields to carry them). Compares the latest run's id before and after the call to report honestly whether a new commit was actually found and analyzed, or the attempt short-circuited on an unchanged commit — a plain "done" could otherwise look like a no-op silently succeeded. `resolveRepository` also now catches `RateLimitedError` alongside `GitHubApiError`.
+- `src/components/ReanalyzeButton.tsx` (client) — the button itself, via `useActionState`, matching the home page's existing pending/error-state pattern.
+- `src/components/LoreView.tsx` — added an optional `actions` prop, rendered next to the analysis-metadata list, so the real `/lore/{owner}/{repo}` page can inject the re-analyze button without `/fixtures/{name}` (which has no real repository to re-analyze) needing to know about it.
+- `src/app/lore/[owner]/[repo]/page.tsx` — renders `<ReanalyzeButton>` in both the failed-run branch and the normal `LoreView` branch, via the new `actions` prop.
+
+Verified manually (no test suite yet — session 15), with the local Postgres container and dev server running:
+
+- `claimReanalysisAttempt` exercised directly: a first claim on a repo with a `NULL` timestamp succeeds; an immediate second claim throws `RateLimitedError` with `retryAfterSeconds` in `(0, 60]`; after manually backdating the timestamp past the cooldown, a claim succeeds again.
+- `analyzeAndPersistRepository` exercised directly against the already-analyzed `pieces-app/example-typescript` (unchanged commit): the first call returned the same run id as the existing latest run (honest no-op, no redundant tarball fetch), and an immediate second call threw `RateLimitedError`.
+- Confirmed via `curl` that the "Re-analyze" button renders on both a `completed` run's page (`pieces-app/example-typescript`) and a `failed` run's page (`react/react`).
+- `npx tsc --noEmit`, `npm run lint`, `npm run build` (including static generation of both fixture routes), and `prettier --check` all pass clean.
+
+**Next smallest task:** Session 12 — write an ADR for the Python analysis approach (library and syntactic-vs-typed tradeoff, mirroring ADR-0003), then build the Python extractor against the same shared Lore-model contract.

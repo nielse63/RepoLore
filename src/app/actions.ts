@@ -1,7 +1,10 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { analyzeAndPersistRepository } from '@/analysis/analyze-and-persist';
+import { RateLimitedError } from '@/analysis/reanalysis-rate-limit';
+import { getLatestAnalysisRunForRepo } from '@/db/analysis-runs';
 import { GitHubApiError } from '@/github/client';
 import { parseGitHubRepoUrl } from '@/github/parse-repo-url';
 
@@ -30,7 +33,7 @@ export async function resolveRepository(
   try {
     await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
-    if (error instanceof GitHubApiError) {
+    if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
       return { status: 'error', message: error.message };
     }
     return {
@@ -40,4 +43,46 @@ export async function resolveRepository(
   }
 
   redirect(`/lore/${owner}/${repo}`);
+}
+
+export type ReanalyzeState =
+  | { status: 'idle' }
+  | { status: 'done'; changed: boolean }
+  | { status: 'error'; message: string };
+
+/**
+ * Server Action backing the "Re-analyze" button on `/lore/{owner}/{repo}`
+ * (acceptance criterion 11, session 11). Bound to `owner`/`repo` via
+ * `.bind()` since the button isn't a plain form with those as field values.
+ * Reports honestly whether the re-run actually produced a new analysis or
+ * short-circuited on an unchanged commit (ADR-0005), rather than a generic
+ * "done" that could look like a no-op silently succeeded.
+ */
+// Required by useActionState's action signature; owner/repo (bound ahead of
+// these two) are what this action actually needs.
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export async function reanalyzeRepository(
+  owner: string,
+  repo: string,
+  _prevState: ReanalyzeState,
+  _formData: FormData
+): Promise<ReanalyzeState> {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  const previousRun = await getLatestAnalysisRunForRepo(owner, repo);
+
+  let run;
+  try {
+    run = await analyzeAndPersistRepository(owner, repo);
+  } catch (error) {
+    if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
+      return { status: 'error', message: error.message };
+    }
+    return {
+      status: 'error',
+      message: 'Something went wrong re-analyzing that repository.',
+    };
+  }
+
+  revalidatePath(`/lore/${owner}/${repo}`);
+  return { status: 'done', changed: run.id !== previousRun?.id };
 }
