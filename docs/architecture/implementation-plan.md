@@ -45,7 +45,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
 ## Sessions (~60–120 min each)
 
 - [x] 1. Scaffold Next.js + TypeScript app, lint/format config, minimal local env config, liveness-only health-check route (no DB, no PAT, no hosting decisions).
-- [ ] 2. Define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
+- [x] 2. Define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
 - [ ] 3. Build the two JS/TS local fixture repos; get ts-morph reading a fixture directly from local disk, with source file discovery + exclusion rules.
 - [ ] 4. ts-morph project model extraction against local fixtures: imports/exports, internal dependency edges, entry-point heuristics, public surface, test relationships, React component detection.
 - [ ] 5. Derived views against JS/TS fixtures: Start Here (with rationale, evidence, and certainty per item), major areas, entry points, direct relationships — rendered on a plain unstyled page. This is the session that proves or disproves the core "wow moment" for JS/TS.
@@ -90,3 +90,11 @@ Scaffolded via `create-next-app` (App Router, TypeScript, ESLint, no Tailwind, `
 **Next smallest task:** Session 2 — define the shared, language-neutral Lore model (Repository, AnalysisSnapshot, Project, SourceLocation, StructuralArea, EntryPoint, Relationship, PublicContract, TestRelationship, Recommendation, Evidence, Gap) and the minimum value contract as code-level types, independent of any language extractor.
 
 **Unresolved decisions (deferred on purpose, not blocking):** exact hosting provider (Fly.io vs. Railway) and managed Postgres provider (Neon vs. Railway Postgres) — deferred to session 17 (deploy); Python analysis library/approach — deferred to session 12's ADR.
+
+### 2026-07-23 — Session 2 complete: shared Lore model
+
+Added `src/lore/model.ts` with the full shared, language-neutral domain model described in `docs/MODEL_OUTPUT.md` ("Shared Lore Domain Model"): `Repository`, `AnalysisSnapshot`, `Project`, `SourceLocation`, `StructuralArea`, `EntryPoint`, `Relationship`, `PublicContract`, `TestRelationship`, `Recommendation`, `Finding`, `Evidence`, `Gap`, plus the aggregate `Lore` type and a shared `CertaintyCategory` (`detected`/`inferred`/`unknown`/`unsupported`). No extractor, persistence, or UI code depends on these types yet — they exist independent of any language extractor, per the session scope.
+
+Also encoded the MVP's minimum value contract (`docs/product/mvp.md`, "Minimum Value Contract") as a `MinimumValueContract` type plus `evaluateMinimumValueContract(lore)`, which checks repository orientation, a Start Here path of 3–7 items each with evidence, a major-area model, entry points, direct relationships, and traceable evidence (every piece of evidence has a source location). This gives session 15 (automated tests) and session 13 (Python validation against the same threshold) a concrete, checkable contract rather than only a documented one. `npx tsc --noEmit` and `npm run lint` both pass clean.
+
+**Next smallest task:** Session 3 — build the two JS/TS local fixture repos (`fixtures/ts-react-app/`, `fixtures/ts-library/`); get ts-morph reading a fixture directly from local disk, with source file discovery and exclusion rules (`node_modules`, build/dist output).

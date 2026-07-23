@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Pre-implementation. This repository currently contains the product and architecture foundation only (see `docs/`); no application code exists yet. See `docs/architecture/implementation-plan.md` for the next steps and current progress.
+Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, and the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined — no language extractor, persistence, or UI reads from it yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -20,4 +20,12 @@ See `docs/product/mvp.md` for the full MVP specification, `docs/product/mission.
 
 ## Local development
 
-Not yet available — the application has not been scaffolded. This section will be filled in during implementation session 1 (see `docs/architecture/implementation-plan.md`).
+```
+npm install
+npm run dev    # start the dev server (serves /api/health as a liveness-only check, no DB)
+npm run build  # production build
+npm run start  # run the production build
+npm run lint   # ESLint
+```
+
+No database, GitHub PAT, or hosting account is required yet — those are provisioned in the sessions that first need them (see `docs/architecture/implementation-plan.md`).
