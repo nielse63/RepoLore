@@ -9,8 +9,8 @@
  * in `./derive-views`.
  */
 
-import fs from "node:fs";
-import path from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
 import type {
   EntryPoint,
   Evidence,
@@ -19,16 +19,16 @@ import type {
   PublicContract,
   Relationship,
   TestRelationship,
-} from "@/lore/model";
-import { discoverSourceFiles } from "./discovery";
-import { extractEntryPoints } from "./entry-points";
-import { extractImportRelationships } from "./imports";
-import { extractPublicSurface } from "./public-surface";
+} from '@/lore/model';
+import { discoverSourceFiles } from './discovery';
+import { extractEntryPoints } from './entry-points';
+import { extractImportRelationships } from './imports';
+import { extractPublicSurface } from './public-surface';
 import {
   detectReactComponents,
   type DetectedReactComponent,
-} from "./react-components";
-import { extractTestRelationships } from "./tests";
+} from './react-components';
+import { extractTestRelationships } from './tests';
 
 export interface JsTsExtraction {
   project: LoreProject;
@@ -42,21 +42,23 @@ export interface JsTsExtraction {
 }
 
 function readPackageName(rootDir: string): string | undefined {
-  const pkgPath = path.join(rootDir, "package.json");
+  const pkgPath = path.join(rootDir, 'package.json');
   if (!fs.existsSync(pkgPath)) return undefined;
   try {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as { name?: string };
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as {
+      name?: string;
+    };
     return pkg.name;
   } catch {
     return undefined;
   }
 }
 
-function detectLanguages(sourceFilePaths: string[]): LoreProject["languages"] {
-  const languages = new Set<LoreProject["languages"][number]>();
+function detectLanguages(sourceFilePaths: string[]): LoreProject['languages'] {
+  const languages = new Set<LoreProject['languages'][number]>();
   for (const filePath of sourceFilePaths) {
-    if (/\.tsx?$/.test(filePath)) languages.add("typescript");
-    else if (/\.jsx?$/.test(filePath)) languages.add("javascript");
+    if (/\.tsx?$/.test(filePath)) languages.add('typescript');
+    else if (/\.jsx?$/.test(filePath)) languages.add('javascript');
   }
   return [...languages];
 }
@@ -67,50 +69,59 @@ function detectLanguages(sourceFilePaths: string[]): LoreProject["languages"] {
  * manifest field with no bootstrap implies a library. Anything else is
  * left unknown rather than guessed.
  */
-function inferProjectKind(
-  entryPoints: EntryPoint[],
-): { kind: LoreProject["kind"]; evidence?: Evidence } {
+function inferProjectKind(entryPoints: EntryPoint[]): {
+  kind: LoreProject['kind'];
+  evidence?: Evidence;
+} {
   const hasApplicationEntry = entryPoints.some(
-    (ep) => ep.kind === "bootstrap" || ep.kind === "cli",
+    (ep) => ep.kind === 'bootstrap' || ep.kind === 'cli'
   );
   if (hasApplicationEntry) {
     return {
-      kind: "application",
+      kind: 'application',
       evidence: {
-        kind: "entry-point-shape",
-        certainty: "inferred",
-        description: "A runtime bootstrap or CLI entry point was detected.",
+        kind: 'entry-point-shape',
+        certainty: 'inferred',
+        description: 'A runtime bootstrap or CLI entry point was detected.',
       },
     };
   }
 
-  const hasLibraryEntry = entryPoints.some((ep) => ep.kind === "library");
+  const hasLibraryEntry = entryPoints.some((ep) => ep.kind === 'library');
   if (hasLibraryEntry) {
     return {
-      kind: "library",
+      kind: 'library',
       evidence: {
-        kind: "entry-point-shape",
-        certainty: "inferred",
-        description: "A package.json library entry field (main/module) was declared, with no runtime bootstrap detected.",
+        kind: 'entry-point-shape',
+        certainty: 'inferred',
+        description:
+          'A package.json library entry field (main/module) was declared, with no runtime bootstrap detected.',
       },
     };
   }
 
-  return { kind: "unknown" };
+  return { kind: 'unknown' };
 }
 
-export function extractJsTsProject(rootDir: string, projectId = "."): JsTsExtraction {
+export function extractJsTsProject(
+  rootDir: string,
+  projectId = '.'
+): JsTsExtraction {
   const absoluteRoot = path.resolve(rootDir);
   const { sourceFiles } = discoverSourceFiles(absoluteRoot);
 
   const importResult = extractImportRelationships(sourceFiles, absoluteRoot);
   const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot);
-  const publicContracts = extractPublicSurface(entryPoints, sourceFiles, absoluteRoot);
+  const publicContracts = extractPublicSurface(
+    entryPoints,
+    sourceFiles,
+    absoluteRoot
+  );
   const testResult = extractTestRelationships(sourceFiles, absoluteRoot);
   const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
 
   const sourceFilePaths = sourceFiles.map((sf) =>
-    path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join("/"),
+    path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join('/')
   );
 
   const { kind, evidence: kindEvidence } = inferProjectKind(entryPoints);
@@ -118,10 +129,10 @@ export function extractJsTsProject(rootDir: string, projectId = "."): JsTsExtrac
   const projectEvidence: Evidence[] = [];
 
   if (reactComponents.length > 0) {
-    frameworks.push("react");
+    frameworks.push('react');
     projectEvidence.push({
-      kind: "react-component-detection",
-      certainty: "detected",
+      kind: 'react-component-detection',
+      certainty: 'detected',
       description: `Detected ${reactComponents.length} React component(s) via JSX-returning functions or class components extending Component.`,
     });
   }
@@ -132,7 +143,7 @@ export function extractJsTsProject(rootDir: string, projectId = "."): JsTsExtrac
     name: readPackageName(absoluteRoot) ?? path.basename(absoluteRoot),
     kind,
     languages: detectLanguages(sourceFilePaths),
-    rootPath: ".",
+    rootPath: '.',
     frameworks,
     evidence: projectEvidence,
     gaps: [],

@@ -30,10 +30,10 @@ import type {
   Relationship,
   StructuralArea,
   TestRelationship,
-} from "@/lore/model";
-import { START_HERE_MAX_ITEMS } from "@/lore/model";
-import type { DetectedReactComponent } from "./react-components";
-import { isTestFile } from "./tests";
+} from '@/lore/model';
+import { START_HERE_MAX_ITEMS } from '@/lore/model';
+import type { DetectedReactComponent } from './react-components';
+import { isTestFile } from './tests';
 
 export interface JsTsViewsInput {
   projectId: string;
@@ -51,7 +51,22 @@ export interface JsTsViews {
   startHere: Recommendation[];
 }
 
-const STARTING_ENTRY_KINDS: ReadonlyArray<EntryPoint["kind"]> = ["bootstrap", "cli"];
+const STARTING_ENTRY_KINDS: ReadonlyArray<EntryPoint['kind']> = [
+  'bootstrap',
+  'cli',
+];
+
+/**
+ * Area responsibilities that are real (evidence-backed) but not primary
+ * implementation — Start Here's area-padding step (step 3) skips these,
+ * since "where can behavior be observed" (tests) is step 4's job, and
+ * tooling configuration isn't a reading-path destination at all.
+ */
+const NON_PRIMARY_AREA_RESPONSIBILITIES = new Set([
+  'Tests',
+  'Test fixtures/support data',
+  'Build/tooling configuration',
+]);
 
 /**
  * Groups a file into an area one directory level under the project root,
@@ -59,9 +74,9 @@ const STARTING_ENTRY_KINDS: ReadonlyArray<EntryPoint["kind"]> = ["bootstrap", "c
  * "src". A file with no directory (at the project root) falls into ".".
  */
 function areaNameForFile(filePath: string): string {
-  const directorySegments = filePath.split("/").slice(0, -1);
-  if (directorySegments.length === 0) return ".";
-  return directorySegments.slice(0, 2).join("/");
+  const directorySegments = filePath.split('/').slice(0, -1);
+  if (directorySegments.length === 0) return '.';
+  return directorySegments.slice(0, 2).join('/');
 }
 
 function areaId(name: string): string {
@@ -76,28 +91,50 @@ function areaId(name: string): string {
  * implementation session 6, where `fixtures/` files (not under `test/` or
  * `tests/`) still crowded out real implementation areas in Start Here.
  */
-const TEST_SUPPORT_DIRECTORY_NAMES = new Set(["fixtures", "__fixtures__", "__mocks__"]);
+const TEST_SUPPORT_DIRECTORY_NAMES = new Set([
+  'fixtures',
+  '__fixtures__',
+  '__mocks__',
+]);
 
 function isTestSupportFile(relativeFilePath: string): boolean {
-  return TEST_SUPPORT_DIRECTORY_NAMES.has(relativeFilePath.split("/")[0]);
+  return TEST_SUPPORT_DIRECTORY_NAMES.has(relativeFilePath.split('/')[0]);
 }
 
-function describeEntryKind(kind: EntryPoint["kind"]): string {
+/**
+ * Root-level build/test-tool configuration files (e.g. `jest.config.js`) —
+ * a narrow, known-tool allowlist rather than a generic `*.config.*` pattern,
+ * since the latter would also match a repository's own application config
+ * modules (e.g. `src/platform.config.ts`, real, actively-imported source
+ * found in `pieces-app/example-typescript` in implementation session 6,
+ * which a generic pattern would have wrongly hidden from Start Here).
+ */
+const TOOLING_CONFIG_FILE_PATTERN =
+  /^(jest|webpack|babel|vite|vitest|rollup|next|tailwind|postcss|eslint|commitlint|cypress|playwright|karma|rspack|parcel|esbuild|tsup|turbo|metro)\.(config|setup)\.(js|cjs|mjs|ts|cts|mts)$/;
+
+function isToolingConfigFile(relativeFilePath: string): boolean {
+  return (
+    !relativeFilePath.includes('/') &&
+    TOOLING_CONFIG_FILE_PATTERN.test(relativeFilePath)
+  );
+}
+
+function describeEntryKind(kind: EntryPoint['kind']): string {
   switch (kind) {
-    case "bootstrap":
-      return "Application bootstrap entry point";
-    case "cli":
-      return "Command-line entry point";
-    case "runtime":
-      return "Conventional runtime entry point";
-    case "library":
+    case 'bootstrap':
+      return 'Application bootstrap entry point';
+    case 'cli':
+      return 'Command-line entry point';
+    case 'runtime':
+      return 'Conventional runtime entry point';
+    case 'library':
       return "Package's declared public entry point";
-    case "public-export":
-      return "Public export entry point";
-    case "framework":
-      return "Framework entry point";
-    case "test":
-      return "Test entry point";
+    case 'public-export':
+      return 'Public export entry point';
+    case 'framework':
+      return 'Framework entry point';
+    case 'test':
+      return 'Test entry point';
   }
 }
 
@@ -123,61 +160,75 @@ function buildStructuralAreas(input: JsTsViewsInput): StructuralArea[] {
     filesByAreaName.set(name, files);
   }
 
-  const reactComponentFiles = new Set(reactComponents.map((c) => c.location.filePath));
+  const reactComponentFiles = new Set(
+    reactComponents.map((c) => c.location.filePath)
+  );
 
   const areas: StructuralArea[] = [...filesByAreaName.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, unsortedFiles]) => {
       const files = [...unsortedFiles].sort();
-      const isAllReactComponents = files.every((f) => reactComponentFiles.has(f));
+      const isAllReactComponents = files.every((f) =>
+        reactComponentFiles.has(f)
+      );
       const isAllTestFiles = files.every((f) => isTestFile(f));
-      const isAllTestSupportFiles = !isAllTestFiles && files.every((f) => isTestSupportFile(f));
+      const isAllTestSupportFiles =
+        !isAllTestFiles && files.every((f) => isTestSupportFile(f));
+      const isAllToolingConfig = files.every((f) => isToolingConfigFile(f));
 
       const areaEntryPoints = entryPoints.filter(
-        (ep) => areaNameByFile.get(ep.location.filePath) === name,
+        (ep) => areaNameByFile.get(ep.location.filePath) === name
       );
       const areaContracts = publicContracts.filter(
-        (pc) => areaNameByFile.get(pc.location.filePath) === name,
+        (pc) => areaNameByFile.get(pc.location.filePath) === name
       );
       const areaTests = testRelationships.filter(
         (tr) =>
           areaNameByFile.get(tr.testLocation.filePath) === name ||
-          areaNameByFile.get(tr.implementationLocation.filePath) === name,
+          areaNameByFile.get(tr.implementationLocation.filePath) === name
       );
       const areaGaps = gaps.filter(
-        (g) => g.location && areaNameByFile.get(g.location.filePath) === name,
+        (g) => g.location && areaNameByFile.get(g.location.filePath) === name
       );
 
       const evidence: Evidence[] = [
         {
-          kind: "source-directory-grouping",
-          certainty: "inferred",
+          kind: 'source-directory-grouping',
+          certainty: 'inferred',
           location: { filePath: name },
           description: `${files.length} source file(s) discovered under '${name}', grouped as a conservative structural fallback since no declared workspace, package, or source-root boundary was found.`,
         },
       ];
       if (isAllReactComponents) {
         evidence.push({
-          kind: "react-component-detection",
-          certainty: "detected",
+          kind: 'react-component-detection',
+          certainty: 'detected',
           location: { filePath: name },
           description: `Every source file under '${name}' is a confidently-detected React component.`,
         });
       }
       if (isAllTestFiles) {
         evidence.push({
-          kind: "test-directory-convention",
-          certainty: "inferred",
+          kind: 'test-directory-convention',
+          certainty: 'inferred',
           location: { filePath: name },
           description: `Every source file under '${name}' is recognized as a test file (naming convention or top-level 'test'/'tests' directory).`,
         });
       }
       if (isAllTestSupportFiles) {
         evidence.push({
-          kind: "test-support-directory-convention",
-          certainty: "inferred",
+          kind: 'test-support-directory-convention',
+          certainty: 'inferred',
           location: { filePath: name },
           description: `Every source file under '${name}' lives under a conventional test-fixture/mock directory, not implementation code.`,
+        });
+      }
+      if (isAllToolingConfig) {
+        evidence.push({
+          kind: 'tooling-config-file',
+          certainty: 'inferred',
+          location: { filePath: name },
+          description: `Every source file under '${name}' matches a known build/test-tool configuration filename, not implementation code.`,
         });
       }
 
@@ -188,12 +239,14 @@ function buildStructuralAreas(input: JsTsViewsInput): StructuralArea[] {
         location: { filePath: name },
         rationale: `Groups ${files.length} source file(s) under '${name}'; no declared workspace, package, or source-root boundary was found, so files are grouped by directory.`,
         responsibility: isAllReactComponents
-          ? "Presentational React components"
+          ? 'Presentational React components'
           : isAllTestFiles
-            ? "Tests"
+            ? 'Tests'
             : isAllTestSupportFiles
-              ? "Test fixtures/support data"
-              : undefined,
+              ? 'Test fixtures/support data'
+              : isAllToolingConfig
+                ? 'Build/tooling configuration'
+                : undefined,
         importantLocations: [
           ...areaEntryPoints.map((ep) => ep.location),
           ...areaContracts.map((pc) => pc.location),
@@ -210,8 +263,8 @@ function buildStructuralAreas(input: JsTsViewsInput): StructuralArea[] {
 
   const areaByName = new Map(areas.map((a) => [a.name, a]));
   for (const rel of relationships) {
-    const fromArea = areaByName.get(areaNameByFile.get(rel.fromId) ?? "");
-    const toArea = areaByName.get(areaNameByFile.get(rel.toId) ?? "");
+    const fromArea = areaByName.get(areaNameByFile.get(rel.fromId) ?? '');
+    const toArea = areaByName.get(areaNameByFile.get(rel.toId) ?? '');
     if (!fromArea || !toArea || fromArea.id === toArea.id) continue;
     if (!fromArea.directDependencyIds.includes(toArea.id)) {
       fromArea.directDependencyIds.push(toArea.id);
@@ -226,9 +279,10 @@ function buildStructuralAreas(input: JsTsViewsInput): StructuralArea[] {
 
 function buildStartHere(
   input: JsTsViewsInput,
-  structuralAreas: StructuralArea[],
+  structuralAreas: StructuralArea[]
 ): Recommendation[] {
-  const { sourceFilePaths, relationships, entryPoints, testRelationships } = input;
+  const { sourceFilePaths, relationships, entryPoints, testRelationships } =
+    input;
 
   const fileCountByAreaName = new Map<string, number>();
   for (const filePath of sourceFilePaths) {
@@ -241,7 +295,7 @@ function buildStartHere(
   const representedAreas = new Set<string>();
   let order = 0;
 
-  function addItem(item: Omit<Recommendation, "id" | "order">) {
+  function addItem(item: Omit<Recommendation, 'id' | 'order'>) {
     order += 1;
     items.push({ id: `start-here-${order}`, order, ...item });
     representedFiles.add(item.location.filePath);
@@ -251,19 +305,21 @@ function buildStartHere(
   // 1. What starts the system? A running application's bootstrap/CLI entry
   // point, or — when there is none — a library's declared public entry point.
   const applicationEntries = entryPoints.filter((ep) =>
-    STARTING_ENTRY_KINDS.includes(ep.kind),
+    STARTING_ENTRY_KINDS.includes(ep.kind)
   );
   const usingApplicationEntries = applicationEntries.length > 0;
   const seedEntries = usingApplicationEntries
     ? applicationEntries
-    : entryPoints.filter((ep) => ep.kind === "library" || ep.kind === "runtime");
+    : entryPoints.filter(
+        (ep) => ep.kind === 'library' || ep.kind === 'runtime'
+      );
 
   for (const ep of seedEntries) {
     addItem({
       location: ep.location,
       whatItRepresents: describeEntryKind(ep.kind),
       rationale: usingApplicationEntries
-        ? "This is likely where the system starts executing; begin here to see how it boots."
+        ? 'This is likely where the system starts executing; begin here to see how it boots.'
         : "This is the system's declared public entry point for consumers.",
       certainty: ep.certainty,
       evidence: ep.evidence,
@@ -274,14 +330,21 @@ function buildStartHere(
   // areas? Follow the detected internal dependency chain outward from the
   // seed entries, breadth-first, capped so a large repository doesn't crowd
   // out the later steps.
-  const maxItemsBeforeTest = START_HERE_MAX_ITEMS - (testRelationships.length > 0 ? 1 : 0);
+  const maxItemsBeforeTest =
+    START_HERE_MAX_ITEMS - (testRelationships.length > 0 ? 1 : 0);
   const queue = seedEntries.map((ep) => ep.location.filePath);
   while (queue.length > 0 && items.length < maxItemsBeforeTest) {
     const currentFile = queue.shift();
     if (currentFile === undefined) break;
     const outgoing = relationships
-      .filter((rel) => rel.fromId === currentFile && !representedFiles.has(rel.toId))
-      .sort((a, b) => Number(b.certainty === "detected") - Number(a.certainty === "detected"));
+      .filter(
+        (rel) => rel.fromId === currentFile && !representedFiles.has(rel.toId)
+      )
+      .sort(
+        (a, b) =>
+          Number(b.certainty === 'detected') -
+          Number(a.certainty === 'detected')
+      );
 
     for (const rel of outgoing) {
       if (items.length >= maxItemsBeforeTest) break;
@@ -290,7 +353,8 @@ function buildStartHere(
         location: { filePath: rel.toId },
         whatItRepresents: `A module directly depended on by '${currentFile}'`,
         rationale:
-          rel.evidence[0]?.description ?? `'${currentFile}' depends on '${rel.toId}'.`,
+          rel.evidence[0]?.description ??
+          `'${currentFile}' depends on '${rel.toId}'.`,
         certainty: rel.certainty,
         evidence: rel.evidence,
       });
@@ -300,27 +364,32 @@ function buildStartHere(
 
   // 3. Pad with any major area not yet represented, largest first, so the
   // path covers the project's primary internal areas rather than only the
-  // entry point's own dependency chain. Test and test-support areas are
-  // skipped here — "where can behavior be observed" is step 4's job, and a
-  // test (or fixture-data) directory outranking real implementation areas by
-  // file count (as both did against sindresorhus/globby in session 6) is
-  // exactly the "largest files" failure mode docs/MODEL_OUTPUT.md warns
-  // Start Here must avoid.
+  // entry point's own dependency chain. Non-primary areas (tests,
+  // test-support data, tooling config) are skipped here — a test or
+  // config directory outranking real implementation areas by file count (as
+  // seen validating against real repositories in session 6) is exactly the
+  // "largest files" failure mode docs/MODEL_OUTPUT.md warns Start Here must
+  // avoid.
   const areasByCoverage = [...structuralAreas].sort((a, b) => {
-    const diff = (fileCountByAreaName.get(b.name) ?? 0) - (fileCountByAreaName.get(a.name) ?? 0);
+    const diff =
+      (fileCountByAreaName.get(b.name) ?? 0) -
+      (fileCountByAreaName.get(a.name) ?? 0);
     return diff !== 0 ? diff : a.name.localeCompare(b.name);
   });
   for (const area of areasByCoverage) {
     if (items.length >= maxItemsBeforeTest) break;
     if (representedAreas.has(area.name)) continue;
-    if (area.responsibility === "Tests" || area.responsibility === "Test fixtures/support data") {
+    if (
+      area.responsibility &&
+      NON_PRIMARY_AREA_RESPONSIBILITIES.has(area.responsibility)
+    ) {
       continue;
     }
     addItem({
       location: area.location,
       whatItRepresents: `Primary structural area: '${area.name}'`,
       rationale: area.rationale,
-      certainty: "inferred",
+      certainty: 'inferred',
       evidence: area.evidence,
     });
   }
@@ -329,15 +398,16 @@ function buildStartHere(
   // relationship, when one exists, that isn't already represented.
   if (items.length < START_HERE_MAX_ITEMS) {
     const candidate =
-      testRelationships.find((tr) => !representedFiles.has(tr.testLocation.filePath)) ??
-      testRelationships[0];
+      testRelationships.find(
+        (tr) => !representedFiles.has(tr.testLocation.filePath)
+      ) ?? testRelationships[0];
     if (candidate && !representedFiles.has(candidate.testLocation.filePath)) {
       addItem({
         location: candidate.testLocation,
         whatItRepresents: `Test for '${candidate.implementationLocation.filePath}'`,
         rationale:
           candidate.evidence[0]?.description ??
-          "Exercises the implementation directly; a good place to observe representative behavior.",
+          'Exercises the implementation directly; a good place to observe representative behavior.',
         certainty: candidate.certainty,
         evidence: candidate.evidence,
       });

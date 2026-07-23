@@ -4,19 +4,20 @@
  * pattern (inferred/detected respectively) when no manifest field applies.
  */
 
-import fs from "node:fs";
-import path from "node:path";
-import { SyntaxKind, type SourceFile } from "ts-morph";
-import type { EntryPoint } from "@/lore/model";
+import fs from 'node:fs';
+import path from 'node:path';
+import { SyntaxKind, type SourceFile } from 'ts-morph';
+import type { EntryPoint } from '@/lore/model';
+import { isTestFile } from './tests';
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
-  return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
+  return path.relative(rootDir, absoluteFilePath).split(path.sep).join('/');
 }
 
 function findSourceFileByRelativePath(
   sourceFiles: SourceFile[],
   rootDir: string,
-  relativePath: string,
+  relativePath: string
 ): SourceFile | undefined {
   const candidates = [
     relativePath,
@@ -26,7 +27,7 @@ function findSourceFileByRelativePath(
     `${relativePath}.jsx`,
   ];
   return sourceFiles.find((sf) =>
-    candidates.includes(toRelative(rootDir, sf.getFilePath())),
+    candidates.includes(toRelative(rootDir, sf.getFilePath()))
   );
 }
 
@@ -40,10 +41,10 @@ interface PackageJson {
 }
 
 function readPackageJson(rootDir: string): PackageJson | undefined {
-  const pkgPath = path.join(rootDir, "package.json");
+  const pkgPath = path.join(rootDir, 'package.json');
   if (!fs.existsSync(pkgPath)) return undefined;
   try {
-    return JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as PackageJson;
+    return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as PackageJson;
   } catch {
     return undefined;
   }
@@ -57,51 +58,65 @@ function readPackageJson(rootDir: string): PackageJson | undefined {
  * declaration files).
  */
 function resolveExportsField(exportsField: ExportsField): string | undefined {
-  if (typeof exportsField === "string") return exportsField;
+  if (typeof exportsField === 'string') return exportsField;
 
-  const dotExport = exportsField["."];
-  if (typeof dotExport === "string") return dotExport;
-  if (dotExport && typeof dotExport === "object") {
+  const dotExport = exportsField['.'];
+  if (typeof dotExport === 'string') return dotExport;
+  if (dotExport && typeof dotExport === 'object') {
     return resolveExportsField(dotExport as Record<string, unknown>);
   }
 
-  for (const condition of ["import", "default"]) {
+  for (const condition of ['import', 'default']) {
     const value = exportsField[condition];
-    if (typeof value === "string") return value;
+    if (typeof value === 'string') return value;
   }
   for (const [key, value] of Object.entries(exportsField)) {
-    if (key === "types" || typeof value !== "string") continue;
+    if (key === 'types' || typeof value !== 'string') continue;
     return value;
   }
   return undefined;
 }
 
-/** True if a file calls `ReactDOM`'s (or `react-dom/client`'s) `render`/`createRoot(...).render`. */
+/**
+ * True if a file calls `ReactDOM`'s (or `react-dom/client`'s)
+ * `X.render(...)`/`createRoot(...).render(...)`. Requires a property-access
+ * call (`.render`), not a bare `render(...)` call — real bootstrap code
+ * always calls render on the `ReactDOM` import or a root/container object,
+ * never a standalone function named `render`. A bare-name match previously
+ * misclassified React Testing Library's `render(<Component />)` in test
+ * files as an application bootstrap entry point, found validating against a
+ * real repository (`pieces-app/example-typescript`) in implementation
+ * session 6.
+ */
 function callsReactDomRender(sourceFile: SourceFile): boolean {
   return sourceFile
     .getDescendantsOfKind(SyntaxKind.CallExpression)
     .some((call) => {
       const text = call.getExpression().getText();
-      return /(^|\.)render$/.test(text) || /createRoot/.test(text);
+      return /\.render$/.test(text) || /createRoot/.test(text);
     });
 }
 
 export function extractEntryPoints(
   sourceFiles: SourceFile[],
-  rootDir: string,
+  rootDir: string
 ): EntryPoint[] {
   const entryPoints: EntryPoint[] = [];
   const pkg = readPackageJson(rootDir);
   const claimedPaths = new Set<string>();
 
   function addManifestEntry(
-    field: "main" | "module",
-    kind: EntryPoint["kind"],
+    field: 'main' | 'module',
+    kind: EntryPoint['kind']
   ) {
     const value = pkg?.[field];
     if (!value) return;
-    const relativeValue = value.startsWith("./") ? value.slice(2) : value;
-    const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, relativeValue);
+    const relativeValue = value.startsWith('./') ? value.slice(2) : value;
+    const resolved = findSourceFileByRelativePath(
+      sourceFiles,
+      rootDir,
+      relativeValue
+    );
     if (!resolved) return;
     const filePath = toRelative(rootDir, resolved.getFilePath());
     if (claimedPaths.has(filePath)) return;
@@ -110,12 +125,12 @@ export function extractEntryPoints(
       id: `js-ts-entry-package-${field}`,
       kind,
       location: { filePath },
-      certainty: "detected",
+      certainty: 'detected',
       evidence: [
         {
-          kind: "package-json-field",
-          certainty: "detected",
-          location: { filePath: "package.json", configKey: field },
+          kind: 'package-json-field',
+          certainty: 'detected',
+          location: { filePath: 'package.json', configKey: field },
           description: `package.json declares "${field}": "${value}".`,
         },
       ],
@@ -127,23 +142,27 @@ export function extractEntryPoints(
   if (pkg?.exports !== undefined) {
     const resolvedSpecifier = resolveExportsField(pkg.exports);
     if (resolvedSpecifier) {
-      const relativeValue = resolvedSpecifier.startsWith("./")
+      const relativeValue = resolvedSpecifier.startsWith('./')
         ? resolvedSpecifier.slice(2)
         : resolvedSpecifier;
-      const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, relativeValue);
+      const resolved = findSourceFileByRelativePath(
+        sourceFiles,
+        rootDir,
+        relativeValue
+      );
       if (resolved) {
         const filePath = toRelative(rootDir, resolved.getFilePath());
         claimedPaths.add(filePath);
         entryPoints.push({
-          id: "js-ts-entry-package-exports",
-          kind: "library",
+          id: 'js-ts-entry-package-exports',
+          kind: 'library',
           location: { filePath },
-          certainty: "detected",
+          certainty: 'detected',
           evidence: [
             {
-              kind: "package-json-field",
-              certainty: "detected",
-              location: { filePath: "package.json", configKey: "exports" },
+              kind: 'package-json-field',
+              certainty: 'detected',
+              location: { filePath: 'package.json', configKey: 'exports' },
               description: `package.json declares "exports" resolving to "${resolvedSpecifier}".`,
             },
           ],
@@ -152,28 +171,32 @@ export function extractEntryPoints(
     }
   }
 
-  addManifestEntry("main", "library");
-  addManifestEntry("module", "library");
+  addManifestEntry('main', 'library');
+  addManifestEntry('module', 'library');
 
   if (pkg?.bin) {
     const binEntries =
-      typeof pkg.bin === "string" ? { [pkg.bin]: pkg.bin } : pkg.bin;
+      typeof pkg.bin === 'string' ? { [pkg.bin]: pkg.bin } : pkg.bin;
     for (const [name, value] of Object.entries(binEntries)) {
-      const relativeValue = value.startsWith("./") ? value.slice(2) : value;
-      const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, relativeValue);
+      const relativeValue = value.startsWith('./') ? value.slice(2) : value;
+      const resolved = findSourceFileByRelativePath(
+        sourceFiles,
+        rootDir,
+        relativeValue
+      );
       if (!resolved) continue;
       const filePath = toRelative(rootDir, resolved.getFilePath());
       claimedPaths.add(filePath);
       entryPoints.push({
         id: `js-ts-entry-bin-${name}`,
-        kind: "cli",
+        kind: 'cli',
         location: { filePath },
-        certainty: "detected",
+        certainty: 'detected',
         evidence: [
           {
-            kind: "package-json-field",
-            certainty: "detected",
-            location: { filePath: "package.json", configKey: `bin.${name}` },
+            kind: 'package-json-field',
+            certainty: 'detected',
+            location: { filePath: 'package.json', configKey: `bin.${name}` },
             description: `package.json declares command "${name}" at "${value}".`,
           },
         ],
@@ -182,20 +205,24 @@ export function extractEntryPoints(
   }
 
   // Runtime-bootstrap heuristic: a file that calls ReactDOM's render/createRoot.
+  // Test files are skipped even when they happen to match — defense in depth
+  // alongside the `.render` property-access requirement above, since a test
+  // file is never the application's real bootstrap entry point.
   for (const sourceFile of sourceFiles) {
     const filePath = toRelative(rootDir, sourceFile.getFilePath());
     if (claimedPaths.has(filePath)) continue;
+    if (isTestFile(filePath)) continue;
     if (!callsReactDomRender(sourceFile)) continue;
     claimedPaths.add(filePath);
     entryPoints.push({
       id: `js-ts-entry-bootstrap-${filePath}`,
-      kind: "bootstrap",
+      kind: 'bootstrap',
       location: { filePath },
-      certainty: "detected",
+      certainty: 'detected',
       evidence: [
         {
-          kind: "react-dom-render-call",
-          certainty: "detected",
+          kind: 'react-dom-render-call',
+          certainty: 'detected',
           location: { filePath },
           description: `'${filePath}' calls React DOM's render/createRoot, mounting the application.`,
         },
@@ -207,28 +234,32 @@ export function extractEntryPoints(
   // more specific was found.
   if (entryPoints.length === 0) {
     const conventionalCandidates = [
-      "src/index.ts",
-      "src/index.tsx",
-      "src/index.js",
-      "src/index.jsx",
-      "index.ts",
-      "index.tsx",
-      "index.js",
-      "index.jsx",
+      'src/index.ts',
+      'src/index.tsx',
+      'src/index.js',
+      'src/index.jsx',
+      'index.ts',
+      'index.tsx',
+      'index.js',
+      'index.jsx',
     ];
     for (const candidate of conventionalCandidates) {
-      const resolved = findSourceFileByRelativePath(sourceFiles, rootDir, candidate);
+      const resolved = findSourceFileByRelativePath(
+        sourceFiles,
+        rootDir,
+        candidate
+      );
       if (!resolved) continue;
       const filePath = toRelative(rootDir, resolved.getFilePath());
       entryPoints.push({
         id: `js-ts-entry-convention-${filePath}`,
-        kind: "runtime",
+        kind: 'runtime',
         location: { filePath },
-        certainty: "inferred",
+        certainty: 'inferred',
         evidence: [
           {
-            kind: "conventional-index-file",
-            certainty: "inferred",
+            kind: 'conventional-index-file',
+            certainty: 'inferred',
             location: { filePath },
             description: `No package.json entry field was found; '${filePath}' matches the conventional index-file location.`,
           },

@@ -4,17 +4,18 @@
  * (syntactic-only: based on import specifiers, not resolved types).
  */
 
-import path from "node:path";
-import type { SourceFile } from "ts-morph";
-import type { Gap, Relationship, SourceLocation } from "@/lore/model";
+import path from 'node:path';
+import type { SourceFile } from 'ts-morph';
+import type { Gap, Relationship, SourceLocation } from '@/lore/model';
 import {
   buildModuleResolutionIndex,
   isRelativeSpecifier,
+  looksLikeAssetImport,
   looksLikePathAlias,
-} from "./module-resolution";
+} from './module-resolution';
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
-  return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
+  return path.relative(rootDir, absoluteFilePath).split(path.sep).join('/');
 }
 
 interface ModuleSpecifierReference {
@@ -24,7 +25,7 @@ interface ModuleSpecifierReference {
 
 /** Every import and re-export specifier referenced from a source file, with its line. */
 function getModuleSpecifierReferences(
-  sourceFile: SourceFile,
+  sourceFile: SourceFile
 ): ModuleSpecifierReference[] {
   const references: ModuleSpecifierReference[] = [];
 
@@ -52,7 +53,7 @@ export interface ImportExtractionResult {
 
 export function extractImportRelationships(
   sourceFiles: SourceFile[],
-  rootDir: string,
+  rootDir: string
 ): ImportExtractionResult {
   const resolver = buildModuleResolutionIndex(sourceFiles);
   const relationships: Relationship[] = [];
@@ -62,27 +63,37 @@ export function extractImportRelationships(
   for (const sourceFile of sourceFiles) {
     const importerPath = toRelative(rootDir, sourceFile.getFilePath());
 
-    for (const { specifier, line } of getModuleSpecifierReferences(sourceFile)) {
+    for (const { specifier, line } of getModuleSpecifierReferences(
+      sourceFile
+    )) {
       const importerLocation: SourceLocation = {
         filePath: importerPath,
         startLine: line,
       };
 
       if (isRelativeSpecifier(specifier)) {
+        if (looksLikeAssetImport(specifier)) {
+          // A relative import of a static asset (bundler-resolved, e.g.
+          // webpack/Vite/CRA) is never an internal code dependency edge —
+          // not resolving it to a JS/TS source file isn't an analysis
+          // limitation, so it's intentionally not recorded as a gap.
+          continue;
+        }
+
         const resolved = resolver.resolve(sourceFile.getFilePath(), specifier);
         if (resolved) {
           relationshipCount += 1;
           const targetPath = toRelative(rootDir, resolved.getFilePath());
           relationships.push({
             id: `js-ts-import-${relationshipCount}`,
-            kind: "depends-on",
+            kind: 'depends-on',
             fromId: importerPath,
             toId: targetPath,
-            certainty: "detected",
+            certainty: 'detected',
             evidence: [
               {
-                kind: "import-statement",
-                certainty: "detected",
+                kind: 'import-statement',
+                certainty: 'detected',
                 location: importerLocation,
                 description: `'${importerPath}' imports from '${specifier}', resolved to '${targetPath}'.`,
               },
@@ -92,7 +103,7 @@ export function extractImportRelationships(
         }
 
         gaps.push({
-          certainty: "unknown",
+          certainty: 'unknown',
           description: `Could not resolve relative import '${specifier}' in '${importerPath}' to a discovered source file.`,
           location: importerLocation,
         });
@@ -101,7 +112,7 @@ export function extractImportRelationships(
 
       if (looksLikePathAlias(specifier)) {
         gaps.push({
-          certainty: "unsupported",
+          certainty: 'unsupported',
           description: `Import '${specifier}' in '${importerPath}' appears to use a path alias; alias resolution (tsconfig 'paths') is not yet implemented (ADR-0003, deferred to implementation session 6).`,
           location: importerLocation,
         });

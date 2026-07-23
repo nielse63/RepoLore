@@ -6,12 +6,12 @@
  * Usage: npm run derive -- fixtures/ts-react-app
  */
 
-import { deriveJsTsViews } from "../src/analysis/js-ts/derive-views";
-import { extractJsTsProject } from "../src/analysis/js-ts/extract-project";
+import { deriveJsTsViews } from '../src/analysis/js-ts/derive-views';
+import { extractJsTsProject } from '../src/analysis/js-ts/extract-project';
 
 const target = process.argv[2];
 if (!target) {
-  console.error("Usage: npm run derive -- <path-to-fixture>");
+  console.error('Usage: npm run derive -- <path-to-fixture>');
   process.exit(1);
 }
 
@@ -30,9 +30,11 @@ for (const item of startHere) {
 
 console.log(`\nMajor areas (${structuralAreas.length}):`);
 for (const area of structuralAreas) {
-  console.log(`  ${area.name}${area.responsibility ? ` — ${area.responsibility}` : ""}`);
+  console.log(
+    `  ${area.name}${area.responsibility ? ` — ${area.responsibility}` : ''}`
+  );
   console.log(`     ${area.rationale}`);
   console.log(
-    `     entry points: ${area.entryPointIds.length}, depends on: ${area.directDependencyIds.length}, depended on by: ${area.directDependentIds.length}, tests: ${area.testRelationshipIds.length}, gaps: ${area.gaps.length}`,
+    `     entry points: ${area.entryPointIds.length}, depends on: ${area.directDependencyIds.length}, depended on by: ${area.directDependentIds.length}, tests: ${area.testRelationshipIds.length}, gaps: ${area.gaps.length}`
   );
 }

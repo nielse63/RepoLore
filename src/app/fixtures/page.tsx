@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 /** Plain, unstyled index of the JS/TS fixtures with derived-view pages (see `[name]/page.tsx`). */
 export default function FixturesIndexPage() {
