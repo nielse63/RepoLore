@@ -1,0 +1,122 @@
+/**
+ * Minimal GitHub REST API client covering only what the MVP core user
+ * journey needs so far (docs/product/mvp.md, steps 2–3): resolve a
+ * repository's default branch and the HEAD commit SHA on that branch. This
+ * is the first code path that calls the GitHub API, so it's also the first
+ * to require a PAT (ADR-0002's consequence: unauthenticated access is capped
+ * at 60 requests/hour). Tarball fetch (ADR-0002) is a later session.
+ */
+
+const API_BASE = 'https://api.github.com';
+
+export type GitHubApiErrorCode =
+  'missing-token' | 'not-found' | 'unauthorized' | 'rate-limited' | 'unknown';
+
+export class GitHubApiError extends Error {
+  code: GitHubApiErrorCode;
+
+  constructor(code: GitHubApiErrorCode, message: string) {
+    super(message);
+    this.name = 'GitHubApiError';
+    this.code = code;
+  }
+}
+
+function getGitHubToken(): string {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    throw new GitHubApiError(
+      'missing-token',
+      'No GITHUB_TOKEN is configured. Set GITHUB_TOKEN in .env.local (see .env.example).'
+    );
+  }
+  return token;
+}
+
+async function githubApiFetch(path: string): Promise<Response> {
+  const token = getGitHubToken();
+  return fetch(`${API_BASE}${path}`, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'repo-lore',
+    },
+  });
+}
+
+async function throwForResponse(
+  res: Response,
+  notFoundContext: string
+): Promise<never> {
+  if (res.status === 404) {
+    throw new GitHubApiError(
+      'not-found',
+      `${notFoundContext} — it may not exist, or it may be private.`
+    );
+  }
+  if (res.status === 401) {
+    throw new GitHubApiError(
+      'unauthorized',
+      'GitHub rejected the configured GITHUB_TOKEN as invalid or expired.'
+    );
+  }
+  if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') {
+    throw new GitHubApiError(
+      'rate-limited',
+      'GitHub API rate limit exceeded. Try again after the limit resets.'
+    );
+  }
+  const body = await res.text().catch(() => '');
+  throw new GitHubApiError(
+    'unknown',
+    `GitHub API request failed (${res.status} ${res.statusText}).${body ? ` ${body}` : ''}`
+  );
+}
+
+export interface RepositoryHead {
+  defaultBranch: string;
+  headSha: string;
+}
+
+/**
+ * Resolves a repository's default branch and the current HEAD commit SHA on
+ * that branch (MVP core user journey steps 3–5: resolve default branch,
+ * analyze its latest commit, record the exact SHA).
+ */
+export async function resolveRepositoryHead(
+  owner: string,
+  repo: string
+): Promise<RepositoryHead> {
+  const repoRes = await githubApiFetch(`/repos/${owner}/${repo}`);
+  if (!repoRes.ok) {
+    await throwForResponse(repoRes, `Repository ${owner}/${repo} not found`);
+  }
+  const repoData = (await repoRes.json()) as { default_branch?: string };
+  const defaultBranch = repoData.default_branch;
+  if (!defaultBranch) {
+    throw new GitHubApiError(
+      'unknown',
+      `GitHub did not report a default branch for ${owner}/${repo}.`
+    );
+  }
+
+  const commitRes = await githubApiFetch(
+    `/repos/${owner}/${repo}/commits/${encodeURIComponent(defaultBranch)}`
+  );
+  if (!commitRes.ok) {
+    await throwForResponse(
+      commitRes,
+      `Default branch ${defaultBranch} on ${owner}/${repo} not found`
+    );
+  }
+  const commitData = (await commitRes.json()) as { sha?: string };
+  if (!commitData.sha) {
+    throw new GitHubApiError(
+      'unknown',
+      `GitHub did not report a HEAD commit SHA for ${owner}/${repo}@${defaultBranch}.`
+    );
+  }
+
+  return { defaultBranch, headSha: commitData.sha };
+}

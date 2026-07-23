@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from local disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components against two hand-built fixtures. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) are now computed from that extraction and rendered on a plain, unstyled page at `/fixtures/{name}` — no acquisition, persistence, or styling yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway. A Next.js (App Router, TypeScript) app lives at the repo root, the shared, language-neutral Lore domain model (`src/lore/model.ts`) is defined, and the JS/TS analyzer (`src/analysis/js-ts/`) reads a project from local disk and extracts imports/exports, internal dependency edges, entry points, public surface, test relationships, and React components — validated against local fixtures and four real public repositories. Start Here and major-area derived views (`src/analysis/js-ts/derive-views.ts`) render on a plain, unstyled page at `/fixtures/{name}`. The home page (`/`) now accepts a pasted GitHub repository URL, validates/normalizes it, and resolves its default branch and HEAD commit SHA via the GitHub API (`src/github/`) — the first code path that calls GitHub, requiring a `GITHUB_TOKEN`. No tarball acquisition, persistence, or `/lore/{owner}/{repo}` page yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 ## Initial scope
 
@@ -28,7 +28,14 @@ npm run start  # run the production build
 npm run lint   # ESLint
 ```
 
-No database, GitHub PAT, or hosting account is required yet — those are provisioned in the sessions that first need them (see `docs/architecture/implementation-plan.md`).
+A GitHub personal access token is now required to resolve a repository from the home page (no scopes needed for public repos — see `.env.example`):
+
+```
+cp .env.example .env.local
+# fill in GITHUB_TOKEN in .env.local
+```
+
+No database or hosting account is required yet — those are provisioned in the sessions that first need them (see `docs/architecture/implementation-plan.md`).
 
 ## Fixtures
 
