@@ -1,0 +1,7 @@
+node_modules
+.next
+superpowers
+dist
+dist
+coverage
+**/package-lock.json
