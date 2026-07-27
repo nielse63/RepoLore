@@ -38,6 +38,7 @@ npm run dev    # start the dev server (serves /api/health as a liveness-only che
 npm run build  # production build
 npm run start  # run the production build
 npm run lint   # ESLint
+npm test       # run the Jest unit test suite
 ```
 
 A GitHub personal access token is now required to resolve a repository from the home page (no scopes needed for public repos — see `.env.example`):
@@ -56,7 +57,7 @@ npm run migrate           # applies src/db/migrations/
 
 ## Fixtures
 
-`fixtures/` holds small, hand-built local repos used to develop and sanity-check each language analyzer before it's run against real repositories (see `docs/architecture/implementation-plan.md`, "Fixture strategy"). No automated test suite exists yet (session 15), so two scripts give manual sanity checks against a fixture:
+`fixtures/` holds small, hand-built local repos used to develop and sanity-check each language analyzer before it's run against real repositories (see `docs/architecture/implementation-plan.md`, "Fixture strategy"). Two scripts also give manual, human-readable sanity checks against a fixture (in addition to the automated unit test suite — see "Testing" below):
 
 ```
 npm run discover -- fixtures/ts-react-app   # source file discovery + exclusion rules
@@ -75,6 +76,16 @@ The Python analyzer (`src/analysis/python/`) has its own sanity-check script, mi
 npm run extract-python -- fixtures/python-app
 npm run extract-python -- fixtures/python-library
 ```
+
+## Testing
+
+Every source file under `src/` has a matching Jest unit test at `<same-directory>/__tests__/<file>.spec.ts`. Run the full suite with `npm test` (or `npm run test:watch` for watch mode).
+
+- Jest is configured via `next/jest` (`jest.config.ts`), which handles the Next.js/SWC transform; tests run in the `node` environment (no jsdom/UI component tests yet).
+- The JS/TS analyzer tests (`src/analysis/js-ts/`) exercise a real in-memory `ts-morph` `Project` rather than mocking its AST — ts-morph is a pure, in-process parser with no network or native-binding dependency, so this is both more realistic and simpler than hand-mocking `SourceFile` objects.
+- The Python analyzer tests (`src/analysis/python/`) similarly parse small real Python source snippets with the real `tree-sitter-python` grammar (`createPythonParser`/`parsePythonSource`) rather than mocking tree-sitter's `Node` interface — it's a bundled, offline WASM grammar with no network dependency. Because `web-tree-sitter` loads that grammar via a dynamic `import()`, the `test`/`test:watch` scripts set `NODE_OPTIONS=--experimental-vm-modules` so Jest's module VM can support it.
+- Genuine external I/O — `pg` (`src/db/`), the GitHub REST API (`src/github/client.ts`), and orchestration layers that depend on either — is mocked with `jest.mock`.
+- Filesystem-heavy modules (tarball extraction, source discovery, config-file reading) that don't touch the network are tested against real temporary directories (`fs/promises.mkdtemp`) rather than mocked, since real disk I/O in a scratch dir is simpler and more trustworthy than reimplementing `fs`'s contract.
 
 ## Analyzing a real repository from the command line
 
