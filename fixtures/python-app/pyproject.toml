@@ -1,0 +1,12 @@
+[project]
+name = "pyapp"
+version = "0.1.0"
+description = "Fixture: a conventional Python application with a console-script entry point."
+requires-python = ">=3.10"
+
+[project.scripts]
+pyapp = "pyapp.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway, and the first end-to-end slice works for JavaScript/TypeScript: paste a public GitHub repository URL on the home page (`/`) and Repo Lore validates it, resolves its default branch and HEAD commit via the GitHub API (`src/github/`), fetches and safely extracts its tarball (`src/acquisition/`), runs the JS/TS analyzer (`src/analysis/js-ts/`) — imports/exports, internal dependency edges, entry points, public surface, test relationships, React components, Start Here and major-area derived views — persists the result to Postgres (`src/db/`, idempotent per ADR-0005), and redirects to a stable `/lore/{owner}/{repo}` page rendering it with a Detected/Inferred/Unknown/Unsupported certainty label on every claim and a GitHub link back to its source. A failed or partially-supported analysis still renders honestly there rather than silently disappearing, and a rate-limited "Re-analyze" button on that page (`src/analysis/reanalysis-rate-limit.ts`) re-checks the repository's HEAD and re-runs analysis if it's moved, reporting honestly when there's nothing new to analyze. Requires `GITHUB_TOKEN` and `DATABASE_URL`. Local fixtures render through the same `Lore` shape at `/fixtures/{name}`. Python analysis doesn't exist yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway, and the first end-to-end slice works for JavaScript/TypeScript: paste a public GitHub repository URL on the home page (`/`) and Repo Lore validates it, resolves its default branch and HEAD commit via the GitHub API (`src/github/`), fetches and safely extracts its tarball (`src/acquisition/`), runs the JS/TS analyzer (`src/analysis/js-ts/`) — imports/exports, internal dependency edges, entry points, public surface, test relationships, React components, Start Here and major-area derived views — persists the result to Postgres (`src/db/`, idempotent per ADR-0005), and redirects to a stable `/lore/{owner}/{repo}` page rendering it with a Detected/Inferred/Unknown/Unsupported certainty label on every claim and a GitHub link back to its source. A failed or partially-supported analysis still renders honestly there rather than silently disappearing, and a rate-limited "Re-analyze" button on that page (`src/analysis/reanalysis-rate-limit.ts`) re-checks the repository's HEAD and re-runs analysis if it's moved, reporting honestly when there's nothing new to analyze. Requires `GITHUB_TOKEN` and `DATABASE_URL`. Local fixtures render through the same `Lore` shape at `/fixtures/{name}`. A Python analyzer (`src/analysis/python/`, ADR-0006: tree-sitter-python via `web-tree-sitter`, syntactic-only) now exists and produces the same project/relationships/entry-points/public-contracts/test-relationships shape as the JS/TS analyzer, verified against `fixtures/python-app` and `fixtures/python-library` — but it isn't wired into acquisition, persistence, derived views (Start Here/major areas), or the `/lore` page yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 The UI now has a full design system (see "Design system and UI routes" below) applied to the home page and the real `/lore/{owner}/{repo}` overview, plus every other view from `docs/designs/` scaffolded under `/lore/{owner}/{repo}/*` with static example content, since the analysis behind them (architecture detection, systems, dependencies, data flow, history, search, change impact) doesn't exist yet.
 
@@ -68,6 +68,13 @@ npm run derive -- fixtures/ts-library
 ```
 
 With `npm run dev` running, the same derived views render on a plain, unstyled page at `/fixtures/ts-react-app` and `/fixtures/ts-library` (index at `/fixtures`).
+
+The Python analyzer (`src/analysis/python/`) has its own sanity-check script, mirroring `extract` above — it doesn't yet have `discover`/`derive` equivalents or a `/fixtures` page, since source discovery is folded into extraction and derived views (Start Here/major areas) don't exist for Python yet:
+
+```
+npm run extract-python -- fixtures/python-app
+npm run extract-python -- fixtures/python-library
+```
 
 ## Analyzing a real repository from the command line
 
