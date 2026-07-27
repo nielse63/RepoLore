@@ -4,15 +4,14 @@ import {
   Layers,
   Link2,
   TestTube2,
-} from 'lucide-react';
-import type { CertaintyCategory, Lore, SourceLocation } from '@/lore/model';
-import { Card, CardDescription, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { CertaintyBadge } from '@/components/ui/CertaintyBadge';
-import { IconTile } from '@/components/ui/IconTile';
-import { SourceLink } from '@/components/ui/SourceLink';
-import { StepList } from '@/components/ui/StepList';
-import { Table, Thead, Th, Tr, Td } from '@/components/ui/Table';
+} from "lucide-react";
+import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
+import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
+import { IconTile } from "@/components/ui/IconTile";
+import { SourceLink } from "@/components/ui/SourceLink";
+import { StepList } from "@/components/ui/StepList";
+import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -30,7 +29,6 @@ export function OverviewContent({
   areaUrl = sourceUrl,
 }: OverviewContentProps) {
   const { snapshot } = lore;
-  const project = lore.projects[0];
 
   const areaFilePaths = new Set(
     lore.structuralAreas.map((area) => area.location.filePath)
@@ -50,48 +48,6 @@ export function OverviewContent({
           </p>
         )}
       </div>
-
-      {project && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold text-foreground">
-            What Is This?
-          </h2>
-          <Card className="flex flex-wrap gap-8">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                Kind
-              </p>
-              <p className="mt-1 text-sm text-foreground">{project.kind}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                Languages
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {project.languages.length > 0 ? (
-                  project.languages.map((lang) => (
-                    <Badge key={lang}>{lang}</Badge>
-                  ))
-                ) : (
-                  <span className="text-sm text-muted">none detected</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                Frameworks
-              </p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {project.frameworks.length > 0 ? (
-                  project.frameworks.map((fw) => <Badge key={fw}>{fw}</Badge>)
-                ) : (
-                  <span className="text-sm text-muted">none detected</span>
-                )}
-              </div>
-            </div>
-          </Card>
-        </section>
-      )}
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-foreground">
@@ -199,7 +155,7 @@ export function OverviewContent({
               <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
                 <IconTile icon={Compass} variant="supporting" size="sm" />
                 <span className="flex-1 text-sm text-foreground">
-                  <span className="font-medium">{ep.kind}</span>{' '}
+                  <span className="font-medium">{ep.kind}</span>{" "}
                   <SourceLink location={ep.location} sourceUrl={sourceUrl} />
                 </span>
                 <CertaintyBadge certainty={ep.certainty} />
