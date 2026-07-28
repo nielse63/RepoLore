@@ -1,4 +1,5 @@
 import {
+  countEvidence,
   evaluateMinimumValueContract,
   START_HERE_MAX_ITEMS,
   START_HERE_MIN_ITEMS,
@@ -173,5 +174,57 @@ describe("evaluateMinimumValueContract", () => {
     });
 
     expect(evaluateMinimumValueContract(lore).hasTraceableEvidence).toBe(false);
+  });
+});
+
+describe("countEvidence", () => {
+  it("is 0 for a completely empty Lore", () => {
+    expect(countEvidence(emptyLore())).toBe(0);
+  });
+
+  it("sums evidence across projects, areas, entry points, relationships, and startHere", () => {
+    const lore = emptyLore();
+    lore.projects.push({
+      id: ".",
+      name: "widgets",
+      kind: "application",
+      languages: [],
+      rootPath: ".",
+      frameworks: [],
+      evidence: [evidence],
+      gaps: [],
+    });
+    lore.structuralAreas.push({
+      id: "area:1",
+      projectId: ".",
+      name: "src",
+      location: { filePath: "src" },
+      rationale: "grouped",
+      importantLocations: [],
+      entryPointIds: [],
+      directDependencyIds: [],
+      directDependentIds: [],
+      testRelationshipIds: [],
+      evidence: [evidence, evidence],
+      gaps: [],
+    });
+    lore.entryPoints.push({
+      id: "entry-1",
+      kind: "runtime",
+      location: { filePath: "src/index.ts" },
+      certainty: "inferred",
+      evidence: [evidence],
+    });
+    lore.relationships.push({
+      id: "rel-1",
+      kind: "depends-on",
+      fromId: "a",
+      toId: "b",
+      certainty: "detected",
+      evidence: [evidence],
+    });
+    lore.startHere.push(recommendation("item-1"));
+
+    expect(countEvidence(lore)).toBe(6);
   });
 });

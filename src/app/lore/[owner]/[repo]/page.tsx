@@ -7,7 +7,7 @@ import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { OverviewContent } from "@/components/lore-shell/OverviewContent";
 import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
-import { Card } from "@/components/ui/Card";
+import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { relativeTime } from "@/lib/relative-time";
 import type { SourceLocation } from "@/lore/model";
 
@@ -28,44 +28,7 @@ export default async function LorePage({
   if (!run) notFound();
 
   if (run.status === "failed" || !run.result) {
-    return (
-      <LorePageFrame
-        topBar={
-          <TopBar
-            left={
-              <RepoIdentity
-                owner={owner}
-                repo={repo}
-                statusLabel="Analysis failed"
-                statusTone="alert"
-                updatedLabel={relativeTime(run.createdAt)}
-                branch="—"
-              />
-            }
-            actions={<ReanalyzeButton owner={owner} repo={repo} />}
-          />
-        }
-      >
-        <div className="max-w-2xl">
-          <h1 className="font-serif text-3xl font-semibold text-foreground">
-            Analysis failed
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            Analysis failed for commit{" "}
-            <code className="font-mono">{run.commitSha}</code> (analyzer{" "}
-            {run.analyzerVersion}, {new Date(run.createdAt).toLocaleString()}).
-          </p>
-          <Card
-            className="mt-4 border-tile-alert-fg/30 bg-tile-alert-bg"
-            role="alert"
-          >
-            <p className="text-sm text-tile-alert-fg">
-              {run.errorMessage ?? "Unknown error."}
-            </p>
-          </Card>
-        </div>
-      </LorePageFrame>
-    );
+    return <FailedRunPanel owner={owner} repo={repo} run={run} />;
   }
 
   const lore = run.result;

@@ -207,6 +207,22 @@ export interface MinimumValueContract {
   hasTraceableEvidence: boolean;
 }
 
+/** Every piece of evidence attached anywhere in a Lore, used by both the minimum value contract and evidence-coverage displays (e.g. the Architecture page, ADR-0008). */
+function collectEvidence(lore: Lore): Evidence[] {
+  return [
+    ...lore.projects.flatMap((p) => p.evidence),
+    ...lore.structuralAreas.flatMap((a) => a.evidence),
+    ...lore.entryPoints.flatMap((e) => e.evidence),
+    ...lore.relationships.flatMap((r) => r.evidence),
+    ...lore.startHere.flatMap((r) => r.evidence),
+  ];
+}
+
+/** Total evidence count across a Lore — a real "evidence coverage" figure, not a fabricated one. */
+export function countEvidence(lore: Lore): number {
+  return collectEvidence(lore).length;
+}
+
 /**
  * Evaluates whether a Lore satisfies the minimum value contract. A Lore that
  * can list files and imports but fails this check has not met the product
@@ -220,13 +236,7 @@ export function evaluateMinimumValueContract(lore: Lore): MinimumValueContract {
     lore.startHere.length <= START_HERE_MAX_ITEMS &&
     lore.startHere.every((item) => item.evidence.length > 0);
 
-  const allEvidence = [
-    ...lore.projects.flatMap((p) => p.evidence),
-    ...lore.structuralAreas.flatMap((a) => a.evidence),
-    ...lore.entryPoints.flatMap((e) => e.evidence),
-    ...lore.relationships.flatMap((r) => r.evidence),
-    ...lore.startHere.flatMap((r) => r.evidence),
-  ];
+  const allEvidence = collectEvidence(lore);
 
   return {
     hasRepositoryOrientation: lore.projects.length > 0,
