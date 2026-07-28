@@ -86,6 +86,19 @@ describe("discoverSourceFiles", () => {
     expect(sourceFiles.map((sf) => sf.relativePath)).toEqual(["src/main.py"]);
   });
 
+  it("excludes fixtures, __fixtures__, and __mocks__ directories at any depth", async () => {
+    await fsp.mkdir(path.join(rootDir, "src"), { recursive: true });
+    await fsp.writeFile(path.join(rootDir, "src/main.py"), "");
+
+    for (const dir of ["fixtures/pyapp", "__fixtures__", "src/pkg/__mocks__"]) {
+      await fsp.mkdir(path.join(rootDir, dir), { recursive: true });
+      await fsp.writeFile(path.join(rootDir, dir, "ignored.py"), "");
+    }
+
+    const sourceFiles = await discoverSourceFiles(rootDir);
+    expect(sourceFiles.map((sf) => sf.relativePath)).toEqual(["src/main.py"]);
+  });
+
   it("returns files sorted by relative path", async () => {
     await fsp.mkdir(path.join(rootDir, "b"), { recursive: true });
     await fsp.mkdir(path.join(rootDir, "a"), { recursive: true });

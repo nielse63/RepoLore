@@ -36,6 +36,7 @@ import type {
   TestRelationship,
 } from "@/lore/model";
 import { START_HERE_MAX_ITEMS } from "@/lore/model";
+import { TEST_SUPPORT_DIRECTORY_NAMES } from "./test-support-directories";
 
 export interface DeriveViewsInput {
   projectId: string;
@@ -109,21 +110,16 @@ function areaId(projectId: string, name: string): string {
 }
 
 /**
- * Top-level directories conventionally holding test *data* rather than test
- * *code* (e.g. fixture inputs spawned or read by a test suite) — distinct
- * from `isTestFile`, since these files rarely look like tests themselves.
- * Validated against a real repository (`sindresorhus/globby`) in
- * implementation session 6, where `fixtures/` files (not under `test/` or
- * `tests/`) still crowded out real implementation areas in Start Here.
+ * Defense-in-depth only: each language's source discovery already excludes
+ * `TEST_SUPPORT_DIRECTORY_NAMES` at any depth, so in practice no such file
+ * reaches this module. Kept in case a future caller feeds in file lists that
+ * skip discovery's exclusion (e.g. a language extractor added later that
+ * doesn't reuse the shared discovery pattern).
  */
-const TEST_SUPPORT_DIRECTORY_NAMES = new Set([
-  "fixtures",
-  "__fixtures__",
-  "__mocks__",
-]);
-
 function isTestSupportFile(relativeFilePath: string): boolean {
-  return TEST_SUPPORT_DIRECTORY_NAMES.has(relativeFilePath.split("/")[0]);
+  return relativeFilePath
+    .split("/")
+    .some((segment) => TEST_SUPPORT_DIRECTORY_NAMES.has(segment));
 }
 
 function describeEntryKind(kind: EntryPoint["kind"]): string {

@@ -53,6 +53,21 @@ describe("extractJsTsProject", () => {
     expect(result.project.kind).toBe("application");
   });
 
+  it("does not treat a fixture app's bootstrap call as the project's real entry point", async () => {
+    rootDir = await makeFixture({
+      "src/lib.ts": "export const x = 1;",
+      "fixtures/ts-react-app/src/index.tsx":
+        "import { createRoot } from 'react-dom/client';\ncreateRoot(document.getElementById('root')).render(<App />);",
+    });
+
+    const result = extractJsTsProject(rootDir);
+    expect(result.sourceFilePaths).not.toContain(
+      "fixtures/ts-react-app/src/index.tsx"
+    );
+    expect(result.entryPoints).toEqual([]);
+    expect(result.project.kind).not.toBe("application");
+  });
+
   it("detects React components and adds the react framework tag", async () => {
     rootDir = await makeFixture({
       "src/Header.tsx": "export function Header() { return <div>hi</div>; }",

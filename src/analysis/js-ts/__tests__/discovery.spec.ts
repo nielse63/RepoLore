@@ -93,6 +93,27 @@ describe("discoverSourceFiles", () => {
     expect(relativePaths).toEqual(["packages/app/src/index.ts"]);
   });
 
+  it("excludes fixtures, __fixtures__, and __mocks__ directories at any depth", async () => {
+    await fsp.mkdir(path.join(rootDir, "src"), { recursive: true });
+    await fsp.writeFile(path.join(rootDir, "src/index.ts"), "");
+
+    for (const dir of [
+      "fixtures/ts-react-app/src",
+      "__fixtures__",
+      "src/components/__mocks__",
+    ]) {
+      await fsp.mkdir(path.join(rootDir, dir), { recursive: true });
+      await fsp.writeFile(path.join(rootDir, dir, "index.tsx"), "");
+    }
+
+    const { sourceFiles } = discoverSourceFiles(rootDir);
+    const relativePaths = sourceFiles.map((sf) =>
+      path.relative(rootDir, sf.getFilePath())
+    );
+
+    expect(relativePaths).toEqual(["src/index.ts"]);
+  });
+
   it("returns an empty project for a directory with no matching source files", async () => {
     await fsp.writeFile(path.join(rootDir, "README.md"), "");
 

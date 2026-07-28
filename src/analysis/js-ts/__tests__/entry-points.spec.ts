@@ -110,6 +110,19 @@ describe("extractEntryPoints", () => {
     });
   });
 
+  it("does not treat a regex literal's '.test' call as a bootstrap render/createRoot match", async () => {
+    rootDir = await makeRootDir();
+    const project = makeProject();
+    project.createSourceFile(
+      path.join(rootDir, "src/detector.ts"),
+      "function check(text: string) { return /\\.render$/.test(text) || /createRoot/.test(text); }"
+    );
+
+    const entryPoints = extractEntryPoints(project.getSourceFiles(), rootDir);
+
+    expect(entryPoints).toEqual([]);
+  });
+
   it("does not treat a bare render() call in a test file as a bootstrap entry point", async () => {
     rootDir = await makeRootDir();
     const project = makeProject();

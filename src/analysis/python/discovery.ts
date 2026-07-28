@@ -7,12 +7,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Tree } from "web-tree-sitter";
+import { TEST_SUPPORT_DIRECTORY_NAMES } from "../shared/test-support-directories";
 import { createPythonParser, parsePythonSource } from "./parser";
 
 /**
  * Directory names excluded from source discovery regardless of depth:
  * bytecode caches, virtual environments, installed/vendored packages,
- * build/output, tool caches, and version-control directories.
+ * build/output, tool caches, version-control, and test-fixture/mock
+ * directories. Fixtures and mocks are excluded here (not just downgraded in
+ * `derive-views`' area labeling) so they can never be mistaken for real
+ * source.
  */
 export const EXCLUDED_DIRECTORY_NAMES = new Set([
   "__pycache__",
@@ -29,6 +33,7 @@ export const EXCLUDED_DIRECTORY_NAMES = new Set([
   ".pytest_cache",
   ".ipynb_checkpoints",
   "node_modules",
+  ...TEST_SUPPORT_DIRECTORY_NAMES,
 ]);
 
 /**

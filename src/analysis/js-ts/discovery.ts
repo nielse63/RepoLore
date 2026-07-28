@@ -6,24 +6,30 @@
  * to parse `.ts`/`.tsx`/`.js`/`.jsx` ASTs.
  */
 
-import path from 'node:path';
-import { Project, ScriptTarget, ts, type SourceFile } from 'ts-morph';
+import path from "node:path";
+import { Project, ScriptTarget, ts, type SourceFile } from "ts-morph";
+import { TEST_SUPPORT_DIRECTORY_NAMES } from "../shared/test-support-directories";
 
 /**
  * Directory names excluded from source discovery regardless of depth:
- * dependency, build/output, and version-control directories.
+ * dependency, build/output, version-control, and test-fixture/mock
+ * directories. Fixtures and mocks are excluded here (not just downgraded in
+ * `derive-views`' area labeling) so they can never be mistaken for real
+ * source — e.g. a fixture app's `index.tsx` calling `ReactDOM.render` would
+ * otherwise be detected as the repository's actual bootstrap entry point.
  */
 export const EXCLUDED_DIRECTORY_NAMES = new Set([
-  'node_modules',
-  'dist',
-  'build',
-  'out',
-  '.next',
-  'coverage',
-  '.git',
+  "node_modules",
+  "dist",
+  "build",
+  "out",
+  ".next",
+  "coverage",
+  ".git",
+  ...TEST_SUPPORT_DIRECTORY_NAMES,
 ]);
 
-const SOURCE_GLOB_EXTENSIONS = '{ts,tsx,js,jsx}';
+const SOURCE_GLOB_EXTENSIONS = "{ts,tsx,js,jsx}";
 
 /** True if any path segment is an excluded directory name. */
 export function isExcludedPath(relativePath: string): boolean {
@@ -54,12 +60,12 @@ export function discoverSourceFiles(rootDir: string): DiscoveredProject {
   });
 
   const absoluteRoot = path.resolve(rootDir);
-  const toPosix = (p: string) => p.split(path.sep).join('/');
+  const toPosix = (p: string) => p.split(path.sep).join("/");
 
   project.addSourceFilesAtPaths([
     toPosix(path.join(absoluteRoot, `**/*.${SOURCE_GLOB_EXTENSIONS}`)),
     ...[...EXCLUDED_DIRECTORY_NAMES].map(
-      (dir) => `!${toPosix(path.join(absoluteRoot, '**', dir, '**'))}`
+      (dir) => `!${toPosix(path.join(absoluteRoot, "**", dir, "**"))}`
     ),
   ]);
 
