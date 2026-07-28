@@ -8,6 +8,7 @@ import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
+import { formatPath } from "@/lib/format-path";
 
 export interface ArchitectureContentProps {
   lore: Lore;
@@ -42,8 +43,11 @@ export function ArchitectureContent({
       </div>
 
       {lore.projects.map((project) => {
+        // The root directory ("." — a file with no directory of its own, e.g.
+        // a root-level config file) adds no orientation value as its own
+        // Major Area.
         const projectAreas = lore.structuralAreas.filter(
-          (area) => area.projectId === project.id
+          (area) => area.projectId === project.id && area.name !== "."
         );
         return (
           <section key={project.id} className="flex flex-col gap-6">
@@ -114,7 +118,7 @@ export function ArchitectureContent({
                           location={area.location}
                           sourceUrl={areaUrl}
                         >
-                          {area.name}
+                          {formatPath(area.name)}
                         </SourceLink>
                         <p className="mt-1 text-sm text-muted">
                           {area.responsibility ?? area.rationale}
@@ -186,7 +190,7 @@ export function ArchitectureContent({
                       location={edge.fromAreaLocation}
                       sourceUrl={areaUrl}
                     >
-                      {edge.fromAreaName}
+                      {formatPath(edge.fromAreaName)}
                     </SourceLink>
                   </Td>
                   <Td>
@@ -194,7 +198,7 @@ export function ArchitectureContent({
                       location={edge.toAreaLocation}
                       sourceUrl={areaUrl}
                     >
-                      {edge.toAreaName}
+                      {formatPath(edge.toAreaName)}
                     </SourceLink>
                   </Td>
                   <Td>

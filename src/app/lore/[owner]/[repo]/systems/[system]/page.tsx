@@ -1,25 +1,26 @@
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowRight,
   ArrowLeftRight,
   Compass,
   Database,
   Target,
-} from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { Badge } from '@/components/ui/Badge';
-import { Card, CardTitle, CardDescription } from '@/components/ui/Card';
-import { IconTile } from '@/components/ui/IconTile';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { Table, Thead, Th, Tr, Td } from '@/components/ui/Table';
-import { SYSTEMS, getSystemDetail } from '@/lib/fixtures/payments-service';
-import { ICONS } from '@/lib/fixtures/icons';
+} from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { Badge } from "@/components/ui/Badge";
+import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
+import { IconTile } from "@/components/ui/IconTile";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
+import { SYSTEMS, getSystemDetail } from "@/lib/fixtures/payments-service";
+import { ICONS } from "@/lib/fixtures/icons";
+import { formatPath } from "@/lib/format-path";
 
 export default async function SystemDetailPage({
   params,
@@ -40,7 +41,7 @@ export default async function SystemDetailPage({
           left={
             <Breadcrumbs
               items={[
-                { label: 'Systems', href: `${base}/systems` },
+                { label: "Systems", href: `${base}/systems` },
                 { label: system.name },
               ]}
             />
@@ -57,7 +58,7 @@ export default async function SystemDetailPage({
             {detail.owns.map((owned) => (
               <li key={owned.path}>
                 <p className="font-mono text-xs text-foreground">
-                  {owned.path}
+                  {formatPath(owned.path)}
                 </p>
                 <p className="text-xs text-muted">{owned.description}</p>
               </li>
@@ -122,7 +123,7 @@ export default async function SystemDetailPage({
                   {detail.owns.map((owned) => (
                     <li key={owned.path}>
                       <p className="font-mono text-xs text-foreground">
-                        {owned.path}
+                        {formatPath(owned.path)}
                       </p>
                       <p className="text-sm text-muted">{owned.description}</p>
                     </li>
@@ -192,7 +193,7 @@ export default async function SystemDetailPage({
                         <Td>{ep.method}</Td>
                         <Td>{ep.description}</Td>
                         <Td className="font-mono text-xs text-muted">
-                          {ep.definedIn}
+                          {formatPath(ep.definedIn)}
                         </Td>
                       </Tr>
                     ))}
@@ -274,7 +275,7 @@ export default async function SystemDetailPage({
                 {detail.owns.map((owned) => (
                   <li key={owned.path} className="text-sm">
                     <p className="font-mono text-xs text-foreground">
-                      {owned.path}
+                      {formatPath(owned.path)}
                     </p>
                     <p className="text-muted">{owned.description}</p>
                   </li>

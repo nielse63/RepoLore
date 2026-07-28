@@ -99,7 +99,7 @@ Each recommendation must contain:
 
 Example:
 
-> Start with `src/index.ts`. The package manifest declares it as the public entry point, and it re-exports functionality from four primary internal modules. **Detected** from `package.json` and export statements.
+> Start with `/src/index.ts`. The package manifest declares it as the public entry point, and it re-exports functionality from four primary internal modules. **Detected** from `package.json` and export statements.
 
 Start Here must not be a list of the largest files or the highest dependency-centrality scores. It should seek useful coverage and avoid recommending several near-duplicate locations from the same area.
 

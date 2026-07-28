@@ -1,51 +1,52 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { ChevronRight, Copy, ExternalLink, ShieldCheck } from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { RepoIdentity } from '@/components/lore-shell/RepoIdentity';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { IconTile } from '@/components/ui/IconTile';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { SYSTEMS } from '@/lib/fixtures/payments-service';
-import { ICONS } from '@/lib/fixtures/icons';
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import { ChevronRight, Copy, ExternalLink, ShieldCheck } from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { IconTile } from "@/components/ui/IconTile";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import { SYSTEMS } from "@/lib/fixtures/payments-service";
+import { ICONS } from "@/lib/fixtures/icons";
+import { formatPath } from "@/lib/format-path";
 
 const FACETS = [
-  { label: 'All', count: 18 },
-  { label: 'Systems', count: 2 },
-  { label: 'Flows', count: 1 },
-  { label: 'Claims', count: 1 },
-  { label: 'Files', count: 8 },
-  { label: 'History', count: 1 },
+  { label: "All", count: 18 },
+  { label: "Systems", count: 2 },
+  { label: "Flows", count: 1 },
+  { label: "Claims", count: 1 },
+  { label: "Files", count: 8 },
+  { label: "History", count: 1 },
 ];
 
 const FILE_RESULTS = [
   {
-    file: 'workers/tasks.py',
-    lines: 'L10-L67',
+    file: "workers/tasks.py",
+    lines: "L10-L67",
     code: 'def process_payment_retry(self, payment_id):\n    """Process a payment retry asynchronously."""',
   },
   {
-    file: 'service/payment/checkout.py',
-    lines: 'L42-L128',
+    file: "service/payment/checkout.py",
+    lines: "L42-L128",
     code: 'process_payment_retry.delay(payment_id)\nreturn Accepted(), {"status": "retry_queued"}',
   },
 ];
 
 export default function SearchPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [query, setQuery] = useState('payment retry');
-  const [facet, setFacet] = useState('All');
-  const paymentService = SYSTEMS.find((s) => s.slug === 'payment-service')!;
-  const worker = SYSTEMS.find((s) => s.slug === 'worker')!;
+  const [query, setQuery] = useState("payment retry");
+  const [facet, setFacet] = useState("All");
+  const paymentService = SYSTEMS.find((s) => s.slug === "payment-service")!;
+  const worker = SYSTEMS.find((s) => s.slug === "worker")!;
 
   return (
     <LorePageFrame
@@ -104,7 +105,8 @@ export default function SearchPage() {
                 {FILE_RESULTS.map((r) => (
                   <li key={r.file}>
                     <p className="font-mono text-xs text-foreground">
-                      {r.file} <span className="text-muted">{r.lines}</span>
+                      {formatPath(r.file)}{" "}
+                      <span className="text-muted">{r.lines}</span>
                     </p>
                   </li>
                 ))}
@@ -118,7 +120,7 @@ export default function SearchPage() {
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onClear={() => setQuery('')}
+          onClear={() => setQuery("")}
           placeholder="Search this repository…"
         />
         <h1 className="mt-6 font-serif text-4xl font-semibold text-foreground">
@@ -142,10 +144,10 @@ export default function SearchPage() {
                     type="button"
                     onClick={() => setFacet(f.label)}
                     className={
-                      'flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm font-medium ' +
+                      "flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm font-medium " +
                       (facet === f.label
-                        ? 'bg-tile-core-bg text-tile-core-fg'
-                        : 'text-muted hover:text-foreground')
+                        ? "bg-tile-core-bg text-tile-core-fg"
+                        : "text-muted hover:text-foreground")
                     }
                   >
                     {f.label}
@@ -174,7 +176,7 @@ export default function SearchPage() {
                       workers using Celery.
                     </p>
                     <p className="mt-2 text-sm text-muted">
-                      Supported by{' '}
+                      Supported by{" "}
                       <span className="font-medium text-primary">
                         7 references
                       </span>
@@ -207,7 +209,7 @@ export default function SearchPage() {
                             {system.description}
                           </p>
                           <p className="mt-1.5 font-mono text-xs text-primary">
-                            {system.ownedPaths}
+                            {formatPath(system.ownedPaths)}
                           </p>
                         </div>
                       </div>
@@ -226,7 +228,7 @@ export default function SearchPage() {
                   <Card key={r.file} className="p-4">
                     <div className="flex items-center justify-between">
                       <p className="font-mono text-xs text-foreground">
-                        {r.file}
+                        {formatPath(r.file)}
                       </p>
                       <span className="text-xs text-muted">{r.lines}</span>
                     </div>

@@ -1,37 +1,38 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { RepoIdentity } from '@/components/lore-shell/RepoIdentity';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { IconTile } from '@/components/ui/IconTile';
-import { FilterPills } from '@/components/ui/FilterPills';
-import { DATA_FLOW_STEPS } from '@/lib/fixtures/payments-service';
-import { ICONS } from '@/lib/fixtures/icons';
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { IconTile } from "@/components/ui/IconTile";
+import { FilterPills } from "@/components/ui/FilterPills";
+import { DATA_FLOW_STEPS } from "@/lib/fixtures/payments-service";
+import { ICONS } from "@/lib/fixtures/icons";
+import { formatPath } from "@/lib/format-path";
 
 const JOURNEYS = [
-  { value: 'create-payment', label: 'Create payment' },
-  { value: 'authenticate-request', label: 'Authenticate request' },
-  { value: 'send-notification', label: 'Send notification' },
-  { value: 'process-retry', label: 'Process retry' },
+  { value: "create-payment", label: "Create payment" },
+  { value: "authenticate-request", label: "Authenticate request" },
+  { value: "send-notification", label: "Send notification" },
+  { value: "process-retry", label: "Process retry" },
 ];
 
 const VIEWS = [
-  { value: 'journey', label: 'Journey' },
-  { value: 'diagram', label: 'Diagram' },
-  { value: 'list', label: 'List' },
+  { value: "journey", label: "Journey" },
+  { value: "diagram", label: "Diagram" },
+  { value: "list", label: "List" },
 ];
 
 export default function DataFlowPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [journey, setJourney] = useState('create-payment');
-  const [view, setView] = useState('journey');
+  const [journey, setJourney] = useState("create-payment");
+  const [view, setView] = useState("journey");
   const [activeStep, setActiveStep] = useState(3);
 
   const step = DATA_FLOW_STEPS[activeStep];
@@ -115,7 +116,8 @@ export default function DataFlowPage() {
                 {step.evidence.map((e) => (
                   <li key={e.location}>
                     <p className="font-mono text-xs text-foreground">
-                      {e.location} <span className="text-muted">{e.lines}</span>
+                      {formatPath(e.location)}{" "}
+                      <span className="text-muted">{e.lines}</span>
                     </p>
                     <p className="text-sm text-muted">{e.description}</p>
                   </li>
@@ -167,25 +169,25 @@ export default function DataFlowPage() {
                   <button
                     type="button"
                     onClick={() => setActiveStep(i)}
-                    aria-current={active ? 'step' : undefined}
+                    aria-current={active ? "step" : undefined}
                     className={
-                      'flex w-full items-center gap-4 px-6 py-4 text-left transition-colors ' +
-                      (active ? 'bg-tile-core-bg/40' : 'hover:bg-border/10')
+                      "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
+                      (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
                     }
                   >
                     <span
                       className={
-                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ' +
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold " +
                         (active
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border text-muted')
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border text-muted")
                       }
                     >
                       {i + 1}
                     </span>
                     <IconTile
                       icon={Icon}
-                      variant={active ? 'core' : 'neutral'}
+                      variant={active ? "core" : "neutral"}
                       size="sm"
                     />
                     <div className="min-w-0 flex-1">

@@ -1,4 +1,5 @@
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
+import { formatPath } from "@/lib/format-path";
 
 /**
  * Plain, unstyled rendering of a full `Lore` — shared by the real
@@ -22,7 +23,7 @@ function Loc({
   sourceUrl?: (location: SourceLocation) => string;
   children?: React.ReactNode;
 }) {
-  const label = children ?? location.filePath;
+  const label = children ?? formatPath(location.filePath);
   if (!sourceUrl) return <code>{label}</code>;
   return (
     <a href={sourceUrl(location)} target="_blank" rel="noopener noreferrer">
@@ -143,22 +144,24 @@ export function LoreView({
             </tr>
           </thead>
           <tbody>
-            {lore.structuralAreas.map((area) => (
-              <tr key={area.id}>
-                <td>
-                  <Loc location={area.location} sourceUrl={areaUrl}>
-                    {area.name}
-                  </Loc>
-                </td>
-                <td>{area.responsibility ?? "—"}</td>
-                <td>{area.rationale}</td>
-                <td>{area.entryPointIds.length}</td>
-                <td>{area.directDependencyIds.length}</td>
-                <td>{area.directDependentIds.length}</td>
-                <td>{area.testRelationshipIds.length}</td>
-                <td>{area.gaps.length}</td>
-              </tr>
-            ))}
+            {lore.structuralAreas
+              .filter((area) => area.name !== ".")
+              .map((area) => (
+                <tr key={area.id}>
+                  <td>
+                    <Loc location={area.location} sourceUrl={areaUrl}>
+                      {formatPath(area.name)}
+                    </Loc>
+                  </td>
+                  <td>{area.responsibility ?? "—"}</td>
+                  <td>{area.rationale}</td>
+                  <td>{area.entryPointIds.length}</td>
+                  <td>{area.directDependencyIds.length}</td>
+                  <td>{area.directDependentIds.length}</td>
+                  <td>{area.testRelationshipIds.length}</td>
+                  <td>{area.gaps.length}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </section>

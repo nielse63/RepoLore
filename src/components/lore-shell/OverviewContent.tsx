@@ -12,6 +12,7 @@ import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
+import { formatPath } from "@/lib/format-path";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -35,6 +36,9 @@ export function OverviewContent({
   );
   const startHereUrl = (location: SourceLocation) =>
     areaFilePaths.has(location.filePath) ? areaUrl : sourceUrl;
+  // The root directory ("." — a file with no directory of its own, e.g. a
+  // root-level config file) adds no orientation value as its own Major Area.
+  const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -99,14 +103,14 @@ export function OverviewContent({
           Major Areas
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {lore.structuralAreas.map((area) => (
+          {majorAreas.map((area) => (
             <Card key={area.id}>
               <div className="flex items-start gap-3">
                 <IconTile icon={Layers} variant="core" size="sm" />
                 <div className="min-w-0 flex-1">
                   <CardTitle>
                     <SourceLink location={area.location} sourceUrl={areaUrl}>
-                      {area.name}
+                      {formatPath(area.name)}
                     </SourceLink>
                   </CardTitle>
                   <CardDescription className="mt-1">

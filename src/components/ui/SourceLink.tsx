@@ -1,4 +1,5 @@
-import type { SourceLocation } from '@/lore/model';
+import type { SourceLocation } from "@/lore/model";
+import { formatPath } from "@/lib/format-path";
 
 export function SourceLink({
   location,
@@ -9,11 +10,11 @@ export function SourceLink({
   sourceUrl?: (location: SourceLocation) => string;
   children?: React.ReactNode;
 }) {
-  const label = children ?? location.filePath;
+  const label = children ?? formatPath(location.filePath);
   const lines =
     location.startLine !== undefined
-      ? `:${location.startLine}${location.endLine ? `-${location.endLine}` : ''}`
-      : '';
+      ? `:${location.startLine}${location.endLine ? `-${location.endLine}` : ""}`
+      : "";
   if (!sourceUrl) {
     return (
       <code className="rounded bg-border/40 px-1.5 py-0.5 font-mono text-xs text-foreground">

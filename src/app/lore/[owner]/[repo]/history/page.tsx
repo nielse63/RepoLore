@@ -1,41 +1,42 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Calendar, ChevronDown, ChevronRight } from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { RepoIdentity } from '@/components/lore-shell/RepoIdentity';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import { useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import { Calendar, ChevronDown, ChevronRight } from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import {
   HISTORY_ENTRIES,
   type HistoryEntry,
-} from '@/lib/fixtures/payments-service';
+} from "@/lib/fixtures/payments-service";
+import { formatPath } from "@/lib/format-path";
 
 const KIND_FILTERS = [
-  { value: 'all', label: 'All changes' },
-  { value: 'Architectural change', label: 'Architecture' },
-  { value: 'Dependency change', label: 'Dependencies' },
-  { value: 'Data flow change', label: 'Data flow' },
+  { value: "all", label: "All changes" },
+  { value: "Architectural change", label: "Architecture" },
+  { value: "Dependency change", label: "Dependencies" },
+  { value: "Data flow change", label: "Data flow" },
 ];
 
-const GROUPS: HistoryEntry['group'][] = [
-  'This week',
-  'Earlier this month',
-  'June 2026',
+const GROUPS: HistoryEntry["group"][] = [
+  "This week",
+  "Earlier this month",
+  "June 2026",
 ];
 
 export default function HistoryPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [kind, setKind] = useState('all');
+  const [kind, setKind] = useState("all");
   const [selected, setSelected] = useState(HISTORY_ENTRIES[0]);
 
   const filtered = useMemo(
-    () => HISTORY_ENTRIES.filter((e) => kind === 'all' || e.kind === kind),
+    () => HISTORY_ENTRIES.filter((e) => kind === "all" || e.kind === kind),
     [kind]
   );
 
@@ -93,7 +94,7 @@ export default function HistoryPage() {
             <div>
               <p className="text-muted">Source</p>
               <p className="font-mono text-xs text-foreground">
-                {selected.source}{' '}
+                {formatPath(selected.source)}{" "}
                 <span className="text-muted">{selected.lineRange}</span>
               </p>
             </div>
@@ -158,12 +159,12 @@ export default function HistoryPage() {
                         <button
                           type="button"
                           onClick={() => setSelected(entry)}
-                          aria-current={active ? 'true' : undefined}
+                          aria-current={active ? "true" : undefined}
                           className={
-                            'flex w-full items-start gap-4 px-6 py-4 text-left transition-colors ' +
+                            "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors " +
                             (active
-                              ? 'bg-tile-core-bg/40'
-                              : 'hover:bg-border/10')
+                              ? "bg-tile-core-bg/40"
+                              : "hover:bg-border/10")
                           }
                         >
                           <div className="w-24 shrink-0">
@@ -187,7 +188,7 @@ export default function HistoryPage() {
                               <span aria-hidden="true">·</span>
                               {entry.commitCount} commits
                               <span aria-hidden="true">·</span>
-                              {entry.systems.join(', ')}
+                              {entry.systems.join(", ")}
                               <span aria-hidden="true">·</span>
                               <span className="font-mono">
                                 {entry.lineRange}
