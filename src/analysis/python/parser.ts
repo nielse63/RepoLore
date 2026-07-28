@@ -6,25 +6,44 @@
  */
 
 import path from "node:path";
-import { createRequire } from "node:module";
 import { Parser, Language, type Tree } from "web-tree-sitter";
 
 let initPromise: Promise<void> | undefined;
 let pythonLanguage: Language | undefined;
 
+/**
+ * Both wasm binaries are located relative to `process.cwd()`'s
+ * `node_modules` rather than via `require.resolve` (the original, more
+ * conventional approach). Under Next.js's Turbopack bundler,
+ * `require.resolve` calls get rewritten into Turbopack's own internal
+ * module representation (a numeric id at build time, an unreadable virtual
+ * `[project]/...`/`[externals]/...` string at request time) instead of a
+ * real, filesystem-readable absolute path — found wiring the Python
+ * fixture pages into `/fixtures/[name]` in implementation session 13, and
+ * confirmed to reproduce identically whether or not the packages are
+ * marked external (`next.config.ts`). `process.cwd()`-relative
+ * construction isn't touched by that rewriting since it isn't a module
+ * resolution call. This assumes a flat `node_modules` layout (true here —
+ * a single Next.js deployable, ADR-0001, no workspaces/monorepo).
+ */
+function nodeModulesPath(...segments: string[]): string {
+  return path.join(process.cwd(), "node_modules", ...segments);
+}
+
 async function ensureInitialized(): Promise<void> {
   if (!initPromise) {
-    initPromise = Parser.init();
+    const wasmDirectory = nodeModulesPath("web-tree-sitter");
+    initPromise = Parser.init({
+      locateFile: (scriptName: string) => path.join(wasmDirectory, scriptName),
+    });
   }
   await initPromise;
 }
 
 async function loadPythonLanguage(): Promise<Language> {
   if (pythonLanguage) return pythonLanguage;
-  const require = createRequire(import.meta.url);
-  const packageJsonPath = require.resolve("tree-sitter-python/package.json");
-  const wasmPath = path.join(
-    path.dirname(packageJsonPath),
+  const wasmPath = nodeModulesPath(
+    "tree-sitter-python",
     "tree-sitter-python.wasm"
   );
   pythonLanguage = await Language.load(wasmPath);

@@ -1,6 +1,6 @@
-import Link from 'next/link';
+import Link from "next/link";
 
-/** Plain, unstyled index of the JS/TS fixtures with derived-view pages (see `[name]/page.tsx`). */
+/** Plain, unstyled index of the fixtures with derived-view pages (see `[name]/page.tsx`). */
 export default function FixturesIndexPage() {
   return (
     <main>
@@ -11,6 +11,12 @@ export default function FixturesIndexPage() {
         </li>
         <li>
           <Link href="/fixtures/ts-library">ts-library</Link>
+        </li>
+        <li>
+          <Link href="/fixtures/python-app">python-app</Link>
+        </li>
+        <li>
+          <Link href="/fixtures/python-library">python-library</Link>
         </li>
       </ul>
     </main>

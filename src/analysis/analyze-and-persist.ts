@@ -13,19 +13,19 @@
  * repo before anything else happens — see `claimReanalysisAttempt`.
  */
 
-import { acquireRepositorySource } from '@/acquisition/fetch-repo-source';
-import { deriveJsTsViews } from '@/analysis/js-ts/derive-views';
-import { extractJsTsProject } from '@/analysis/js-ts/extract-project';
-import { claimReanalysisAttempt } from '@/analysis/reanalysis-rate-limit';
-import { JS_TS_ANALYZER_VERSION } from '@/analysis/js-ts/version';
+import { acquireRepositorySource } from "@/acquisition/fetch-repo-source";
+import { deriveJsTsViews } from "@/analysis/js-ts/derive-views";
+import { extractJsTsProject } from "@/analysis/js-ts/extract-project";
+import { claimReanalysisAttempt } from "@/analysis/reanalysis-rate-limit";
+import { JS_TS_ANALYZER_VERSION } from "@/analysis/js-ts/version";
 import {
   getAnalysisRunByKey,
   saveAnalysisRun,
   type AnalysisRunRow,
-} from '@/db/analysis-runs';
-import { upsertRepo } from '@/db/repos';
-import { resolveRepositoryHead } from '@/github/client';
-import { buildJsTsLore } from '@/lore/build-lore';
+} from "@/db/analysis-runs";
+import { upsertRepo } from "@/db/repos";
+import { resolveRepositoryHead } from "@/github/client";
+import { buildLore } from "@/lore/build-lore";
 
 function errorMessageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -60,7 +60,7 @@ export async function analyzeAndPersistRepository(
       repoId: repoRow.id,
       commitSha: headSha,
       analyzerVersion: JS_TS_ANALYZER_VERSION,
-      status: 'failed',
+      status: "failed",
       errorMessage: errorMessageOf(error),
     });
   }
@@ -71,7 +71,7 @@ export async function analyzeAndPersistRepository(
       projectId: extraction.project.id,
       ...extraction,
     });
-    const lore = buildJsTsLore({
+    const lore = buildLore({
       owner,
       repo,
       defaultBranch,
@@ -95,7 +95,7 @@ export async function analyzeAndPersistRepository(
       repoId: repoRow.id,
       commitSha: acquired.headSha,
       analyzerVersion: JS_TS_ANALYZER_VERSION,
-      status: 'failed',
+      status: "failed",
       errorMessage: errorMessageOf(error),
     });
   } finally {

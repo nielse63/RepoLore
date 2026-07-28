@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Phase 2 (scaffolding) is underway. Session 1 is complete: a real Next.js (App Router, TypeScript) app lives at the repo root, scaffolded with `create-next-app`. No test suite is configured yet (see session 15 in the implementation plan). See `docs/architecture/implementation-plan.md` for the exact next task and progress log.
+Phase 2 (scaffolding) is underway, through session 13 of `docs/architecture/implementation-plan.md`. A real Next.js (App Router, TypeScript) app lives at the repo root. A jest test suite is configured and gates every session's work (one spec file per analyzer module); see `npm run test` below. See `docs/architecture/implementation-plan.md` for the exact next task and progress log.
 
 - `npm run dev` — start the dev server (serves `/api/health` as a liveness-only check, no DB)
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — ESLint (flat config, `eslint-config-next`)
+- `npm run test` — jest test suite
 
 ## Product
 
@@ -32,7 +33,7 @@ Constraints that should shape any proposed feature or dependency (see `product-s
 
 ## Architecture
 
-First-slice architecture and the reasoning behind it live in `docs/architecture/decisions/` (ADR-0001 through ADR-0005): a single Next.js deployable (the worker entrypoint and job queue are deferred until a synchronous path proves insufficient — see ADR-0001 and ADR-0004), GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis for JavaScript/TypeScript, and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)`. ADR-0003 currently scopes ts-morph analysis to JavaScript/TypeScript only; Python analysis needs its own ADR before that work begins (see `docs/architecture/implementation-plan.md`). Read these before proposing a different shape for ingestion, analysis, or job execution.
+First-slice architecture and the reasoning behind it live in `docs/architecture/decisions/` (ADR-0001 through ADR-0006): a single Next.js deployable (the worker entrypoint and job queue are deferred until a synchronous path proves insufficient — see ADR-0001 and ADR-0004), GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis for JavaScript/TypeScript (ADR-0003), syntactic tree-sitter-python analysis for Python (ADR-0006), and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)` (ADR-0005). Both language extractors' derived views (Start Here, major areas) share one language-neutral core (`src/analysis/shared/derive-views.ts`); real end-to-end analysis submissions are still JS/TS-only pending a project-language-detection dispatch (see `docs/architecture/implementation-plan.md`, session 13's log). Read these before proposing a different shape for ingestion, analysis, or job execution.
 
 ## Custom subagents
 

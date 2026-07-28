@@ -1,7 +1,7 @@
 import type { JsTsExtraction } from "@/analysis/js-ts/extract-project";
 import type { JsTsViews } from "@/analysis/js-ts/derive-views";
 import { START_HERE_MIN_ITEMS } from "../model";
-import { buildJsTsLore, type BuildJsTsLoreInput } from "../build-lore";
+import { buildLore, type BuildLoreInput } from "../build-lore";
 
 function minimalExtraction(
   overrides: Partial<JsTsExtraction> = {}
@@ -36,9 +36,7 @@ function minimalViews(overrides: Partial<JsTsViews> = {}): JsTsViews {
   };
 }
 
-function baseInput(
-  overrides: Partial<BuildJsTsLoreInput> = {}
-): BuildJsTsLoreInput {
+function baseInput(overrides: Partial<BuildLoreInput> = {}): BuildLoreInput {
   return {
     owner: "acme",
     repo: "widgets",
@@ -52,9 +50,9 @@ function baseInput(
   };
 }
 
-describe("buildJsTsLore", () => {
+describe("buildLore", () => {
   it("assembles the repository identity and snapshot metadata", () => {
-    const lore = buildJsTsLore(baseInput({ description: "A widget factory" }));
+    const lore = buildLore(baseInput({ description: "A widget factory" }));
 
     expect(lore.snapshot).toMatchObject({
       id: "acme/widgets@sha123:js-ts-v2",
@@ -72,7 +70,7 @@ describe("buildJsTsLore", () => {
   });
 
   it("omits the repository description when not provided", () => {
-    const lore = buildJsTsLore(baseInput());
+    const lore = buildLore(baseInput());
     expect(lore.snapshot.repository.description).toBeUndefined();
   });
 
@@ -107,7 +105,7 @@ describe("buildJsTsLore", () => {
       ],
     });
 
-    const lore = buildJsTsLore(baseInput({ extraction, views }));
+    const lore = buildLore(baseInput({ extraction, views }));
 
     expect(lore.projects).toEqual([extraction.project]);
     expect(lore.entryPoints).toEqual(extraction.entryPoints);
@@ -116,7 +114,7 @@ describe("buildJsTsLore", () => {
   });
 
   it('marks status "partial" when the minimum value contract is not met', () => {
-    const lore = buildJsTsLore(baseInput());
+    const lore = buildLore(baseInput());
     expect(lore.snapshot.status).toBe("partial");
   });
 
@@ -188,7 +186,7 @@ describe("buildJsTsLore", () => {
       })),
     });
 
-    const lore = buildJsTsLore(baseInput({ extraction, views }));
+    const lore = buildLore(baseInput({ extraction, views }));
     expect(lore.snapshot.status).toBe("completed");
   });
 });

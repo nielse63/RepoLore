@@ -8,7 +8,7 @@ Repo Lore earns confidence through evidence, not AI narration. Analysis starts w
 
 ## Status
 
-Phase 2 (scaffolding) is underway, and the first end-to-end slice works for JavaScript/TypeScript: paste a public GitHub repository URL on the home page (`/`) and Repo Lore validates it, resolves its default branch and HEAD commit via the GitHub API (`src/github/`), fetches and safely extracts its tarball (`src/acquisition/`), runs the JS/TS analyzer (`src/analysis/js-ts/`) — imports/exports, internal dependency edges, entry points, public surface, test relationships, React components, Start Here and major-area derived views — persists the result to Postgres (`src/db/`, idempotent per ADR-0005), and redirects to a stable `/lore/{owner}/{repo}` page rendering it with a Detected/Inferred/Unknown/Unsupported certainty label on every claim and a GitHub link back to its source. A failed or partially-supported analysis still renders honestly there rather than silently disappearing, and a rate-limited "Re-analyze" button on that page (`src/analysis/reanalysis-rate-limit.ts`) re-checks the repository's HEAD and re-runs analysis if it's moved, reporting honestly when there's nothing new to analyze. Requires `GITHUB_TOKEN` and `DATABASE_URL`. Local fixtures render through the same `Lore` shape at `/fixtures/{name}`. A Python analyzer (`src/analysis/python/`, ADR-0006: tree-sitter-python via `web-tree-sitter`, syntactic-only) now exists and produces the same project/relationships/entry-points/public-contracts/test-relationships shape as the JS/TS analyzer, verified against `fixtures/python-app` and `fixtures/python-library` — but it isn't wired into acquisition, persistence, derived views (Start Here/major areas), or the `/lore` page yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
+Phase 2 (scaffolding) is underway, and the first end-to-end slice works for JavaScript/TypeScript: paste a public GitHub repository URL on the home page (`/`) and Repo Lore validates it, resolves its default branch and HEAD commit via the GitHub API (`src/github/`), fetches and safely extracts its tarball (`src/acquisition/`), runs the JS/TS analyzer (`src/analysis/js-ts/`) — imports/exports, internal dependency edges, entry points, public surface, test relationships, React components, Start Here and major-area derived views — persists the result to Postgres (`src/db/`, idempotent per ADR-0005), and redirects to a stable `/lore/{owner}/{repo}` page rendering it with a Detected/Inferred/Unknown/Unsupported certainty label on every claim and a GitHub link back to its source. A failed or partially-supported analysis still renders honestly there rather than silently disappearing, and a rate-limited "Re-analyze" button on that page (`src/analysis/reanalysis-rate-limit.ts`) re-checks the repository's HEAD and re-runs analysis if it's moved, reporting honestly when there's nothing new to analyze. Requires `GITHUB_TOKEN` and `DATABASE_URL`. Local fixtures render through the same `Lore` shape at `/fixtures/{name}`. A Python analyzer (`src/analysis/python/`, ADR-0006: tree-sitter-python via `web-tree-sitter`, syntactic-only) now exists and produces the same project/relationships/entry-points/public-contracts/test-relationships shape as the JS/TS analyzer, plus its own Start Here/major-area derived views (`src/analysis/python/derive-views.ts`, sharing a language-neutral core with JS/TS at `src/analysis/shared/derive-views.ts`) — validated against `fixtures/python-app`, `fixtures/python-library`, and three real public Python repositories, and viewable at `/fixtures/python-app` and `/fixtures/python-library`. It isn't wired into real GitHub acquisition or persistence yet — every real `/lore/{owner}/{repo}` submission still runs the JS/TS analyzer unconditionally, since no project-language-detection step exists yet. See `docs/architecture/implementation-plan.md` for the next task and progress log.
 
 The UI now has a full design system (see "Design system and UI routes" below) applied to the home page and the real `/lore/{owner}/{repo}` overview, plus every other view from `docs/designs/` scaffolded under `/lore/{owner}/{repo}/*` with static example content, since the analysis behind them (architecture detection, systems, dependencies, data flow, history, search, change impact) doesn't exist yet.
 
@@ -70,12 +70,16 @@ npm run derive -- fixtures/ts-library
 
 With `npm run dev` running, the same derived views render on a plain, unstyled page at `/fixtures/ts-react-app` and `/fixtures/ts-library` (index at `/fixtures`).
 
-The Python analyzer (`src/analysis/python/`) has its own sanity-check script, mirroring `extract` above — it doesn't yet have `discover`/`derive` equivalents or a `/fixtures` page, since source discovery is folded into extraction and derived views (Start Here/major areas) don't exist for Python yet:
+The Python analyzer (`src/analysis/python/`) has its own equivalent scripts (source discovery is folded into extraction, so there's no separate `discover-python`):
 
 ```
 npm run extract-python -- fixtures/python-app
+npm run derive-python -- fixtures/python-app
 npm run extract-python -- fixtures/python-library
+npm run derive-python -- fixtures/python-library
 ```
+
+The same derived views render at `/fixtures/python-app` and `/fixtures/python-library` alongside the JS/TS fixtures.
 
 ## Testing
 
@@ -96,6 +100,14 @@ npm run analyze-repo -- https://github.com/sindresorhus/globby
 ```
 
 This resolves the repository's default branch and HEAD commit, downloads and safely extracts its tarball into a temp directory (`src/acquisition/`), runs the same JS/TS extraction and derived-view logic used for local fixtures against it, prints Start Here / major areas / entry points / gaps, and always cleans up the temp directory afterward. Requires `GITHUB_TOKEN`. The real web flow (home page → `/lore/{owner}/{repo}`) additionally persists the result — see below.
+
+`npm run analyze-python-repo` is the same thing for the Python analyzer:
+
+```
+npm run analyze-python-repo -- https://github.com/neubig/starter-repo
+```
+
+Neither script is wired into the real, persisted `/lore/{owner}/{repo}` flow for Python yet — see the Status section above.
 
 ## Database
 

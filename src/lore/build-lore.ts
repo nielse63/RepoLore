@@ -1,23 +1,43 @@
 /**
  * Assembles a full `Lore` (the durable, persisted unit — see
- * `docs/architecture/decisions/0005-analysis-result-keying.md`) from JS/TS
- * extraction output (`@/analysis/js-ts/extract-project`) and derived views
- * (`@/analysis/js-ts/derive-views`), plus the repository/commit identity
+ * `docs/architecture/decisions/0005-analysis-result-keying.md`) from any
+ * language's extraction output plus its derived views
+ * (`@/analysis/shared/derive-views`), plus the repository/commit identity
  * that only exists once a real GitHub repository has been resolved and
- * fetched. Used both for a real analysis run and for the local `/fixtures`
- * pages, so both render through the same `Lore` shape.
+ * fetched. Used for a real analysis run, the local `/fixtures` pages, and
+ * both JS/TS and Python, so every language renders through the same `Lore`
+ * shape via one shared assembly function.
  */
 
-import type { JsTsExtraction } from '@/analysis/js-ts/extract-project';
-import type { JsTsViews } from '@/analysis/js-ts/derive-views';
+import type { DerivedViews } from "@/analysis/shared/derive-views";
 import {
   evaluateMinimumValueContract,
   type AnalysisSnapshot,
+  type EntryPoint,
+  type Gap,
   type Lore,
+  type Project,
+  type PublicContract,
+  type Relationship,
   type Repository,
-} from './model';
+  type TestRelationship,
+} from "./model";
 
-export interface BuildJsTsLoreInput {
+/**
+ * The subset of a language extraction's output `buildLore` actually needs —
+ * both `JsTsExtraction` and `PythonExtraction` satisfy this structurally
+ * (each has additional, language-specific fields this function never reads).
+ */
+export interface BuildLoreExtraction {
+  project: Project;
+  entryPoints: EntryPoint[];
+  relationships: Relationship[];
+  publicContracts: PublicContract[];
+  testRelationships: TestRelationship[];
+  gaps: Gap[];
+}
+
+export interface BuildLoreInput {
   owner: string;
   repo: string;
   defaultBranch: string;
@@ -25,8 +45,8 @@ export interface BuildJsTsLoreInput {
   commitSha: string;
   analyzerVersion: string;
   analyzedAt: string;
-  extraction: JsTsExtraction;
-  views: JsTsViews;
+  extraction: BuildLoreExtraction;
+  views: DerivedViews;
 }
 
 /**
@@ -36,7 +56,7 @@ export interface BuildJsTsLoreInput {
  * didn't throw. Anything short of that (e.g. an unsupported/near-empty
  * project) is honestly `'partial'` rather than dressed up as a full result.
  */
-export function buildJsTsLore(input: BuildJsTsLoreInput): Lore {
+export function buildLore(input: BuildLoreInput): Lore {
   const {
     owner,
     repo,
@@ -63,7 +83,7 @@ export function buildJsTsLore(input: BuildJsTsLoreInput): Lore {
     commitSha,
     analyzedAt,
     analyzerVersion,
-    status: 'partial',
+    status: "partial",
   };
 
   const lore: Lore = {
@@ -81,7 +101,7 @@ export function buildJsTsLore(input: BuildJsTsLoreInput): Lore {
 
   const contract = evaluateMinimumValueContract(lore);
   const meetsContract = Object.values(contract).every(Boolean);
-  snapshot.status = meetsContract ? 'completed' : 'partial';
+  snapshot.status = meetsContract ? "completed" : "partial";
 
   return lore;
 }
