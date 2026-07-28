@@ -4,13 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Phase 2 (scaffolding) is underway, through session 13 of `docs/architecture/implementation-plan.md`. A real Next.js (App Router, TypeScript) app lives at the repo root. A jest test suite is configured and gates every session's work (one spec file per analyzer module); see `npm run test` below. See `docs/architecture/implementation-plan.md` for the exact next task and progress log.
+Phase 2 (scaffolding) is underway, through session 14 of `docs/architecture/implementation-plan.md`. A real Next.js (App Router, TypeScript) app lives at the repo root. Automated tests are both unit (Jest, one spec file per analyzer module, gating every session's work) and functional (Playwright, driving real pages in a browser — currently the home page's client-side URL validation and the `/fixtures/*` pages, which need no `GITHUB_TOKEN`/database); see `npm run test` and `npm run test:e2e` below. See `docs/architecture/implementation-plan.md` for the exact next task and progress log.
 
 - `npm run dev` — start the dev server (serves `/api/health` as a liveness-only check, no DB)
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — ESLint (flat config, `eslint-config-next`)
-- `npm run test` — jest test suite
+- `npm run test` — Jest unit test suite
+- `npm run test:coverage` — Jest unit test suite with a coverage report
+- `npm run test:e2e` — Playwright functional/UI test suite
 
 ## Product
 

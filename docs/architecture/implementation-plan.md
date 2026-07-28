@@ -66,7 +66,7 @@ Async dispatch (job queue, worker process, crash reaper — ADR-0004) is intenti
   - https://github.com/scottrogowski/code2flow
   - https://github.com/dbarnett/python-helloworld
 - [x] 14. Wire real language-detection dispatch into `analyze-and-persist.ts` (ADR-0007: GitHub `languages` API signal, 10% byte-share threshold, multi-analyzer dispatch, explicit unsupported-language state) and confirm the repository-level model presents JS/TS and Python projects together without inventing unevidenced cross-language relationships.
-- [ ] 15. Automated tests: analyzer correctness against all fixtures (JS/TS, Python, mixed, unsupported), evidence traceability, failure handling (malformed, oversized, path-traversal attempt).
+- [x] 15. Automated tests: analyzer correctness against all fixtures (JS/TS, Python, mixed, unsupported), evidence traceability, failure handling (malformed, oversized, path-traversal attempt).
 - [ ] 16. _(Only if needed by then)_ Async dispatch: `analysis_jobs` table, worker entrypoint, `FOR UPDATE SKIP LOCKED` claim, stuck-job reaper (ADR-0004's deferred design).
 - [ ] 17. Deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
 - [ ] 18. Local dev docs, run-through against fixtures + pinned public repos across all three languages, self-review against `docs/product/mvp.md`'s minimum value contract and success test (Phase 3 of the founding brief).
@@ -396,3 +396,23 @@ Since this changes derived-view conclusions for any repository containing a `fix
 Added regression coverage: `discovery.spec.ts` for both languages now assert `fixtures/`, `__fixtures__/`, and `__mocks__/` are excluded at any depth; `extract-project.spec.ts` (JS/TS) adds the exact reported shape (a fixture app calling `ReactDOM.render` alongside real `src/` source) and asserts the fixture produces zero entry points and isn't classified as an `application`.
 
 Verified: `npm run test` (323/323, up from 320), `npm run lint`, `npx tsc --noEmit`, all clean.
+
+### 2026-07-28 — Session 15 complete: functional (Playwright) test suite added alongside existing Jest coverage
+
+Session 15's original scope (analyzer correctness against all fixtures including mixed/unsupported, evidence traceability, failure handling for malformed/oversized/path-traversal input) was already substantively covered by unit tests written during earlier sessions — `src/acquisition/__tests__/extract-tarball.spec.ts` (tarball-too-large, too-many-files, extracted-too-large, path-traversal rejection), `src/analysis/dispatch/__tests__/detect-languages.spec.ts` and `src/analysis/__tests__/analyze-and-persist.spec.ts` (mixed-language and unsupported-language dispatch), and each analyzer's own fixture-driven suites. This session's actual gap, raised directly by the product owner, was that "automated tests" meant unit tests only — there was no browser-driven functional/UI coverage at all.
+
+Added a Playwright suite (`@playwright/test`, `eslint-plugin-playwright` — both devDependencies; Chromium browser binary only, installed via `npx playwright install chromium`) at `e2e/`, configured by `playwright.config.ts`:
+
+- Scoped to pages that need no external services, matching this project's no-secrets-in-CI constraint: `e2e/home.spec.ts` drives the home page's client-side/pre-analysis URL validation (`parseGitHubRepoUrl`, which rejects empty/non-GitHub input before the Server Action would ever call the GitHub API), and `e2e/fixtures.spec.ts` drives all four `/fixtures/{name}` pages plus the `/fixtures` index and an unknown-fixture 404 — these run a real analyzer against a local fixture directory at request time, needing neither `GITHUB_TOKEN` nor a database. The real submit → analyze → `/lore/{owner}/{repo}` flow (which needs both) is intentionally not covered by this suite yet.
+- `webServer` reuses an already-running `next dev` locally (Next.js refuses to start a second dev server against the same directory) and starts its own in CI.
+- Deliberately _not_ wired into the Husky pre-commit hook alongside Jest — browser + dev-server startup cost makes it a slower, separately-run check (`npm run test:e2e`) rather than a per-commit gate. Revisit if/when CI is set up (session 17).
+- No code-coverage instrumentation for this suite (Playwright doesn't produce Istanbul-style coverage the way Jest does, and it wasn't asked for) — `reporter: [["list"], ["html", ...]]` in `playwright.config.ts` gives an HTML pass/fail/trace report instead, viewable via `npx playwright show-report`.
+- Added `npm run test:coverage` (`jest --coverage`) alongside the existing `npm test`/`npm run test:watch`, since a coverage command for the unit suite didn't exist before this session.
+
+Updated `eslint.config.mjs` (scoped `eslint-plugin-playwright` recommended rules to `e2e/**/*.spec.ts`, alongside the existing Jest-scoped block), `.gitignore` (`/test-results/`, `/playwright-report/`, `/playwright/.cache/`), `CLAUDE.md`, and `README.md`'s "Testing" section (split into "Unit tests (Jest)" and "Functional/UI tests (Playwright)" subsections) to describe both suites.
+
+Verified: `npm run test` (44 suites / 324 tests, unaffected), `npm run test:e2e` (9/9 passing), `npm run lint`, `npx tsc --noEmit`, all clean.
+
+**Next smallest task:** Session 16 — async dispatch (`analysis_jobs` table, worker entrypoint, `FOR UPDATE SKIP LOCKED` claim, stuck-job reaper), only if synchronous analysis has demonstrably become a problem by then; otherwise skip ahead to session 17 (deploy).
+
+**Unresolved decisions (deferred on purpose, not blocking):** The real submit → analyze → `/lore/{owner}/{repo}` flow still has no functional/browser test coverage, since exercising it would need either a live GitHub token + local Postgres in the test run or mocking both at the browser-test level — worth revisiting once CI (session 17) needs to decide how to provision or fake those. A `fixtures/mixed-language` local fixture (flagged as still-missing at the end of session 14) remains unbuilt; it would slot into `e2e/fixtures.spec.ts` alongside the other four once it exists.

@@ -38,7 +38,9 @@ npm run dev    # start the dev server (serves /api/health as a liveness-only che
 npm run build  # production build
 npm run start  # run the production build
 npm run lint   # ESLint
-npm test       # run the Jest unit test suite
+npm test               # run the Jest unit test suite
+npm run test:coverage  # Jest unit test suite with a coverage report
+npm run test:e2e       # run the Playwright functional/UI test suite
 ```
 
 A GitHub personal access token is now required to resolve a repository from the home page (no scopes needed for public repos — see `.env.example`):
@@ -83,13 +85,26 @@ The same derived views render at `/fixtures/python-app` and `/fixtures/python-li
 
 ## Testing
 
-Every source file under `src/` has a matching Jest unit test at `<same-directory>/__tests__/<file>.spec.ts`. Run the full suite with `npm test` (or `npm run test:watch` for watch mode).
+Automated tests are both unit (Jest) and functional (Playwright).
 
-- Jest is configured via `next/jest` (`jest.config.ts`), which handles the Next.js/SWC transform; tests run in the `node` environment (no jsdom/UI component tests yet).
+### Unit tests (Jest)
+
+Every source file under `src/` has a matching Jest unit test at `<same-directory>/__tests__/<file>.spec.ts`. Run the full suite with `npm test` (`npm run test:watch` for watch mode, `npm run test:coverage` for a coverage report).
+
+- Jest is configured via `next/jest` (`jest.config.ts`), which handles the Next.js/SWC transform; tests run in the `node` environment (no jsdom/UI component tests — that's what the Playwright suite below covers).
 - The JS/TS analyzer tests (`src/analysis/js-ts/`) exercise a real in-memory `ts-morph` `Project` rather than mocking its AST — ts-morph is a pure, in-process parser with no network or native-binding dependency, so this is both more realistic and simpler than hand-mocking `SourceFile` objects.
 - The Python analyzer tests (`src/analysis/python/`) similarly parse small real Python source snippets with the real `tree-sitter-python` grammar (`createPythonParser`/`parsePythonSource`) rather than mocking tree-sitter's `Node` interface — it's a bundled, offline WASM grammar with no network dependency. Because `web-tree-sitter` loads that grammar via a dynamic `import()`, the `test`/`test:watch` scripts set `NODE_OPTIONS=--experimental-vm-modules` so Jest's module VM can support it.
 - Genuine external I/O — `pg` (`src/db/`), the GitHub REST API (`src/github/client.ts`), and orchestration layers that depend on either — is mocked with `jest.mock`.
 - Filesystem-heavy modules (tarball extraction, source discovery, config-file reading) that don't touch the network are tested against real temporary directories (`fs/promises.mkdtemp`) rather than mocked, since real disk I/O in a scratch dir is simpler and more trustworthy than reimplementing `fs`'s contract.
+
+### Functional/UI tests (Playwright)
+
+`e2e/` holds a Playwright suite (`playwright.config.ts`) that drives real pages in an actual browser (Chromium only, for speed). Run it with `npm run test:e2e` — Playwright starts `npm run dev` itself if nothing is already listening on `http://localhost:3000` (or reuses an already-running `next dev` locally).
+
+- Scoped to pages that need no external services: the home page's client-side/pre-analysis URL validation (`src/github/parse-repo-url.ts`, exercised before any GitHub API call would happen) and the `/fixtures/*` pages, which run a real analyzer against a local fixture directory at request time with no `GITHUB_TOKEN` or database required. The real submit → analyze → `/lore/{owner}/{repo}` flow (which does need both) isn't covered here yet.
+- Not currently wired into the Husky pre-commit hook (Jest is) — the browser + dev-server startup cost makes it a slower, separately-run check for now.
+- No code-coverage instrumentation is collected for this suite; `npx playwright show-report` opens the HTML report of the last run (pass/fail, timings, traces on retry) instead.
+- `eslint-plugin-playwright`'s recommended rules lint `e2e/**/*.spec.ts` (see `eslint.config.mjs`).
 
 ## Analyzing a real repository from the command line
 

@@ -11,6 +11,8 @@
     "format": "prettier --write",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "npm test -- --watch",
+    "test:coverage": "npm test -- --coverage",
+    "test:e2e": "playwright test",
     "discover": "tsx scripts/discover-fixture.ts",
     "extract": "tsx scripts/extract-fixture.ts",
     "extract-python": "tsx scripts/extract-python-fixture.ts",
@@ -44,6 +46,7 @@
     "web-tree-sitter": "^0.26.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.0",
     "@types/ini": "^4.1.1",
     "@types/jest": "^30.0.0",
     "@types/lodash.startcase": "^4.4.9",
@@ -54,6 +57,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "eslint-plugin-jest": "^29.16.0",
+    "eslint-plugin-playwright": "^2.11.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-node": "^30.4.1",

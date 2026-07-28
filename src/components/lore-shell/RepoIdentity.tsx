@@ -1,5 +1,5 @@
-import { FolderGit2, GitBranch } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { Badge } from "@/components/ui/Badge";
+import { FolderGit2, GitBranch } from "lucide-react";
 
 function Dot() {
   return <span aria-hidden="true">·</span>;
@@ -8,9 +8,9 @@ function Dot() {
 export function RepoIdentity({
   owner,
   repo,
-  visibility = 'Public',
+  visibility = "Public",
   statusLabel,
-  statusTone = 'success',
+  statusTone = "success",
   updatedLabel,
   branch,
   language,
@@ -19,7 +19,7 @@ export function RepoIdentity({
   repo: string;
   visibility?: string;
   statusLabel: string;
-  statusTone?: 'success' | 'alert';
+  statusTone?: "success" | "alert";
   updatedLabel: string;
   branch: string;
   language?: string;
@@ -36,9 +36,9 @@ export function RepoIdentity({
       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
         <span
           className={
-            statusTone === 'success'
-              ? 'h-1.5 w-1.5 rounded-full bg-success'
-              : 'h-1.5 w-1.5 rounded-full bg-tile-alert-fg'
+            statusTone === "success"
+              ? "h-1.5 w-1.5 rounded-full bg-success"
+              : "h-1.5 w-1.5 rounded-full bg-tile-alert-fg"
           }
           aria-hidden="true"
         />
@@ -51,7 +51,9 @@ export function RepoIdentity({
         {language && (
           <>
             <Dot />
-            {language}
+            <Badge className="truncate font-mono text-xs text-foreground">
+              {language}
+            </Badge>
           </>
         )}
       </div>
