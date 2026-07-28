@@ -1,14 +1,14 @@
-import { Compass, Layers, Link2 } from "lucide-react";
-import startCase from "lodash.startcase";
-import type { Lore, SourceLocation } from "@/lore/model";
-import { deriveAreaRelationships } from "@/lore/area-relationships";
-import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
-import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
+import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
+import { deriveAreaRelationships } from "@/lore/area-relationships";
+import type { Lore, SourceLocation } from "@/lore/model";
+import startCase from "lodash.startcase";
+import { Compass, Layers, Link2 } from "lucide-react";
 
 export interface ArchitectureContentProps {
   lore: Lore;
@@ -138,7 +138,7 @@ export function ArchitectureContent({
                           </dd>
                         </div>
                         <div>
-                          <dt>Depended on by</dt>
+                          <dt>Imported By</dt>
                           <dd className="mt-0.5 text-sm font-medium text-foreground">
                             {area.directDependentIds.length}
                           </dd>

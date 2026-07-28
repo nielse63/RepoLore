@@ -55,6 +55,7 @@ describe("extractJsTsProject", () => {
 
   it("does not treat a fixture app's bootstrap call as the project's real entry point", async () => {
     rootDir = await makeFixture({
+      "package.json": JSON.stringify({ main: "./src/lib.ts" }),
       "src/lib.ts": "export const x = 1;",
       "fixtures/ts-react-app/src/index.tsx":
         "import { createRoot } from 'react-dom/client';\ncreateRoot(document.getElementById('root')).render(<App />);",
@@ -64,8 +65,9 @@ describe("extractJsTsProject", () => {
     expect(result.sourceFilePaths).not.toContain(
       "fixtures/ts-react-app/src/index.tsx"
     );
-    expect(result.entryPoints).toEqual([]);
-    expect(result.project.kind).not.toBe("application");
+    expect(result.entryPoints).toHaveLength(1);
+    expect(result.entryPoints[0].kind).not.toBe("bootstrap");
+    expect(result.project.kind).toBe("library");
   });
 
   it("detects React components and adds the react framework tag", async () => {
@@ -125,5 +127,70 @@ describe("extractJsTsProject", () => {
     rootDir = await makeFixture({ "src/index.ts": "" });
     const result = extractJsTsProject(rootDir, "custom-id");
     expect(result.project.id).toBe("custom-id");
+  });
+
+  describe("project.kind manifest-shape heuristic", () => {
+    it("infers an application when package.json declares neither main nor exports", async () => {
+      rootDir = await makeFixture({
+        "package.json": JSON.stringify({ name: "no-entry" }),
+        "src/util.ts": "export const x = 1;",
+      });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("application");
+    });
+
+    it("infers an application when there is no package.json at all", async () => {
+      rootDir = await makeFixture({ "src/util.ts": "export const x = 1;" });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("application");
+    });
+
+    it("ignores the imports field as a library signal", async () => {
+      rootDir = await makeFixture({
+        "package.json": JSON.stringify({
+          imports: { "#util": "./src/util.ts" },
+        }),
+        "src/util.ts": "export const x = 1;",
+      });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("application");
+    });
+
+    it("infers a library from a bare exports field", async () => {
+      rootDir = await makeFixture({
+        "package.json": JSON.stringify({ exports: "./src/index.ts" }),
+        "src/index.ts": "export const x = 1;",
+      });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("library");
+    });
+
+    it("overrides to application when a UI framework dependency is present alongside main", async () => {
+      rootDir = await makeFixture({
+        "package.json": JSON.stringify({
+          main: "./src/index.ts",
+          dependencies: { react: "^18.0.0" },
+        }),
+        "src/index.ts": "export const x = 1;",
+      });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("application");
+    });
+
+    it("overrides to application when UI components are detected in source alongside main", async () => {
+      rootDir = await makeFixture({
+        "package.json": JSON.stringify({ main: "./src/index.ts" }),
+        "src/index.ts": "export const x = 1;",
+        "src/Header.tsx": "export function Header() { return <div>hi</div>; }",
+      });
+
+      const result = extractJsTsProject(rootDir);
+      expect(result.project.kind).toBe("application");
+    });
   });
 });

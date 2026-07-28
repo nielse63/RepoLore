@@ -1,3 +1,14 @@
+import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import {
+  CertaintyBadge,
+  VARIANT_BY_CERTAINTY,
+} from "@/components/ui/CertaintyBadge";
+import { IconTile } from "@/components/ui/IconTile";
+import { SourceLink } from "@/components/ui/SourceLink";
+import { StepList } from "@/components/ui/StepList";
+import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
+import { formatPath } from "@/lib/format-path";
+import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
   Compass,
   GitCommitHorizontal,
@@ -5,14 +16,6 @@ import {
   Link2,
   TestTube2,
 } from "lucide-react";
-import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
-import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
-import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
-import { IconTile } from "@/components/ui/IconTile";
-import { SourceLink } from "@/components/ui/SourceLink";
-import { StepList } from "@/components/ui/StepList";
-import { Table, Thead, Th, Tr, Td } from "@/components/ui/Table";
-import { formatPath } from "@/lib/format-path";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -22,6 +25,13 @@ export interface OverviewContentProps {
 
 function certaintyLabel(certainty: CertaintyCategory): string {
   return certainty.charAt(0).toUpperCase() + certainty.slice(1);
+}
+
+function getCertaintyColor(certainty: CertaintyCategory): string {
+  if (certainty in VARIANT_BY_CERTAINTY) {
+    return `text-tile-${VARIANT_BY_CERTAINTY[certainty]}-fg`;
+  }
+  return "";
 }
 
 export function OverviewContent({
@@ -83,11 +93,16 @@ export function OverviewContent({
                     <p>{item.rationale}</p>
                     {item.evidence.length > 0 && (
                       <ul className="mt-2 space-y-1 text-xs text-muted">
-                        {item.evidence.map((e, i) => (
-                          <li key={i}>
-                            [{certaintyLabel(e.certainty)}] {e.description}
-                          </li>
-                        ))}
+                        {item.evidence.map((e, i) => {
+                          return (
+                            <li key={i}>
+                              <span className={getCertaintyColor(e.certainty)}>
+                                [{certaintyLabel(e.certainty)}]
+                              </span>{" "}
+                              {e.description}
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </>
@@ -132,7 +147,7 @@ export function OverviewContent({
                   </dd>
                 </div>
                 <div>
-                  <dt>Depended on by</dt>
+                  <dt>Imported By</dt>
                   <dd className="text-sm font-medium text-foreground">
                     {area.directDependentIds.length}
                   </dd>
@@ -149,30 +164,32 @@ export function OverviewContent({
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          Entry Points
-        </h2>
-        <Card className="p-0">
-          <ul className="divide-y divide-border">
-            {lore.entryPoints.map((ep) => (
-              <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
-                <IconTile icon={Compass} variant="supporting" size="sm" />
-                <span className="flex-1 text-sm text-foreground">
-                  <span className="font-medium">{ep.kind}</span>{" "}
-                  <SourceLink location={ep.location} sourceUrl={sourceUrl} />
-                </span>
-                <CertaintyBadge certainty={ep.certainty} />
-              </li>
-            ))}
-            {lore.entryPoints.length === 0 && (
-              <li className="px-6 py-3 text-sm text-muted">
-                No entry points detected.
-              </li>
-            )}
-          </ul>
-        </Card>
-      </section>
+      {!!lore.entryPoints.length && (
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-foreground">
+            Entry Points
+          </h2>
+          <Card className="p-0">
+            <ul className="divide-y divide-border">
+              {lore.entryPoints.map((ep) => (
+                <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
+                  <IconTile icon={Compass} variant="supporting" size="sm" />
+                  <span className="flex-1 text-sm text-foreground">
+                    <span className="font-medium">{ep.kind}</span>{" "}
+                    <SourceLink location={ep.location} sourceUrl={sourceUrl} />
+                  </span>
+                  <CertaintyBadge certainty={ep.certainty} />
+                </li>
+              ))}
+              {lore.entryPoints.length === 0 && (
+                <li className="px-6 py-3 text-sm text-muted">
+                  No entry points detected.
+                </li>
+              )}
+            </ul>
+          </Card>
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">

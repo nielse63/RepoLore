@@ -464,3 +464,24 @@ Added `src/lib/__tests__/format-path.spec.ts`. No existing test needed updating:
 Also updated `docs/MODEL_OUTPUT.md`'s Start Here example (`` `src/index.ts` `` → `` `/src/index.ts` ``) to match.
 
 Verified: `npm run test`, `npm run lint`, `npx tsc --noEmit` all clean; manually reviewed the real Overview/Architecture pages, `/fixtures/*`, and the fixture-backed Systems/Search/Data Flow/History preview pages in the dev server.
+
+### 2026-07-28 — Session 20: refined JS/TS `project.kind` heuristic (manifest shape + UI framework/component override)
+
+**Problem:** `inferProjectKind` (`src/analysis/js-ts/extract-project.ts`) previously fell through to `"unknown"` whenever a project had neither a detected bootstrap/CLI entry point nor a resolvable `main`/`module`/`exports` entry point — which included every package whose manifest entry field points at a gitignored build artifact (e.g. `"main": "dist/index.js"`, common for published npm packages analyzed from source) and every application (e.g. many Next.js apps) that declares no manifest entry field and never calls `ReactDOM.render`/`createRoot` directly.
+
+**New heuristic**, replacing the library/unknown branches (bootstrap/CLI-detected entries are unchanged and still win outright):
+
+1. Read package.json's raw `main`/`exports` fields directly, not the resolved `EntryPoint` list — so a `main`/`exports` pointing at an unresolvable build artifact still counts.
+2. Neither field present → `"application"` (nothing declared for consumers to import).
+3. Either field present → `"library"`, **unless** a common UI framework package (`react`, `vue`, `@angular/core`, `svelte`, `solid-js`, `preact`, `lit` — checked across `dependencies`/`devDependencies`/`peerDependencies`) or a detected React component (`reactComponents.length > 0`, the only real UI-component detector that exists) is present, in which case → `"application"`.
+4. package.json's `imports` field is deliberately excluded from the check — confirmed with the product owner it's Node's internal subpath-import map (`"#foo"` specifiers), not a public entry surface like `main`/`exports`, and plenty of ordinary applications set it purely for internal path aliasing.
+
+All branches carry `certainty: "inferred"` evidence (never `"detected"`), consistent with this being an assumption layer, not a fact.
+
+**Unresolved decision (deferred on purpose, confirmed with the product owner):** the framework/component override isn't gated on `private`/direct-vs-peer dependency placement, so a genuine UI component library (declares `main`/`exports`, peer-depends on React, JSX source) is still misclassified as `"application"`. Revisit if this misfires often in practice — a `package.json` `"private"` check or a dependencies-only (not peerDependencies) check were both considered and rejected for now to keep the change minimal.
+
+Since this changes `project.kind` conclusions for previously-analyzed repositories, bumped `JS_TS_ANALYZER_VERSION` (`js-ts-v4` → `js-ts-v5`), per ADR-0005 precedent. Added `describe("project.kind manifest-shape heuristic", ...)` cases to `extract-project.spec.ts` covering each branch, and updated the existing fixture-leak regression test (which previously asserted `kind !== "application"` as a side effect of the old "no entry points → unknown" fallback) to declare a `main` field so it now correctly asserts `"library"`.
+
+Verified: `npm run test` (46 suites / 341 tests, up from 45/331), `npm run lint`, `npx tsc --noEmit` all clean.
+
+**Next smallest task:** Resume session 17 — deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.

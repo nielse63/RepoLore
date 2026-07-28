@@ -41,17 +41,53 @@ export interface JsTsExtraction {
   gaps: Gap[];
 }
 
-function readPackageName(rootDir: string): string | undefined {
+interface PackageJsonMeta {
+  name?: string;
+  main?: string;
+  exports?: unknown;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+}
+
+function readPackageJson(rootDir: string): PackageJsonMeta | undefined {
   const pkgPath = path.join(rootDir, "package.json");
   if (!fs.existsSync(pkgPath)) return undefined;
   try {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as {
-      name?: string;
-    };
-    return pkg.name;
+    return JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as PackageJsonMeta;
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Common web/UI framework packages (session 20 heuristic): presence in any
+ * dependency field is treated as an application-implying signal, not gated
+ * on direct-vs-peer placement — a real UI component library that peer-depends
+ * on one of these and declares "main"/"exports" will therefore still be
+ * misclassified as an application. Accepted for now (product owner call);
+ * see the implementation plan for the deferred fix.
+ */
+const UI_FRAMEWORK_PACKAGES = [
+  "react",
+  "vue",
+  "@angular/core",
+  "svelte",
+  "solid-js",
+  "preact",
+  "lit",
+];
+
+function detectFrameworkDependency(
+  pkg: PackageJsonMeta | undefined
+): string | undefined {
+  if (!pkg) return undefined;
+  const allDeps = {
+    ...pkg.dependencies,
+    ...pkg.devDependencies,
+    ...pkg.peerDependencies,
+  };
+  return UI_FRAMEWORK_PACKAGES.find((name) => name in allDeps);
 }
 
 function detectLanguages(sourceFilePaths: string[]): LoreProject["languages"] {
@@ -64,12 +100,25 @@ function detectLanguages(sourceFilePaths: string[]): LoreProject["languages"] {
 }
 
 /**
- * Conservative project-kind inference from entry-point shape: a runtime
- * bootstrap or CLI entry implies an application; a bare library/module
- * manifest field with no bootstrap implies a library. Anything else is
- * left unknown rather than guessed.
+ * Project-kind inference (session 20): a detected runtime bootstrap or CLI
+ * entry point wins outright. Otherwise, package.json's raw "main"/"exports"
+ * fields decide manifest shape directly (not the resolved EntryPoint list —
+ * this also correctly classifies packages whose "main"/"exports" points at a
+ * gitignored build artifact that never resolves to a source file). Neither
+ * field present implies an application (nothing declared for consumers to
+ * import); either field present implies a library, unless a common UI
+ * framework dependency or detected UI components in source suggest it's
+ * really an application that merely happens to declare an entry field.
+ * package.json's "imports" field is deliberately not part of this check —
+ * it's Node's internal subpath-import map ("#foo" specifiers), not a public
+ * entry point, and plenty of ordinary applications set it for internal path
+ * aliasing.
  */
-function inferProjectKind(entryPoints: EntryPoint[]): {
+function inferProjectKind(
+  entryPoints: EntryPoint[],
+  pkg: PackageJsonMeta | undefined,
+  reactComponents: DetectedReactComponent[]
+): {
   kind: LoreProject["kind"];
   evidence?: Evidence;
 } {
@@ -88,21 +137,55 @@ function inferProjectKind(entryPoints: EntryPoint[]): {
     };
   }
 
-  const libraryEntry = entryPoints.find((ep) => ep.kind === "library");
-  if (libraryEntry) {
+  const hasLibraryField = pkg?.main !== undefined || pkg?.exports !== undefined;
+  if (!hasLibraryField) {
     return {
-      kind: "library",
+      kind: "application",
       evidence: {
-        kind: "entry-point-shape",
+        kind: "package-json-entry-field-shape",
         certainty: "inferred",
-        location: libraryEntry.location,
+        location: { filePath: "package.json" },
         description:
-          "A package.json library entry field (main/module) was declared, with no runtime bootstrap detected.",
+          'package.json declares neither "main" nor "exports", so no library entry point is declared; assumed to be an application.',
       },
     };
   }
 
-  return { kind: "unknown" };
+  const frameworkDependency = detectFrameworkDependency(pkg);
+  if (frameworkDependency) {
+    return {
+      kind: "application",
+      evidence: {
+        kind: "framework-dependency",
+        certainty: "inferred",
+        location: { filePath: "package.json" },
+        description: `package.json declares "main"/"exports" but depends on "${frameworkDependency}", a UI framework; assumed to be an application rather than a library.`,
+      },
+    };
+  }
+
+  if (reactComponents.length > 0) {
+    return {
+      kind: "application",
+      evidence: {
+        kind: "react-component-detection",
+        certainty: "inferred",
+        location: reactComponents[0].location,
+        description: `package.json declares "main"/"exports" but ${reactComponents.length} React component(s) were detected in source (e.g. '${reactComponents[0].location.filePath}'); assumed to be an application rather than a library.`,
+      },
+    };
+  }
+
+  return {
+    kind: "library",
+    evidence: {
+      kind: "package-json-entry-field-shape",
+      certainty: "inferred",
+      location: { filePath: "package.json" },
+      description:
+        'package.json declares "main" and/or "exports" with no application-implying signal (runtime bootstrap, CLI, UI framework dependency, or detected UI components).',
+    },
+  };
 }
 
 export function extractJsTsProject(
@@ -110,6 +193,7 @@ export function extractJsTsProject(
   projectId = "."
 ): JsTsExtraction {
   const absoluteRoot = path.resolve(rootDir);
+  const pkg = readPackageJson(absoluteRoot);
   const { sourceFiles } = discoverSourceFiles(absoluteRoot);
 
   const importResult = extractImportRelationships(sourceFiles, absoluteRoot);
@@ -135,7 +219,11 @@ export function extractJsTsProject(
     path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join("/")
   );
 
-  const { kind, evidence: kindEvidence } = inferProjectKind(entryPoints);
+  const { kind, evidence: kindEvidence } = inferProjectKind(
+    entryPoints,
+    pkg,
+    reactComponents
+  );
   const frameworks: string[] = [];
   const projectEvidence: Evidence[] = [];
 
@@ -152,7 +240,7 @@ export function extractJsTsProject(
 
   const project: LoreProject = {
     id: projectId,
-    name: readPackageName(absoluteRoot) ?? path.basename(absoluteRoot),
+    name: pkg?.name ?? path.basename(absoluteRoot),
     kind,
     languages: detectLanguages(sourceFilePaths),
     rootPath: ".",

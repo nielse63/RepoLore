@@ -1,5 +1,5 @@
-import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import { formatPath } from "@/lib/format-path";
+import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 
 /**
  * Plain, unstyled rendering of a full `Lore` — shared by the real
@@ -136,9 +136,9 @@ export function LoreView({
               <th>Area</th>
               <th>Responsibility</th>
               <th>Rationale</th>
-              <th>Entry points</th>
-              <th>Depends on</th>
-              <th>Depended on by</th>
+              <th>Entry Points</th>
+              <th>Depends On</th>
+              <th>Imported By</th>
               <th>Tests</th>
               <th>Gaps</th>
             </tr>
