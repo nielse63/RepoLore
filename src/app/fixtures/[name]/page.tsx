@@ -77,8 +77,7 @@ export default async function FixturePage({
     commitSha: "local",
     analyzerVersion,
     analyzedAt: new Date().toISOString(),
-    extraction,
-    views,
+    extractions: [{ extraction, views }],
   });
 
   return <LoreView lore={lore} />;

@@ -69,7 +69,12 @@ export default async function LorePage({
   }
 
   const lore = run.result;
-  const project = lore.projects[0];
+  // A mixed-language repository (ADR-0007) can have more than one project —
+  // aggregate across all of them rather than reading only the first, so a
+  // second detected language isn't silently hidden.
+  const languages = [
+    ...new Set(lore.projects.flatMap((p) => p.languages)),
+  ].join(", ");
   const sourceUrl = (location: SourceLocation) =>
     githubBlobUrl(owner, repo, lore.snapshot.commitSha, location);
   const areaUrl = (location: SourceLocation) =>
@@ -93,7 +98,7 @@ export default async function LorePage({
               }
               updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
               branch={lore.snapshot.repository.defaultBranch}
-              language={project?.languages.join(", ")}
+              language={languages}
             />
           }
           actions={<ReanalyzeButton owner={owner} repo={repo} />}
@@ -102,7 +107,7 @@ export default async function LorePage({
       rightRail={
         <AnalysisRail
           snapshot={lore.snapshot}
-          project={project}
+          projects={lore.projects}
           gaps={lore.gaps}
         />
       }

@@ -1,5 +1,6 @@
 import {
   GitHubApiError,
+  fetchRepositoryLanguages,
   fetchRepositoryTarball,
   resolveRepositoryHead,
 } from "../client";
@@ -157,6 +158,41 @@ describe("github/client", () => {
       ).rejects.toMatchObject({
         code: "unknown",
       });
+    });
+  });
+
+  describe("fetchRepositoryLanguages", () => {
+    it("returns the byte-weighted language map on success", async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse(200, { Python: 495, JavaScript: 272 })
+      );
+
+      const result = await fetchRepositoryLanguages("owner", "repo");
+
+      expect(result).toEqual({ Python: 495, JavaScript: 272 });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.github.com/repos/owner/repo/languages",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer test-token",
+          }),
+        })
+      );
+    });
+
+    it("returns an empty map for a repository with no classified languages", async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
+
+      const result = await fetchRepositoryLanguages("owner", "repo");
+      expect(result).toEqual({});
+    });
+
+    it("throws not-found when the languages lookup 404s", async () => {
+      fetchMock.mockResolvedValueOnce(jsonResponse(404, {}));
+
+      await expect(
+        fetchRepositoryLanguages("owner", "repo")
+      ).rejects.toMatchObject({ code: "not-found" });
     });
   });
 

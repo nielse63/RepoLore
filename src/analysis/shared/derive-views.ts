@@ -98,8 +98,14 @@ function areaNameForFile(filePath: string): string {
   return directorySegments.slice(0, 2).join("/");
 }
 
-function areaId(name: string): string {
-  return `area:${name}`;
+/**
+ * Namespaced by `projectId` (not just `area:${name}`) so that merging two
+ * extractions' derived views into one `Lore` (ADR-0007 — e.g. a JS/TS
+ * extraction and a Python extraction both grouping a top-level `src/` into
+ * an area) can't collide on the same area ID.
+ */
+function areaId(projectId: string, name: string): string {
+  return `area:${projectId}:${name}`;
 }
 
 /**
@@ -233,7 +239,7 @@ function buildStructuralAreas(
       }
 
       const area: StructuralArea = {
-        id: areaId(name),
+        id: areaId(projectId, name),
         projectId,
         name,
         location: { filePath: name },

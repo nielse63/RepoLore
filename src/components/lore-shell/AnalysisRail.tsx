@@ -7,53 +7,63 @@ import Link from "next/link";
 
 export function AnalysisRail({
   snapshot,
-  project,
+  projects,
   gaps,
 }: {
   snapshot: AnalysisSnapshot;
-  project?: Project;
+  /** One entry per detected project (ADR-0007 — a mixed-language repository can have more than one). */
+  projects: Project[];
   gaps: Gap[];
 }) {
   return (
     <RightRailShell title="Analysis">
-      {project && (
-        <dl className="space-y-3 text-sm border-b border-border pb-4">
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">
-              <strong>Kind</strong>
-            </dt>
-            <dd className="text-foreground">{startCase(project.kind)}</dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">
-              <strong>Languages</strong>
-            </dt>
-            <dd className="truncate font-mono text-xs text-foreground">
-              {project.languages.length > 0 ? (
-                project.languages.map((lang) => (
-                  <Badge key={lang}>{lang}</Badge>
-                ))
-              ) : (
-                <span className="text-foreground">None Detected</span>
+      {projects.length > 0 && (
+        <div className="space-y-4 border-b border-border pb-4">
+          {projects.map((project) => (
+            <dl key={project.id} className="space-y-3 text-sm">
+              {projects.length > 1 && (
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                  {project.languages.join(", ") || "Unknown language"} project
+                </div>
               )}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">
-              <strong>Frameworks</strong>
-            </dt>
-            <dd className="text-foreground">
-              {project.frameworks.length > 0 ? (
-                project.frameworks.map((fw) => <Badge key={fw}>{fw}</Badge>)
-              ) : (
-                <span className="text-foreground">None Detected</span>
-              )}
-            </dd>
-          </div>
-        </dl>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">
+                  <strong>Kind</strong>
+                </dt>
+                <dd className="text-foreground">{startCase(project.kind)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">
+                  <strong>Languages</strong>
+                </dt>
+                <dd className="truncate font-mono text-xs text-foreground">
+                  {project.languages.length > 0 ? (
+                    project.languages.map((lang) => (
+                      <Badge key={lang}>{lang}</Badge>
+                    ))
+                  ) : (
+                    <span className="text-foreground">None Detected</span>
+                  )}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">
+                  <strong>Frameworks</strong>
+                </dt>
+                <dd className="text-foreground">
+                  {project.frameworks.length > 0 ? (
+                    project.frameworks.map((fw) => <Badge key={fw}>{fw}</Badge>)
+                  ) : (
+                    <span className="text-foreground">None Detected</span>
+                  )}
+                </dd>
+              </div>
+            </dl>
+          ))}
+        </div>
       )}
 
-      <dl className={`space-y-3 text-sm ${project ? "pt-4" : ""}`}>
+      <dl className={`space-y-3 text-sm ${projects.length > 0 ? "pt-4" : ""}`}>
         <div className="flex justify-between gap-4">
           <dt className="text-muted">
             <strong>Status</strong>

@@ -1,23 +1,34 @@
 /**
  * Assembles a full `Lore` (the durable, persisted unit — see
- * `docs/architecture/decisions/0005-analysis-result-keying.md`) from any
- * language's extraction output plus its derived views
+ * `docs/architecture/decisions/0005-analysis-result-keying.md`) from one or
+ * more language extractions' output plus their derived views
  * (`@/analysis/shared/derive-views`), plus the repository/commit identity
  * that only exists once a real GitHub repository has been resolved and
  * fetched. Used for a real analysis run, the local `/fixtures` pages, and
  * both JS/TS and Python, so every language renders through the same `Lore`
  * shape via one shared assembly function.
+ *
+ * A real submission can select more than one analyzer (ADR-0007 — a
+ * genuinely polyglot repository, e.g. a Python service with a JS/TS
+ * frontend). Each extraction contributes its own `Project` to
+ * `Lore.projects`; every other array is a plain concatenation — no
+ * cross-language relationship is invented — except `startHere`, which is
+ * interleaved across languages and capped so the merged result still
+ * respects the model's existing `START_HERE_MIN_ITEMS`/`START_HERE_MAX_ITEMS`
+ * bound rather than simply overflowing it.
  */
 
 import type { DerivedViews } from "@/analysis/shared/derive-views";
 import {
   evaluateMinimumValueContract,
+  START_HERE_MAX_ITEMS,
   type AnalysisSnapshot,
   type EntryPoint,
   type Gap,
   type Lore,
   type Project,
   type PublicContract,
+  type Recommendation,
   type Relationship,
   type Repository,
   type TestRelationship,
@@ -37,6 +48,12 @@ export interface BuildLoreExtraction {
   gaps: Gap[];
 }
 
+/** One language's extraction output paired with its derived views. */
+export interface BuildLoreProjectInput {
+  extraction: BuildLoreExtraction;
+  views: DerivedViews;
+}
+
 export interface BuildLoreInput {
   owner: string;
   repo: string;
@@ -45,8 +62,32 @@ export interface BuildLoreInput {
   commitSha: string;
   analyzerVersion: string;
   analyzedAt: string;
-  extraction: BuildLoreExtraction;
-  views: DerivedViews;
+  /** One entry per analyzer selected for this repository (ADR-0007) — almost always one, sometimes more for a mixed-language repository. */
+  extractions: BuildLoreProjectInput[];
+}
+
+/**
+ * Interleaves each language's already-ordered Start Here list (round-robin,
+ * preferring earlier items from every list before later ones) rather than
+ * concatenating them, then caps and renumbers to `START_HERE_MAX_ITEMS`. A
+ * single-extraction input (the common case) passes through unchanged aside
+ * from renumbering, which is always a no-op for an already-correctly-ordered
+ * list.
+ */
+function mergeStartHere(startHereLists: Recommendation[][]): Recommendation[] {
+  const merged: Recommendation[] = [];
+  const maxLength = Math.max(0, ...startHereLists.map((list) => list.length));
+  outer: for (let i = 0; i < maxLength; i++) {
+    for (const list of startHereLists) {
+      if (merged.length >= START_HERE_MAX_ITEMS) break outer;
+      if (i < list.length) merged.push(list[i]);
+    }
+  }
+  return merged.map((item, index) => ({
+    ...item,
+    id: `start-here-${index + 1}`,
+    order: index + 1,
+  }));
 }
 
 /**
@@ -65,8 +106,7 @@ export function buildLore(input: BuildLoreInput): Lore {
     commitSha,
     analyzerVersion,
     analyzedAt,
-    extraction,
-    views,
+    extractions,
   } = input;
 
   const repository: Repository = {
@@ -88,15 +128,17 @@ export function buildLore(input: BuildLoreInput): Lore {
 
   const lore: Lore = {
     snapshot,
-    projects: [extraction.project],
-    structuralAreas: views.structuralAreas,
-    entryPoints: extraction.entryPoints,
-    relationships: extraction.relationships,
-    publicContracts: extraction.publicContracts,
-    testRelationships: extraction.testRelationships,
-    startHere: views.startHere,
+    projects: extractions.map((e) => e.extraction.project),
+    structuralAreas: extractions.flatMap((e) => e.views.structuralAreas),
+    entryPoints: extractions.flatMap((e) => e.extraction.entryPoints),
+    relationships: extractions.flatMap((e) => e.extraction.relationships),
+    publicContracts: extractions.flatMap((e) => e.extraction.publicContracts),
+    testRelationships: extractions.flatMap(
+      (e) => e.extraction.testRelationships
+    ),
+    startHere: mergeStartHere(extractions.map((e) => e.views.startHere)),
     findings: [],
-    gaps: extraction.gaps,
+    gaps: extractions.flatMap((e) => e.extraction.gaps),
   };
 
   const contract = evaluateMinimumValueContract(lore);

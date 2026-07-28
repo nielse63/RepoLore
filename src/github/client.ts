@@ -7,17 +7,17 @@
  * unauthenticated access is capped at 60 requests/hour).
  */
 
-const API_BASE = 'https://api.github.com';
+const API_BASE = "https://api.github.com";
 
 export type GitHubApiErrorCode =
-  'missing-token' | 'not-found' | 'unauthorized' | 'rate-limited' | 'unknown';
+  "missing-token" | "not-found" | "unauthorized" | "rate-limited" | "unknown";
 
 export class GitHubApiError extends Error {
   code: GitHubApiErrorCode;
 
   constructor(code: GitHubApiErrorCode, message: string) {
     super(message);
-    this.name = 'GitHubApiError';
+    this.name = "GitHubApiError";
     this.code = code;
   }
 }
@@ -26,8 +26,8 @@ function getGitHubToken(): string {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     throw new GitHubApiError(
-      'missing-token',
-      'No GITHUB_TOKEN is configured. Set GITHUB_TOKEN in .env.local (see .env.example).'
+      "missing-token",
+      "No GITHUB_TOKEN is configured. Set GITHUB_TOKEN in .env.local (see .env.example)."
     );
   }
   return token;
@@ -41,10 +41,10 @@ async function githubApiFetch(
   return fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
-      Accept: 'application/vnd.github+json',
+      Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'repo-lore',
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "repo-lore",
       ...init.headers,
     },
   });
@@ -56,26 +56,26 @@ async function throwForResponse(
 ): Promise<never> {
   if (res.status === 404) {
     throw new GitHubApiError(
-      'not-found',
+      "not-found",
       `${notFoundContext} — it may not exist, or it may be private.`
     );
   }
   if (res.status === 401) {
     throw new GitHubApiError(
-      'unauthorized',
-      'GitHub rejected the configured GITHUB_TOKEN as invalid or expired.'
+      "unauthorized",
+      "GitHub rejected the configured GITHUB_TOKEN as invalid or expired."
     );
   }
-  if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') {
+  if (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0") {
     throw new GitHubApiError(
-      'rate-limited',
-      'GitHub API rate limit exceeded. Try again after the limit resets.'
+      "rate-limited",
+      "GitHub API rate limit exceeded. Try again after the limit resets."
     );
   }
-  const body = await res.text().catch(() => '');
+  const body = await res.text().catch(() => "");
   throw new GitHubApiError(
-    'unknown',
-    `GitHub API request failed (${res.status} ${res.statusText}).${body ? ` ${body}` : ''}`
+    "unknown",
+    `GitHub API request failed (${res.status} ${res.statusText}).${body ? ` ${body}` : ""}`
   );
 }
 
@@ -106,7 +106,7 @@ export async function resolveRepositoryHead(
   const defaultBranch = repoData.default_branch;
   if (!defaultBranch) {
     throw new GitHubApiError(
-      'unknown',
+      "unknown",
       `GitHub did not report a default branch for ${owner}/${repo}.`
     );
   }
@@ -123,7 +123,7 @@ export async function resolveRepositoryHead(
   const commitData = (await commitRes.json()) as { sha?: string };
   if (!commitData.sha) {
     throw new GitHubApiError(
-      'unknown',
+      "unknown",
       `GitHub did not report a HEAD commit SHA for ${owner}/${repo}@${defaultBranch}.`
     );
   }
@@ -133,6 +133,25 @@ export async function resolveRepositoryHead(
     headSha: commitData.sha,
     description: repoData.description ?? undefined,
   };
+}
+
+/**
+ * Fetches a repository's byte-weighted per-language breakdown (ADR-0007) —
+ * the same data GitHub's own repository page computes its language
+ * percentage bar from. Keys are GitHub's linguist language names (e.g.
+ * "Python", "JavaScript"); values are bytes of code classified as that
+ * language at the repository's default branch. An empty repository (or one
+ * GitHub hasn't classified any files in) returns `{}`, not an error.
+ */
+export async function fetchRepositoryLanguages(
+  owner: string,
+  repo: string
+): Promise<Record<string, number>> {
+  const res = await githubApiFetch(`/repos/${owner}/${repo}/languages`);
+  if (!res.ok) {
+    await throwForResponse(res, `Languages for ${owner}/${repo} not found`);
+  }
+  return (await res.json()) as Record<string, number>;
 }
 
 /**

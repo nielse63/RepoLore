@@ -1,4 +1,4 @@
-import type { CertaintyCategory, Lore, SourceLocation } from '@/lore/model';
+import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 
 /**
  * Plain, unstyled rendering of a full `Lore` — shared by the real
@@ -48,7 +48,6 @@ export function LoreView({
   actions,
 }: LoreViewProps) {
   const { snapshot } = lore;
-  const project = lore.projects[0];
 
   // Start Here can seed an item directly from a structural area's location
   // (a directory) rather than a file — recognized by matching a known area,
@@ -81,18 +80,21 @@ export function LoreView({
         {actions}
       </section>
 
-      {project && (
+      {lore.projects.length > 0 && (
         <section>
           <h2>What Is This?</h2>
-          <ul>
-            <li>Kind: {project.kind}</li>
-            <li>
-              Languages: {project.languages.join(', ') || 'none detected'}
-            </li>
-            <li>
-              Frameworks: {project.frameworks.join(', ') || 'none detected'}
-            </li>
-          </ul>
+          {lore.projects.map((project) => (
+            <ul key={project.id}>
+              {lore.projects.length > 1 && <li>Project: {project.id}</li>}
+              <li>Kind: {project.kind}</li>
+              <li>
+                Languages: {project.languages.join(", ") || "none detected"}
+              </li>
+              <li>
+                Frameworks: {project.frameworks.join(", ") || "none detected"}
+              </li>
+            </ul>
+          ))}
         </section>
       )}
 
@@ -108,7 +110,7 @@ export function LoreView({
                   <Loc
                     location={item.location}
                     sourceUrl={startHereUrl(item.location)}
-                  />{' '}
+                  />{" "}
                   — {item.whatItRepresents} ({certaintyLabel(item.certainty)})
                 </p>
                 <p>{item.rationale}</p>
@@ -148,7 +150,7 @@ export function LoreView({
                     {area.name}
                   </Loc>
                 </td>
-                <td>{area.responsibility ?? '—'}</td>
+                <td>{area.responsibility ?? "—"}</td>
                 <td>{area.rationale}</td>
                 <td>{area.entryPointIds.length}</td>
                 <td>{area.directDependencyIds.length}</td>
@@ -166,7 +168,7 @@ export function LoreView({
         <ul>
           {lore.entryPoints.map((ep) => (
             <li key={ep.id}>
-              [{certaintyLabel(ep.certainty)}] {ep.kind}:{' '}
+              [{certaintyLabel(ep.certainty)}] {ep.kind}:{" "}
               <Loc location={ep.location} sourceUrl={sourceUrl} />
             </li>
           ))}
@@ -214,8 +216,8 @@ export function LoreView({
         <ul>
           {lore.testRelationships.map((tr) => (
             <li key={tr.id}>
-              [{certaintyLabel(tr.certainty)}]{' '}
-              <Loc location={tr.testLocation} sourceUrl={sourceUrl} /> →{' '}
+              [{certaintyLabel(tr.certainty)}]{" "}
+              <Loc location={tr.testLocation} sourceUrl={sourceUrl} /> →{" "}
               <Loc location={tr.implementationLocation} sourceUrl={sourceUrl} />
             </li>
           ))}
