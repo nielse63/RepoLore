@@ -275,7 +275,7 @@ This section helps the user answer:
 - Where do tests connect to implementation?
 - Which apparent boundaries are crossed by dependencies?
 
-Plain lists and tables are sufficient. An interactive graph is not required.
+Plain lists and tables are sufficient for describing relationships; interactivity (pan, zoom, drag, click-to-filter) is not required and should not be added without its own scoped decision. As a deliberate, narrow exception, the Major-Area relationship view may additionally be presented as a static, non-interactive diagram of area-to-area edges (ADR-0009) — reusing the same data as the table, not a new analysis capability. This exception does not extend to file-level relationships, which remain list/table only.
 
 The product should prioritize relationships that improve the reader’s mental model rather than displaying every available edge.
 

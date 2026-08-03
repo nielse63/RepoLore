@@ -32,7 +32,7 @@ The launch MVP does not require:
 - complete execution-flow or data-flow tracing;
 - indirect change-impact guarantees;
 - generalized health findings or numeric health scores;
-- interactive dependency graphs;
+- interactive dependency graphs (pan, zoom, drag, click-to-filter, or similar) — at the file level, or otherwise; a static, non-interactive, area-level relationship diagram is a scoped exception, see ADR-0009, and does not license file-level graphs or interactivity generally;
 - manual documentation editing;
 - arbitrary repository configuration or user-created analysis rules;
 - complete framework-specific behavioral interpretation;

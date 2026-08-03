@@ -1,3 +1,4 @@
+import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   CertaintyBadge,
@@ -6,15 +7,18 @@ import {
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
-import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
+import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
+  ArrowRight,
   Compass,
   GitCommitHorizontal,
   Layers,
   Link2,
   TestTube2,
+  TriangleAlert,
 } from "lucide-react";
 
 export interface OverviewContentProps {
@@ -49,6 +53,9 @@ export function OverviewContent({
   // The root directory ("." — a file with no directory of its own, e.g. a
   // root-level config file) adds no orientation value as its own Major Area.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
+  const areaRelationships = deriveAreaRelationships(lore.structuralAreas);
+  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
+  const architectureUrl = `/lore/${snapshot.repository.owner}/${snapshot.repository.name}/architecture`;
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -62,6 +69,20 @@ export function OverviewContent({
           </p>
         )}
       </div>
+
+      <section>
+        <Card className="bg-red-100">
+          <p className="text-sm text-muted flex items-center">
+            <TriangleAlert className="mr-2" />
+            <strong>Understanding is partial</strong>
+          </p>
+          <p className="mt-2">
+            Repo Lore identified the primary application structure, but imports
+            using the <code>@/</code> path alias could not be resolved. Some
+            dependency and architecture conclusions may be incomplete.
+          </p>
+        </Card>
+      </section>
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-foreground">
@@ -191,49 +212,29 @@ export function OverviewContent({
         </section>
       )}
 
-      <section>
+      <section id="component-connections">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Link2 className="h-4 w-4" aria-hidden="true" /> Direct Relationships
+          <Link2 className="h-4 w-4" aria-hidden="true" /> Component Connections
         </h2>
-        <Card className="p-0">
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>From</Th>
-                <Th>Kind</Th>
-                <Th>To</Th>
-                <Th>Certainty</Th>
-              </Tr>
-            </Thead>
-            <tbody>
-              {lore.relationships.map((rel) => (
-                <Tr key={rel.id}>
-                  <Td>
-                    <SourceLink
-                      location={{ filePath: rel.fromId }}
-                      sourceUrl={sourceUrl}
-                    />
-                  </Td>
-                  <Td>{rel.kind}</Td>
-                  <Td>
-                    <SourceLink
-                      location={{ filePath: rel.toId }}
-                      sourceUrl={sourceUrl}
-                    />
-                  </Td>
-                  <Td>
-                    <CertaintyBadge certainty={rel.certainty} />
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
-          {lore.relationships.length === 0 && (
-            <p className="px-6 py-4 text-sm text-muted">
-              No direct relationships detected.
-            </p>
-          )}
-        </Card>
+        {diagramLayout ? (
+          <Card>
+            <AreaDependencyDiagram
+              areas={majorAreas}
+              relationships={areaRelationships}
+              areaUrl={areaUrl}
+            />
+          </Card>
+        ) : (
+          <p className="text-sm text-muted">
+            No direct relationships were detected between areas.
+          </p>
+        )}
+        <a
+          href={architectureUrl}
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        >
+          View full architecture <ArrowRight className="h-4 w-4" />
+        </a>
       </section>
 
       <section>

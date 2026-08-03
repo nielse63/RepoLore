@@ -485,3 +485,21 @@ Since this changes `project.kind` conclusions for previously-analyzed repositori
 Verified: `npm run test` (46 suites / 341 tests, up from 45/331), `npm run lint`, `npx tsc --noEmit` all clean.
 
 **Next smallest task:** Resume session 17 — deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
+
+### 2026-07-28 — ADR-0009 + area dependency diagram implemented on Overview and Architecture
+
+**Product owner request:** the Overview page's "Direct Relationships" section — a flat table of every raw file-to-file `depends-on` edge, potentially hundreds of rows — was flagged as clunky and uninformative. After discussion of how tools like Madge/skott/dependency-cruiser/dpdm visualize module relationships, and a `product-scope-guardian` review of the specific narrowed proposal (area-level only, presentation-only, non-interactive), the product owner made a deliberate, scoped decision to deviate from `mvp.md`/`non-goals.md`'s "plain lists and tables only, no interactive graphs" default for this one case. Recorded as **ADR-0009** (`docs/architecture/decisions/0009-area-dependency-diagram.md`), which supersedes ADR-0008's "Static area-only diagram" rejection specifically (ADR-0008's other three rejections — boundary narrative, infrastructure detection, expanded framework detection — are unaffected).
+
+- `package.json`/`package-lock.json` — added `@dagrejs/dagre` (layout computation only, server-only usage; never shipped to the client bundle since neither content component below is a `"use client"` component).
+- `src/lore/area-diagram-layout.ts` (new) — `deriveAreaDiagramLayout(areas, edges)`, a pure function wrapping `dagre.layout()` to turn `StructuralArea`s and the `AreaRelationship`s `deriveAreaRelationships` (ADR-0008) already produces into node positions and edge paths. Returns `null` below two areas or above `MAX_DIAGRAM_AREAS` (30), so callers fall back to table-only rather than rendering an unreadable diagram. No new relationship data, no `src/lore/model.ts` changes.
+- `src/lore/__tests__/area-diagram-layout.spec.ts` (new) — normal-graph layout, edges filtered to the given area set, below/above the size ceiling, and a mutual (cyclic) dependency doesn't throw.
+- `src/components/lore-shell/AreaDependencyDiagram.tsx` (new) — server component rendering the layout as static SVG: `<path>` edges with an arrowhead marker, `<foreignObject>` node boxes styled with the existing design-system Tailwind tokens (`bg-tile-core-bg`, `border-border`, etc.), each an ordinary `<a href={areaUrl(...)}>` hyperlink — no pan/zoom/drag/click-to-filter, and no cycle-detection callout even where dagre internally resolves one.
+- `src/components/lore-shell/ArchitectureContent.tsx` — embeds the diagram above the existing "How areas connect" table (table unchanged, kept for its `Certainty` column and evidence `SourceLink`s).
+- `src/components/lore-shell/OverviewContent.tsx` — the "Direct Relationships" section (raw `lore.relationships` table) is replaced entirely by a renamed "How Areas Connect" section: the diagram plus a "View full architecture →" link to `/lore/{owner}/{repo}/architecture`, matching `docs/designs/repository-overview.png`, which has no raw relationships table on Overview at all.
+- `docs/product/mvp.md` ("Entry Points and Relationships") and `docs/product/non-goals.md` ("interactive dependency graphs") both amended to record this as a documented, narrow exception referencing ADR-0009, rather than silently contradicting the shipped product.
+
+File-level relationships (`lore.relationships`) remain undiagrammed and list/table-only everywhere — this exception is strictly area-level, per ADR-0009's own guardrails.
+
+Verified: `npm run test` (47 suites / 346 tests, up from 46/341), `npm run lint`, `npx tsc --noEmit`, `npm run build` all clean.
+
+**Next smallest task:** Resume session 17 — deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
