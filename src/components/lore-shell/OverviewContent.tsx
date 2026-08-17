@@ -1,4 +1,3 @@
-import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   CertaintyBadge,
@@ -12,11 +11,9 @@ import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
-  ArrowRight,
   Compass,
   GitCommitHorizontal,
   Layers,
-  Link2,
   TestTube2,
   TriangleAlert,
 } from "lucide-react";
@@ -211,31 +208,6 @@ export function OverviewContent({
           </Card>
         </section>
       )}
-
-      <section id="component-connections">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <Link2 className="h-4 w-4" aria-hidden="true" /> Component Connections
-        </h2>
-        {diagramLayout ? (
-          <Card>
-            <AreaDependencyDiagram
-              areas={majorAreas}
-              relationships={areaRelationships}
-              areaUrl={areaUrl}
-            />
-          </Card>
-        ) : (
-          <p className="text-sm text-muted">
-            No direct relationships were detected between areas.
-          </p>
-        )}
-        <a
-          href={architectureUrl}
-          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          View full architecture <ArrowRight className="h-4 w-4" />
-        </a>
-      </section>
 
       <section>
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
