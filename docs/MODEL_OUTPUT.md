@@ -340,7 +340,6 @@ Avoid:
 
 - private repositories and accounts;
 - snapshot comparisons and architectural change explanations;
-- careful commit and pull-request history analysis;
 - deeper change-impact investigation;
 - additional languages and frameworks;
 - branch or commit-specific workflows when demand justifies them;

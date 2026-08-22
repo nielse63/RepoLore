@@ -3,8 +3,15 @@
 import { analyzeAndPersistRepository } from "@/analysis/analyze-and-persist";
 import { RateLimitedError } from "@/analysis/reanalysis-rate-limit";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
+import { saveHistoryEntries } from "@/db/history-entries";
+import { upsertRepo } from "@/db/repos";
 import { GitHubApiError } from "@/github/client";
 import { parseGitHubRepoUrl } from "@/github/parse-repo-url";
+import { computeHistory } from "@/history/compute-history";
+import {
+  HistoryRateLimitedError,
+  claimHistoryRefresh,
+} from "@/history/history-rate-limit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -94,4 +101,52 @@ export async function reanalyzeRepository(
 
   revalidatePath(`/lore/${owner}/${repo}`);
   return { status: "done", changed: run.id !== previousRun?.id };
+}
+
+export type RefreshHistoryState =
+  | { status: "idle" }
+  | { status: "done"; entryCount: number }
+  | { status: "error"; message: string };
+
+/**
+ * Server Action backing the History page's "Refresh history" button
+ * (docs/architecture/decisions/0010-history-page-real-data-scope.md).
+ * Unlike `reanalyzeRepository`, this never touches the analyzer — it only
+ * re-fetches and re-classifies commit diffs against whatever `Lore` was
+ * last persisted.
+ */
+// Required by useActionState's action signature; owner/repo (bound ahead of
+// these two) are what this action actually needs.
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export async function refreshHistory(
+  owner: string,
+  repo: string,
+  _prevState: RefreshHistoryState,
+  _formData: FormData
+): Promise<RefreshHistoryState> {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  try {
+    const repoRow = await upsertRepo(owner, repo);
+    await claimHistoryRefresh(repoRow.id);
+    const { entries, computedThroughSha } = await computeHistory(owner, repo);
+    await saveHistoryEntries({
+      repoId: repoRow.id,
+      computedThroughSha,
+      entries,
+    });
+    revalidatePath(`/lore/${owner}/${repo}/history`);
+    return { status: "done", entryCount: entries.length };
+  } catch (error) {
+    if (
+      error instanceof GitHubApiError ||
+      error instanceof HistoryRateLimitedError
+    ) {
+      return { status: "error", message: error.message };
+    }
+    console.error(`refreshHistory(${owner}/${repo}) failed:`, error);
+    return {
+      status: "error",
+      message: "Something went wrong refreshing history.",
+    };
+  }
 }

@@ -27,7 +27,7 @@ The launch MVP does not require:
 - scheduled refresh, webhooks, or real-time synchronization;
 - notifications;
 - AI-generated explanations or chat;
-- commit and pull-request history analysis;
+- commit and pull-request history analysis — a deliberate, narrow exception is the History page's deterministic, non-AI commit-diff classification (no narrative/LLM synthesis, no before/after diagram), see ADR-0010; this does not license pull-request analysis, architectural-diff narrative, or AI-generated history explanations, which remain excluded;
 - architectural diffs or pull-request impact analysis;
 - complete execution-flow or data-flow tracing;
 - indirect change-impact guarantees;

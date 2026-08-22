@@ -33,7 +33,7 @@ function getGitHubToken(): string {
   return token;
 }
 
-async function githubApiFetch(
+export async function githubApiFetch(
   path: string,
   init: RequestInit = {}
 ): Promise<Response> {
@@ -50,7 +50,7 @@ async function githubApiFetch(
   });
 }
 
-async function throwForResponse(
+export async function throwForResponse(
   res: Response,
   notFoundContext: string
 ): Promise<never> {

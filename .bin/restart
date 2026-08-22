@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+root=$(realpath "$(dirname "$(dirname "$0")")")
+cd "$root"
+
+npx -y kill-port 3000
+npm run migrate
+docker compose up -d db
+npm run dev
