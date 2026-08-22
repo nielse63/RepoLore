@@ -215,19 +215,6 @@ export function LoreView({
       </section>
 
       <section>
-        <h2>Test Relationships</h2>
-        <ul>
-          {lore.testRelationships.map((tr) => (
-            <li key={tr.id}>
-              [{certaintyLabel(tr.certainty)}]{" "}
-              <Loc location={tr.testLocation} sourceUrl={sourceUrl} /> →{" "}
-              <Loc location={tr.implementationLocation} sourceUrl={sourceUrl} />
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
         <h2>Gaps</h2>
         {lore.gaps.length === 0 ? (
           <p>None.</p>

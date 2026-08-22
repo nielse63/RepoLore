@@ -42,7 +42,6 @@ for (const name of FIXTURE_NAMES) {
       "Major Areas",
       "Entry Points",
       "Direct Relationships",
-      "Test Relationships",
       "Gaps",
     ]) {
       await expect(page.getByRole("heading", { name: section })).toBeVisible();

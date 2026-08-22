@@ -14,7 +14,6 @@ import {
   Compass,
   GitCommitHorizontal,
   Layers,
-  TestTube2,
   TriangleAlert,
 } from "lucide-react";
 
@@ -208,36 +207,6 @@ export function OverviewContent({
           </Card>
         </section>
       )}
-
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <TestTube2 className="h-4 w-4" aria-hidden="true" /> Test
-          Relationships
-        </h2>
-        <Card className="p-0">
-          <ul className="divide-y divide-border">
-            {lore.testRelationships.map((tr) => (
-              <li
-                key={tr.id}
-                className="flex flex-wrap items-center gap-2 px-6 py-3 text-sm"
-              >
-                <CertaintyBadge certainty={tr.certainty} />
-                <SourceLink location={tr.testLocation} sourceUrl={sourceUrl} />
-                <span className="text-muted">tests</span>
-                <SourceLink
-                  location={tr.implementationLocation}
-                  sourceUrl={sourceUrl}
-                />
-              </li>
-            ))}
-            {lore.testRelationships.length === 0 && (
-              <li className="px-6 py-3 text-sm text-muted">
-                No test relationships detected.
-              </li>
-            )}
-          </ul>
-        </Card>
-      </section>
 
       <section id="gaps">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
