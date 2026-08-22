@@ -1,15 +1,15 @@
-'use server';
+"use server";
 
-import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
-import { analyzeAndPersistRepository } from '@/analysis/analyze-and-persist';
-import { RateLimitedError } from '@/analysis/reanalysis-rate-limit';
-import { getLatestAnalysisRunForRepo } from '@/db/analysis-runs';
-import { GitHubApiError } from '@/github/client';
-import { parseGitHubRepoUrl } from '@/github/parse-repo-url';
+import { analyzeAndPersistRepository } from "@/analysis/analyze-and-persist";
+import { RateLimitedError } from "@/analysis/reanalysis-rate-limit";
+import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
+import { GitHubApiError } from "@/github/client";
+import { parseGitHubRepoUrl } from "@/github/parse-repo-url";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export type ResolveRepositoryState =
-  { status: 'idle' } | { status: 'error'; message: string };
+  { status: "idle" } | { status: "error"; message: string };
 
 /**
  * Server Action backing the home page's URL form: validates/normalizes the
@@ -23,10 +23,17 @@ export async function resolveRepository(
   _prevState: ResolveRepositoryState,
   formData: FormData
 ): Promise<ResolveRepositoryState> {
-  const rawUrl = formData.get('url');
-  const parsed = parseGitHubRepoUrl(typeof rawUrl === 'string' ? rawUrl : '');
+  const rawUrl = formData.get("url");
+  const rawUrlString = typeof rawUrl === "string" ? rawUrl : "";
+  if (!rawUrlString.includes("github.com")) {
+    return {
+      status: "error",
+      message: "A GitHub URL is required",
+    };
+  }
+  const parsed = parseGitHubRepoUrl(rawUrlString);
   if (!parsed.ok) {
-    return { status: 'error', message: parsed.reason };
+    return { status: "error", message: parsed.reason };
   }
 
   const { owner, repo } = parsed.value;
@@ -34,11 +41,12 @@ export async function resolveRepository(
     await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
     if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
-      return { status: 'error', message: error.message };
+      return { status: "error", message: error.message };
     }
+    console.error(`resolveRepository(${owner}/${repo}) failed:`, error);
     return {
-      status: 'error',
-      message: 'Something went wrong analyzing that repository.',
+      status: "error",
+      message: "Something went wrong analyzing that repository.",
     };
   }
 
@@ -46,9 +54,9 @@ export async function resolveRepository(
 }
 
 export type ReanalyzeState =
-  | { status: 'idle' }
-  | { status: 'done'; changed: boolean }
-  | { status: 'error'; message: string };
+  | { status: "idle" }
+  | { status: "done"; changed: boolean }
+  | { status: "error"; message: string };
 
 /**
  * Server Action backing the "Re-analyze" button on `/lore/{owner}/{repo}`
@@ -75,14 +83,15 @@ export async function reanalyzeRepository(
     run = await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
     if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
-      return { status: 'error', message: error.message };
+      return { status: "error", message: error.message };
     }
+    console.error(`reanalyzeRepository(${owner}/${repo}) failed:`, error);
     return {
-      status: 'error',
-      message: 'Something went wrong re-analyzing that repository.',
+      status: "error",
+      message: "Something went wrong re-analyzing that repository.",
     };
   }
 
   revalidatePath(`/lore/${owner}/${repo}`);
-  return { status: 'done', changed: run.id !== previousRun?.id };
+  return { status: "done", changed: run.id !== previousRun?.id };
 }

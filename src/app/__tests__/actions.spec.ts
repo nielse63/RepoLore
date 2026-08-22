@@ -86,7 +86,9 @@ describe("resolveRepository", () => {
   });
 
   it("returns a generic error message for unexpected failures", async () => {
-    mockAnalyzeAndPersistRepository.mockRejectedValue(new Error("boom"));
+    const error = new Error("boom");
+    mockAnalyzeAndPersistRepository.mockRejectedValue(error);
+    const consoleError = jest.spyOn(console, "error").mockImplementation();
 
     const result = await resolveRepository(
       { status: "idle" },
@@ -97,6 +99,11 @@ describe("resolveRepository", () => {
       status: "error",
       message: "Something went wrong analyzing that repository.",
     });
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("acme/widgets"),
+      error
+    );
+    consoleError.mockRestore();
   });
 });
 
@@ -165,7 +172,9 @@ describe("reanalyzeRepository", () => {
 
   it("returns a generic error message for unexpected failures", async () => {
     mockGetLatestAnalysisRunForRepo.mockResolvedValue(null);
-    mockAnalyzeAndPersistRepository.mockRejectedValue(new Error("boom"));
+    const error = new Error("boom");
+    mockAnalyzeAndPersistRepository.mockRejectedValue(error);
+    const consoleError = jest.spyOn(console, "error").mockImplementation();
 
     const result = await reanalyzeRepository(
       "acme",
@@ -178,5 +187,10 @@ describe("reanalyzeRepository", () => {
       status: "error",
       message: "Something went wrong re-analyzing that repository.",
     });
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("acme/widgets"),
+      error
+    );
+    consoleError.mockRestore();
   });
 });
