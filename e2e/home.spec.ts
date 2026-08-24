@@ -44,3 +44,68 @@ test("shows an honest inline error for a non-GitHub URL", async ({ page }) => {
     page.getByText("Only github.com repository URLs are supported.")
   ).toBeVisible();
 });
+
+test("focuses the repository URL input on page load", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#url")).toBeFocused();
+});
+
+test("has no broken same-origin links", async ({ page, request }) => {
+  await page.goto("/");
+
+  const hrefs = await page
+    .locator("a[href]")
+    .evaluateAll((anchors) =>
+      anchors
+        .map((a) => a.getAttribute("href"))
+        .filter((href): href is string => !!href)
+    );
+
+  const sameOriginPaths = hrefs.filter(
+    (href) =>
+      !href.startsWith("#") &&
+      !href.startsWith("mailto:") &&
+      !href.startsWith("tel:") &&
+      !/^[a-z]+:\/\//i.test(href)
+  );
+
+  for (const path of sameOriginPaths) {
+    const response = await request.get(path);
+    expect(response.status(), `link "${path}" should not error`).toBeLessThan(
+      400
+    );
+  }
+});
+
+test("loads with no failed asset requests or console errors", async ({
+  page,
+}) => {
+  const failedRequests: string[] = [];
+  const consoleErrors: string[] = [];
+
+  page.on("requestfailed", (req) => {
+    failedRequests.push(
+      `${req.url()} (${req.failure()?.errorText ?? "unknown error"})`
+    );
+  });
+  page.on("response", (res) => {
+    if (res.status() >= 400) {
+      failedRequests.push(`${res.url()} (${res.status()})`);
+    }
+  });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text());
+    }
+  });
+  page.on("pageerror", (err) => {
+    consoleErrors.push(err.message);
+  });
+
+  await page.goto("/");
+  await page.waitForLoadState("load");
+
+  expect(failedRequests, "no asset/network requests should fail").toEqual([]);
+  expect(consoleErrors, "no console errors should be logged").toEqual([]);
+});

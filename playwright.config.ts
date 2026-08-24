@@ -29,9 +29,26 @@ export default defineConfig({
         outputFile: "./coverage/e2e/report.html",
         coverage: {
           outputDir: "./coverage/e2e",
-          entryFilter: (entry: { url: string }) =>
-            entry.url.includes("/_next/static/"),
-          sourceFilter: (sourcePath: string) => sourcePath.startsWith("src/"),
+          entryFilter: (entry: { url: string }) => {
+            const { url } = entry;
+            const returnValue =
+              url.includes("/_next/static/") &&
+              !url.includes("[turbopack]") &&
+              !url.includes("%5Bturbopack%5D") &&
+              !url.includes("node_modules");
+            return returnValue;
+          },
+          sourceFilter: (sourcePath: string) => {
+            if (
+              sourcePath.includes("node_modules") ||
+              sourcePath.includes("[turbopack]") ||
+              sourcePath.startsWith("next/") ||
+              sourcePath.startsWith("_next/")
+            ) {
+              return false;
+            }
+            return sourcePath.startsWith("src/");
+          },
           lcov: true,
         },
       },
@@ -41,6 +58,7 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    browserName: "chromium",
   },
   projects: [
     {
