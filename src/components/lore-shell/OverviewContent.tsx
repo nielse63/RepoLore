@@ -5,17 +5,13 @@ import {
 } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
+import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StepList } from "@/components/ui/StepList";
 import { formatPath } from "@/lib/format-path";
 import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
-import {
-  Compass,
-  GitCommitHorizontal,
-  Layers,
-  TriangleAlert,
-} from "lucide-react";
+import { Compass, GitCommitHorizontal, Layers } from "lucide-react";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -66,19 +62,11 @@ export function OverviewContent({
         )}
       </div>
 
-      <section>
-        <Card className="bg-red-100">
-          <p className="text-sm text-muted flex items-center">
-            <TriangleAlert className="mr-2" />
-            <strong>Understanding is partial</strong>
-          </p>
-          <p className="mt-2">
-            Repo Lore identified the primary application structure, but imports
-            using the <code>@/</code> path alias could not be resolved. Some
-            dependency and architecture conclusions may be incomplete.
-          </p>
-        </Card>
-      </section>
+      {snapshot.status !== "completed" && (
+        <section>
+          <PartialUnderstandingCard gapsCount={lore.gaps.length} />
+        </section>
+      )}
 
       <section>
         <h2 className="mb-3 text-lg font-semibold text-foreground">

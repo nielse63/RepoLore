@@ -1,14 +1,15 @@
-import { notFound } from "next/navigation";
+import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
+import { HistoryContent } from "@/components/lore-shell/HistoryContent";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import {
   getHistoryEntriesForRepoByName,
   saveHistoryEntries,
 } from "@/db/history-entries";
 import { upsertRepo } from "@/db/repos";
+import { getAnalysisStatus } from "@/helpers";
 import { computeHistory } from "@/history/compute-history";
-import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
-import { HistoryContent } from "@/components/lore-shell/HistoryContent";
 import { relativeTime } from "@/lib/relative-time";
+import { notFound } from "next/navigation";
 
 /**
  * Real History view (ADR-0010) — same fetch/render pattern as the real
@@ -60,10 +61,7 @@ export default async function HistoryPage({
       entries={cached.entries}
       truncated={truncated}
       repoIdentity={{
-        statusLabel:
-          lore.snapshot.status === "completed"
-            ? "Analysis current"
-            : "Analysis partial",
+        statusLabel: getAnalysisStatus(lore),
         statusTone: lore.snapshot.status === "completed" ? "success" : "alert",
         updatedLabel: `Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`,
         branch: lore.snapshot.repository.defaultBranch,

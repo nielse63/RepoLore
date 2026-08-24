@@ -1,15 +1,16 @@
-import { notFound } from "next/navigation";
-import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
-import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
-import { TopBar } from "@/components/lore-shell/TopBar";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
-import { OverviewContent } from "@/components/lore-shell/OverviewContent";
 import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { OverviewContent } from "@/components/lore-shell/OverviewContent";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
+import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
+import { getAnalysisStatus } from "@/helpers";
 import { relativeTime } from "@/lib/relative-time";
 import type { SourceLocation } from "@/lore/model";
+import { notFound } from "next/navigation";
 
 /**
  * Renders the latest persisted analysis run for a repository (acceptance
@@ -51,11 +52,7 @@ export default async function LorePage({
             <RepoIdentity
               owner={owner}
               repo={repo}
-              statusLabel={
-                lore.snapshot.status === "completed"
-                  ? "Analysis current"
-                  : "Analysis partial"
-              }
+              statusLabel={getAnalysisStatus(lore)}
               statusTone={
                 lore.snapshot.status === "completed" ? "success" : "alert"
               }

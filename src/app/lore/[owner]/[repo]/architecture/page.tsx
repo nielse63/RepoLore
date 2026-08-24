@@ -1,16 +1,17 @@
-import { FileText } from "lucide-react";
-import { notFound } from "next/navigation";
+import { ReanalyzeButton } from "@/components/ReanalyzeButton";
+import { ArchitectureContent } from "@/components/lore-shell/ArchitectureContent";
+import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { TopBar } from "@/components/lore-shell/TopBar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
-import { TopBar } from "@/components/lore-shell/TopBar";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
-import { ArchitectureContent } from "@/components/lore-shell/ArchitectureContent";
+import { getAnalysisStatus } from "@/helpers";
 import { relativeTime } from "@/lib/relative-time";
 import { countEvidence, type SourceLocation } from "@/lore/model";
+import { FileText } from "lucide-react";
+import { notFound } from "next/navigation";
 
 /**
  * Real Architecture view (ADR-0008) — same fetch/render pattern as the real
@@ -49,11 +50,7 @@ export default async function ArchitecturePage({
             <RepoIdentity
               owner={owner}
               repo={repo}
-              statusLabel={
-                lore.snapshot.status === "completed"
-                  ? "Analysis current"
-                  : "Analysis partial"
-              }
+              statusLabel={getAnalysisStatus(lore)}
               statusTone={
                 lore.snapshot.status === "completed" ? "success" : "alert"
               }
