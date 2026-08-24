@@ -1,9 +1,9 @@
 'use client';
 
-import { useActionState } from 'react';
-import { FolderGit2 } from 'lucide-react';
-import { resolveRepository, type ResolveRepositoryState } from './actions';
 import { Button } from '@/components/ui/Button';
+import { FolderGit2 } from 'lucide-react';
+import { useActionState } from 'react';
+import { resolveRepository, type ResolveRepositoryState } from './actions';
 
 const initialState: ResolveRepositoryState = { status: 'idle' };
 
@@ -57,6 +57,7 @@ export default function Home() {
               type="text"
               placeholder="https://github.com/owner/repository"
               className="w-full rounded-lg border border-border bg-surface py-3 pl-12 pr-4 text-sm text-foreground placeholder:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              autoFocus
             />
           </div>
           <Button type="submit" disabled={isPending} className="px-6 py-3">

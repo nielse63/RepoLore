@@ -84,6 +84,8 @@ export interface RepositoryHead {
   headSha: string;
   /** GitHub's own repository description, when set — surfaced as-is, not inferred. */
   description?: string;
+  /** GitHub's own `private` flag — never inferred or defaulted, since getting this wrong misrepresents repository access. */
+  isPrivate: boolean;
 }
 
 /**
@@ -102,12 +104,19 @@ export async function resolveRepositoryHead(
   const repoData = (await repoRes.json()) as {
     default_branch?: string;
     description?: string | null;
+    private?: boolean;
   };
   const defaultBranch = repoData.default_branch;
   if (!defaultBranch) {
     throw new GitHubApiError(
       "unknown",
       `GitHub did not report a default branch for ${owner}/${repo}.`
+    );
+  }
+  if (typeof repoData.private !== "boolean") {
+    throw new GitHubApiError(
+      "unknown",
+      `GitHub did not report visibility for ${owner}/${repo}.`
     );
   }
 
@@ -132,6 +141,7 @@ export async function resolveRepositoryHead(
     defaultBranch,
     headSha: commitData.sha,
     description: repoData.description ?? undefined,
+    isPrivate: repoData.private,
   };
 }
 

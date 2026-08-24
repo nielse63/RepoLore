@@ -23,6 +23,7 @@ describe("acquireRepositorySource", () => {
     mockResolveRepositoryHead.mockResolvedValue({
       defaultBranch: "main",
       headSha: "sha123",
+      isPrivate: false,
     });
   });
 

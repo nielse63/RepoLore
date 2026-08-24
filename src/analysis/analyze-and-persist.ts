@@ -91,7 +91,7 @@ export async function analyzeAndPersistRepository(
 
   // Resolution failures (repo doesn't exist, bad token, ...) have no commit
   // to key a run on, so they're left to the caller rather than persisted.
-  const [{ defaultBranch, headSha, description }, languageBytes] =
+  const [{ defaultBranch, headSha, description, isPrivate }, languageBytes] =
     await Promise.all([
       resolveRepositoryHead(owner, repo),
       fetchRepositoryLanguages(owner, repo),
@@ -147,6 +147,7 @@ export async function analyzeAndPersistRepository(
       repo,
       defaultBranch,
       description,
+      isPrivate,
       commitSha: acquired.headSha,
       analyzerVersion,
       analyzedAt: new Date().toISOString(),

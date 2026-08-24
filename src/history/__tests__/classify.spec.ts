@@ -35,6 +35,7 @@ function makeLore(structuralAreas: StructuralArea[]): Lore {
         name: "payments-service",
         defaultBranch: "main",
         url: "https://github.com/acme/payments-service",
+        isPrivate: false,
       },
       commitSha: "headsha",
       analyzedAt: "2026-08-01T00:00:00Z",

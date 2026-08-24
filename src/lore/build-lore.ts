@@ -59,6 +59,7 @@ export interface BuildLoreInput {
   repo: string;
   defaultBranch: string;
   description?: string;
+  isPrivate: boolean;
   commitSha: string;
   analyzerVersion: string;
   analyzedAt: string;
@@ -103,6 +104,7 @@ export function buildLore(input: BuildLoreInput): Lore {
     repo,
     defaultBranch,
     description,
+    isPrivate,
     commitSha,
     analyzerVersion,
     analyzedAt,
@@ -115,6 +117,7 @@ export function buildLore(input: BuildLoreInput): Lore {
     description,
     defaultBranch,
     url: `https://github.com/${owner}/${repo}`,
+    isPrivate,
   };
 
   const snapshot: AnalysisSnapshot = {

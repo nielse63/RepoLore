@@ -42,6 +42,7 @@ function baseInput(overrides: Partial<BuildLoreInput> = {}): BuildLoreInput {
     owner: "acme",
     repo: "widgets",
     defaultBranch: "main",
+    isPrivate: false,
     commitSha: "sha123",
     analyzerVersion: "js-ts-v2",
     analyzedAt: "2026-01-01T00:00:00Z",

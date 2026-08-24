@@ -57,6 +57,8 @@ export interface Repository {
   description?: string;
   defaultBranch: string;
   url: string;
+  /** GitHub's own visibility flag at analysis time — never inferred or defaulted. */
+  isPrivate: boolean;
 }
 
 /** Repository, default branch, commit SHA, timestamp, and analyzer version identifying one analysis run. */

@@ -23,6 +23,7 @@ function emptyLore(): Lore {
         name: "widgets",
         defaultBranch: "main",
         url: "https://github.com/acme/widgets",
+        isPrivate: false,
       },
       commitSha: "sha123",
       analyzedAt: "2026-01-01T00:00:00Z",

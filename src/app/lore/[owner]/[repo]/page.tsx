@@ -52,6 +52,9 @@ export default async function LorePage({
             <RepoIdentity
               owner={owner}
               repo={repo}
+              visibility={
+                lore.snapshot.repository.isPrivate ? 'Private' : 'Public'
+              }
               statusLabel={getAnalysisStatus(lore)}
               statusTone={
                 lore.snapshot.status === "completed" ? "success" : "alert"

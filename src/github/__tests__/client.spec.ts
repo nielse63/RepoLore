@@ -48,7 +48,11 @@ describe("github/client", () => {
     it("resolves the default branch, HEAD sha, and description on success", async () => {
       fetchMock
         .mockResolvedValueOnce(
-          jsonResponse(200, { default_branch: "main", description: "A repo" })
+          jsonResponse(200, {
+            default_branch: "main",
+            description: "A repo",
+            private: true,
+          })
         )
         .mockResolvedValueOnce(jsonResponse(200, { sha: "deadbeef" }));
 
@@ -58,6 +62,7 @@ describe("github/client", () => {
         defaultBranch: "main",
         headSha: "deadbeef",
         description: "A repo",
+        isPrivate: true,
       });
       expect(fetchMock).toHaveBeenNthCalledWith(
         1,
@@ -77,7 +82,9 @@ describe("github/client", () => {
 
     it("omits description when GitHub reports none", async () => {
       fetchMock
-        .mockResolvedValueOnce(jsonResponse(200, { default_branch: "main" }))
+        .mockResolvedValueOnce(
+          jsonResponse(200, { default_branch: "main", private: false })
+        )
         .mockResolvedValueOnce(jsonResponse(200, { sha: "deadbeef" }));
 
       const result = await resolveRepositoryHead("owner", "repo");
@@ -136,9 +143,23 @@ describe("github/client", () => {
       });
     });
 
+    it("throws unknown when the repo response omits private", async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse(200, { default_branch: "main" })
+      );
+
+      await expect(
+        resolveRepositoryHead("owner", "repo")
+      ).rejects.toMatchObject({
+        code: "unknown",
+      });
+    });
+
     it("throws not-found when the commit lookup 404s", async () => {
       fetchMock
-        .mockResolvedValueOnce(jsonResponse(200, { default_branch: "main" }))
+        .mockResolvedValueOnce(
+          jsonResponse(200, { default_branch: "main", private: false })
+        )
         .mockResolvedValueOnce(jsonResponse(404, {}));
 
       await expect(
@@ -150,7 +171,9 @@ describe("github/client", () => {
 
     it("throws unknown when the commit response omits a sha", async () => {
       fetchMock
-        .mockResolvedValueOnce(jsonResponse(200, { default_branch: "main" }))
+        .mockResolvedValueOnce(
+          jsonResponse(200, { default_branch: "main", private: false })
+        )
         .mockResolvedValueOnce(jsonResponse(200, {}));
 
       await expect(

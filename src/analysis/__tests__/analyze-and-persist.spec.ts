@@ -117,6 +117,7 @@ describe("analyzeAndPersistRepository", () => {
     mockResolveRepositoryHead.mockResolvedValue({
       defaultBranch: "main",
       headSha: "sha123",
+      isPrivate: false,
     });
     // Defaults to a pure-TypeScript language breakdown so existing
     // JS/TS-focused tests don't each need to restate it.
