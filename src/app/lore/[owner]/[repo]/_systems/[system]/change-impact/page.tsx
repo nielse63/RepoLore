@@ -1,54 +1,54 @@
-import { notFound } from 'next/navigation';
-import { Copy, Download } from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { SYSTEMS, getSystemDetail } from '@/lib/fixtures/payments-service';
+import { notFound } from "next/navigation";
+import { Copy, Download } from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { SYSTEMS, getSystemDetail } from "@/lib/fixtures/payments-service";
 
 const LIKELY_AFFECTED = [
   {
-    name: 'Worker',
-    description: 'Payment Service enqueues jobs consumed by Worker.',
+    name: "Worker",
+    description: "Payment Service enqueues jobs consumed by Worker.",
     evidence: 3,
   },
   {
-    name: 'Auth Service',
+    name: "Auth Service",
     description:
-      'Payment Service calls Auth Service to validate and issue JWTs.',
+      "Payment Service calls Auth Service to validate and issue JWTs.",
     evidence: 2,
   },
   {
-    name: 'Notification Service',
-    description: 'Payment Service sends email and SMS notifications.',
+    name: "Notification Service",
+    description: "Payment Service sends email and SMS notifications.",
     evidence: 2,
   },
   {
-    name: 'API routes',
-    description: 'HTTP endpoints route requests to Payment Service.',
+    name: "API routes",
+    description: "HTTP endpoints route requests to Payment Service.",
     evidence: 6,
   },
 ];
 
 const REVIEW_RECOMMENDED = [
   {
-    name: 'PostgreSQL',
+    name: "PostgreSQL",
     description:
-      'Payment Service reads from and writes to the primary database.',
+      "Payment Service reads from and writes to the primary database.",
     evidence: 4,
   },
   {
-    name: 'Redis',
-    description: 'Payment Service uses Redis for caching and queuing.',
+    name: "Redis",
+    description: "Payment Service uses Redis for caching and queuing.",
     evidence: 3,
   },
   {
-    name: 'Other services',
-    description: 'Indirect integrations that may be affected.',
+    name: "Other services",
+    description: "Indirect integrations that may be affected.",
     evidence: 1,
   },
 ];
@@ -72,9 +72,9 @@ export default async function ChangeImpactPage({
           left={
             <Breadcrumbs
               items={[
-                { label: 'Systems', href: `${base}/systems` },
+                { label: "Systems", href: `${base}/systems` },
                 { label: system.name, href: `${base}/systems/${system.slug}` },
-                { label: 'Change impact' },
+                { label: "Change impact" },
               ]}
             />
           }
@@ -133,7 +133,7 @@ export default async function ChangeImpactPage({
           Change impact
         </h1>
         <p className="mt-2 text-base text-muted">
-          What could be affected if the {system.name} changes.{' '}
+          What could be affected if the {system.name} changes.{" "}
           <Badge variant="primary">Evidence-based estimate</Badge>
         </p>
 
@@ -161,8 +161,8 @@ export default async function ChangeImpactPage({
                     <p className="text-sm text-muted">{item.description}</p>
                   </div>
                   <span className="shrink-0 text-sm text-primary">
-                    {item.evidence}{' '}
-                    {item.evidence === 1 ? 'reference' : 'references'}
+                    {item.evidence}{" "}
+                    {item.evidence === 1 ? "reference" : "references"}
                   </span>
                 </li>
               ))}
@@ -191,8 +191,8 @@ export default async function ChangeImpactPage({
                     <p className="text-sm text-muted">{item.description}</p>
                   </div>
                   <span className="shrink-0 text-sm text-primary">
-                    {item.evidence}{' '}
-                    {item.evidence === 1 ? 'reference' : 'references'}
+                    {item.evidence}{" "}
+                    {item.evidence === 1 ? "reference" : "references"}
                   </span>
                 </li>
               ))}

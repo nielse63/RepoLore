@@ -57,6 +57,9 @@ export default async function ArchitecturePage({
               updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
               branch={lore.snapshot.repository.defaultBranch}
               language={languages}
+              visibility={
+                lore.snapshot.repository.isPrivate ? "Private" : "Public"
+              }
             />
           }
           actions={<ReanalyzeButton owner={owner} repo={repo} />}

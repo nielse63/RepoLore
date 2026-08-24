@@ -15,6 +15,7 @@ import { HISTORY_LOOKBACK_DAYS } from "@/github/commits";
 import { githubBlobUrl } from "@/github/urls";
 import type { HistoryChangeKind, HistoryEntry } from "@/history/model";
 import { formatPath } from "@/lib/format-path";
+import type { Lore } from "@/lore/model";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -79,6 +80,7 @@ export interface HistoryContentProps {
   };
   /** The analyzed commit SHA — used to build GitHub source links client-side (`githubBlobUrl` is a pure string builder, safe here). */
   commitSha?: string;
+  lore: Lore;
 }
 
 export function HistoryContent({
@@ -88,6 +90,7 @@ export function HistoryContent({
   truncated,
   repoIdentity,
   commitSha,
+  lore,
 }: HistoryContentProps) {
   const [kind, setKind] = useState<HistoryChangeKind | "all">("all");
   const [selectedId, setSelectedId] = useState(entries[0]?.id);
@@ -138,6 +141,9 @@ export function HistoryContent({
               updatedLabel={repoIdentity.updatedLabel}
               branch={repoIdentity.branch}
               language={repoIdentity.language}
+              visibility={
+                lore.snapshot.repository.isPrivate ? "Private" : "Public"
+              }
             />
           }
           actions={<RefreshHistoryButton owner={owner} repo={repo} />}

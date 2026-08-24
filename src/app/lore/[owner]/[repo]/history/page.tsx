@@ -68,6 +68,7 @@ export default async function HistoryPage({
         language: languages,
       }}
       commitSha={lore.snapshot.commitSha}
+      lore={lore}
     />
   );
 }

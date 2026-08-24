@@ -1,42 +1,42 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { ChevronRight } from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { RepoIdentity } from '@/components/lore-shell/RepoIdentity';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { IconTile } from '@/components/ui/IconTile';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { FilterPills } from '@/components/ui/FilterPills';
-import { SYSTEMS, type SystemSummary } from '@/lib/fixtures/payments-service';
-import { ICONS } from '@/lib/fixtures/icons';
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { IconTile } from "@/components/ui/IconTile";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { FilterPills } from "@/components/ui/FilterPills";
+import { SYSTEMS, type SystemSummary } from "@/lib/fixtures/payments-service";
+import { ICONS } from "@/lib/fixtures/icons";
 
 const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'Core', label: 'Core' },
-  { value: 'Supporting', label: 'Supporting' },
-  { value: 'Data', label: 'Data' },
+  { value: "all", label: "All" },
+  { value: "Core", label: "Core" },
+  { value: "Supporting", label: "Supporting" },
+  { value: "Data", label: "Data" },
 ];
 
 const totalEvidence = SYSTEMS.reduce((sum, s) => sum + s.evidence, 0);
 
 export default function SystemsPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [query, setQuery] = useState('');
-  const [kind, setKind] = useState('all');
+  const [query, setQuery] = useState("");
+  const [kind, setKind] = useState("all");
 
   const filtered = useMemo(() => {
     return SYSTEMS.filter((s) => {
-      const matchesKind = kind === 'all' || s.kind === kind;
+      const matchesKind = kind === "all" || s.kind === kind;
       const matchesQuery =
-        query.trim() === '' ||
+        query.trim() === "" ||
         s.name.toLowerCase().includes(query.trim().toLowerCase());
       return matchesKind && matchesQuery;
     });
@@ -87,7 +87,7 @@ export default function SystemsPage() {
                 variant="core"
                 size="sm"
                 className="h-5 w-5"
-              />{' '}
+              />{" "}
               Core
             </span>
             <span className="flex items-center gap-1.5">
@@ -96,7 +96,7 @@ export default function SystemsPage() {
                 variant="supporting"
                 size="sm"
                 className="h-5 w-5"
-              />{' '}
+              />{" "}
               Supporting
             </span>
             <span className="flex items-center gap-1.5">
@@ -105,7 +105,7 @@ export default function SystemsPage() {
                 variant="data"
                 size="sm"
                 className="h-5 w-5"
-              />{' '}
+              />{" "}
               Data
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function SystemsPage() {
           repository.
         </p>
         <p className="mt-1 text-sm text-muted">
-          {SYSTEMS.length} systems identified ·{' '}
+          {SYSTEMS.length} systems identified ·{" "}
           <span className="font-medium text-primary">
             {totalEvidence} supporting references
           </span>
@@ -137,7 +137,7 @@ export default function SystemsPage() {
             placeholder="Search systems"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onClear={() => setQuery('')}
+            onClear={() => setQuery("")}
             className="flex-1"
           />
           <FilterPills

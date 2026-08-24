@@ -7,8 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix",
-    "format": "prettier --write",
+    "lint": "eslint --fix --cache",
+    "format": "prettier --write --cache",
     "test": "npm run test:unit:coverage && npm run test:e2e",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:unit:watch": "npm run test:unit -- --watch",
@@ -25,7 +25,8 @@
     "db:down": "docker compose down",
     "migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
     "prepare": "husky",
-    "verify": ".bin/verify"
+    "verify": ".bin/verify",
+    "coverage:open": "open coverage/lcov-report/index.html ; open coverage/e2e/index.html"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
@@ -85,7 +86,7 @@
   },
   "homepage": "https://github.com/nielse63/RepoLore#readme",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": "eslint --fix",
-    "*.{ts,tsx,js,jsx,md,json}": "prettier --write"
+    "*.{ts,tsx,js,jsx}": "eslint --fix --cache",
+    "*.{ts,tsx,js,jsx,md,json}": "prettier --write --cache"
   }
 }

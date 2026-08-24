@@ -1,35 +1,34 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Badge } from "@/components/ui/Badge";
+import { cn } from "@/lib/cn";
 import {
   ChevronDown,
   Clock,
   FolderGit2,
   Home,
   Network,
-  Package,
   Settings,
   Share2,
   ShieldCheck,
   Waypoints,
-} from 'lucide-react';
-import { cn } from '@/lib/cn';
-import { Badge } from '@/components/ui/Badge';
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { slug: '', label: 'Overview', icon: Home },
-  { slug: 'architecture', label: 'Architecture', icon: Network },
-  { slug: 'systems', label: 'Systems', icon: Package },
-  { slug: 'dependencies', label: 'Dependencies', icon: Share2 },
-  { slug: 'data-flow', label: 'Data flow', icon: Waypoints },
-  { slug: 'history', label: 'History', icon: Clock },
+  { slug: "", label: "Overview", icon: Home },
+  { slug: "architecture", label: "Architecture", icon: Network },
+  // { slug: 'systems', label: 'Systems', icon: Package },
+  { slug: "dependencies", label: "Dependencies", icon: Share2 },
+  { slug: "data-flow", label: "Data flow", icon: Waypoints },
+  { slug: "history", label: "History", icon: Clock },
 ] as const;
 
 export function Sidebar({
   owner,
   repo,
-  visibility = 'Public',
+  visibility = "Public",
 }: {
   owner: string;
   repo: string;
@@ -85,12 +84,12 @@ export function Sidebar({
             <Link
               key={item.label}
               href={href}
-              aria-current={active ? 'page' : undefined}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? 'bg-tile-core-bg text-tile-core-fg'
-                  : 'text-muted hover:bg-border/20 hover:text-foreground'
+                  ? "bg-tile-core-bg text-tile-core-fg"
+                  : "text-muted hover:bg-border/20 hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -119,13 +118,13 @@ export function Sidebar({
         <Link
           href={`${base}/repository-settings`}
           aria-current={
-            pathname === `${base}/repository-settings` ? 'page' : undefined
+            pathname === `${base}/repository-settings` ? "page" : undefined
           }
           className={cn(
-            'flex items-center gap-2.5 rounded-lg border-t border-border px-3 pt-3 text-sm font-medium',
+            "flex items-center gap-2.5 rounded-lg border-t border-border px-3 pt-3 text-sm font-medium",
             pathname === `${base}/repository-settings`
-              ? 'text-tile-core-fg'
-              : 'text-muted hover:text-foreground'
+              ? "text-tile-core-fg"
+              : "text-muted hover:text-foreground"
           )}
         >
           <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
