@@ -5,6 +5,12 @@ import { chromium } from "playwright";
 const __dirname = import.meta.dirname;
 const baseUrl = "http://localhost:3000";
 const repoPath = "lore/nielse63/RepoLore";
+const pages = [
+  "",
+  repoPath,
+  `${repoPath}/architecture`,
+  `${repoPath}/history`
+];
 
 const screenshotsDir = path.join(__dirname, "screenshots");
 if (!fs.existsSync(screenshotsDir)) {
@@ -33,9 +39,7 @@ const gotoPage = async (pageName = "") => {
 
 const main = async () => {
   try {
-    await gotoPage();
-    await gotoPage(repoPath);
-    await gotoPage(`${repoPath}/architecture`);
+    await Promise.all(pages.map(gotoPage));
   } finally {
     await browser.close();
   }

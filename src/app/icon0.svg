@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc" width="512" height="512"><metadata><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dc="http://purl.org/dc/elements/1.1/"><rdf:Description><dc:creator>RealFaviconGenerator</dc:creator><dc:source>https://realfavicongenerator.net</dc:source></rdf:Description></rdf:RDF></metadata><title id="title">Repo Lore gradient app icon</title><desc id="desc">The connected white Repo Lore glyph on a purple-to-cyan rounded-square background.</desc><defs>
+    <linearGradient id="background" x1="56" y1="45" x2="462" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A34FDB"></stop>
+      <stop offset="0.48" stop-color="#7469EC"></stop>
+      <stop offset="1" stop-color="#10BFD1"></stop>
+    </linearGradient>
+  </defs><rect x="20" y="20" width="472" height="472" rx="96" fill="url(#background)"></rect><rect x="21" y="21" width="470" height="470" rx="95" fill="none" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="2"></rect><g fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M171 132h104c58 0 95 39 95 90s-34 82-84 88l82 77"></path>
+    <path d="M171 180h101c29 0 47 19 47 43s-18 41-47 41h-25c-23 0-36 22-20 40l79 82"></path>
+    <path d="M171 180v206"></path>
+  </g><g fill="#FFFFFF">
+    <circle cx="171" cy="132" r="20"></circle>
+    <circle cx="171" cy="180" r="18"></circle>
+    <circle cx="171" cy="273" r="17"></circle>
+    <circle cx="171" cy="386" r="20"></circle>
+    <circle cx="306" cy="386" r="19"></circle>
+    <circle cx="368" cy="387" r="20"></circle>
+  </g></svg>
