@@ -19,7 +19,7 @@ let pythonLanguage: Language | undefined;
  * module representation (a numeric id at build time, an unreadable virtual
  * `[project]/...`/`[externals]/...` string at request time) instead of a
  * real, filesystem-readable absolute path — found wiring the Python
- * fixture pages into `/fixtures/[name]` in implementation session 13, and
+ * analyzer into a real page route in implementation session 13, and
  * confirmed to reproduce identically whether or not the packages are
  * marked external (`next.config.ts`). `process.cwd()`-relative
  * construction isn't touched by that rewriting since it isn't a module

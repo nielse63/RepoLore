@@ -526,3 +526,13 @@ New tests: `src/github/__tests__/commits.spec.ts`, `src/history/__tests__/classi
 Verified: `npm run test` (50 suites / 368 tests), `npm run lint`, `npx tsc --noEmit` all clean. `npm run test:e2e` has 2 pre-existing, unrelated failures on `main` (home-page inline-error assertions) confirmed via `git stash` — not caused by this change.
 
 **Next smallest task:** Resume session 17 — deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy.
+
+### 2026-08-24 — Removed the `/fixtures/*` route and its Playwright coverage
+
+**Decision, at the product owner's request.** `/fixtures` (`src/app/fixtures/`) and `e2e/fixtures.spec.ts` (session 15) are removed. The product owner has created a private GitHub repository per local fixture — `nielse63/repo-lore-{ts-react-app,ts-library,python-app,python-library}-fixture`, same source as `fixtures/{name}` — to exercise the real submit → analyze → `/lore/{owner}/{repo}` flow end-to-end instead of a synthetic route that only proved `LoreView` could render at all. The `fixtures/` directory itself, its Jest coverage, and the `discover`/`extract`/`derive`(`-python`) scripts are untouched — those exercise the analyzers directly and don't depend on the removed route.
+
+This reopens the gap flagged since session 15 (line 419 above): the real flow still has no Playwright coverage, since it needs `GITHUB_TOKEN` + Postgres in the test run. The pinned private fixture repos are intended to close that gap, likely via a `GITHUB_TOKEN` scoped to read them plus a test database, but that wiring hasn't been built yet.
+
+Updated `next.config.ts` and `playwright.config.ts` comments (referenced the removed route), `README.md` ("Status", "Fixtures", "Testing" sections).
+
+**Next smallest task:** Resume session 17 — deploy: choose hosting (Fly.io/Railway) and managed Postgres provider (Neon/Railway), wire secrets, first public deploy. Wiring real-repo Playwright coverage against the pinned private fixture repos remains unscoped, likely worth doing alongside CI setup.

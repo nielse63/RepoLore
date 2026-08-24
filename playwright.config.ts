@@ -5,9 +5,7 @@ const baseURL = "http://localhost:3000";
 /**
  * Functional/UI test suite (implementation-plan.md session 15), scoped to
  * pages that need no external services: the home page's client-side URL
- * validation and the `/fixtures/*` pages, which run a real analyzer against
- * a local fixture at request time with no GitHub token or database
- * required. `reuseExistingServer` (local only) reuses a `next dev` a
+ * validation. `reuseExistingServer` (local only) reuses a `next dev` a
  * developer already has running rather than failing to start a second one —
  * Next.js refuses to run two dev servers against the same directory.
  *
