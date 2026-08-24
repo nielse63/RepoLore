@@ -28,42 +28,42 @@ function withScheme(input: string): string {
 export function parseGitHubRepoUrl(input: string): ParseRepoUrlResult {
   const trimmed = input.trim();
   if (!trimmed) {
-    return { ok: false, reason: 'Enter a GitHub repository URL.' };
+    return { ok: false, reason: "A GitHub URL is required." };
   }
 
   let url: URL;
   try {
     url = new URL(withScheme(trimmed));
   } catch {
-    return { ok: false, reason: 'That doesn’t look like a valid URL.' };
+    return { ok: false, reason: "That doesn’t look like a valid URL." };
   }
 
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
     return {
       ok: false,
-      reason: 'Only http(s) GitHub repository URLs are supported.',
+      reason: "Only http(s) GitHub repository URLs are supported.",
     };
   }
 
   const host = url.hostname.toLowerCase();
-  if (host !== 'github.com' && host !== 'www.github.com') {
+  if (host !== "github.com" && host !== "www.github.com") {
     return {
       ok: false,
-      reason: 'Only github.com repository URLs are supported.',
+      reason: "Only github.com repository URLs are supported.",
     };
   }
 
-  const segments = url.pathname.split('/').filter(Boolean);
+  const segments = url.pathname.split("/").filter(Boolean);
   if (segments.length < 2) {
     return {
       ok: false,
       reason:
-        'The URL must include an owner and repository name, e.g. github.com/owner/repo.',
+        "The URL must include an owner and repository name, e.g. github.com/owner/repo.",
     };
   }
 
   const [owner, rawRepo] = segments;
-  const repo = rawRepo.endsWith('.git') ? rawRepo.slice(0, -4) : rawRepo;
+  const repo = rawRepo.endsWith(".git") ? rawRepo.slice(0, -4) : rawRepo;
 
   if (!OWNER_PATTERN.test(owner)) {
     return { ok: false, reason: `“${owner}” isn’t a valid GitHub owner name.` };

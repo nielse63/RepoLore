@@ -103,7 +103,8 @@ Every source file under `src/` has a matching Jest unit test at `<same-directory
 
 - Scoped to pages that need no external services: the home page's client-side/pre-analysis URL validation (`src/github/parse-repo-url.ts`, exercised before any GitHub API call would happen) and the `/fixtures/*` pages, which run a real analyzer against a local fixture directory at request time with no `GITHUB_TOKEN` or database required. The real submit → analyze → `/lore/{owner}/{repo}` flow (which does need both) isn't covered here yet.
 - Not currently wired into the Husky pre-commit hook (Jest is) — the browser + dev-server startup cost makes it a slower, separately-run check for now.
-- No code-coverage instrumentation is collected for this suite; `npx playwright show-report` opens the HTML report of the last run (pass/fail, timings, traces on retry) instead.
+- `npx playwright show-report` opens the HTML report of the last run (pass/fail, timings, traces on retry). Failing tests attach a screenshot (`screenshot: "only-on-failure"` in `playwright.config.ts`), viewable in that same report.
+- Every run also collects Chromium V8 coverage (`e2e/coverage.ts`, an automatic fixture) into a `monocart-reporter` coverage report at `coverage/e2e/` (`index.html` plus `lcov.info`) — a separate report from the one `show-report` opens.
 - `eslint-plugin-playwright`'s recommended rules lint `e2e/**/*.spec.ts` (see `eslint.config.mjs`).
 
 ## Analyzing a real repository from the command line

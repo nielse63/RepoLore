@@ -32,12 +32,6 @@ export async function resolveRepository(
 ): Promise<ResolveRepositoryState> {
   const rawUrl = formData.get("url");
   const rawUrlString = typeof rawUrl === "string" ? rawUrl : "";
-  if (!rawUrlString.includes("github.com")) {
-    return {
-      status: "error",
-      message: "A GitHub URL is required",
-    };
-  }
   const parsed = parseGitHubRepoUrl(rawUrlString);
   if (!parsed.ok) {
     return { status: "error", message: parsed.reason };

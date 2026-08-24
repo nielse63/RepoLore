@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+npx trash \
+    .bin/screenshots \
+    coverage \
+    playwright-report \
+    screenshots \
+    test-results

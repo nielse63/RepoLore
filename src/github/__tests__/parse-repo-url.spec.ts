@@ -5,7 +5,7 @@ describe("parseGitHubRepoUrl", () => {
     const result = parseGitHubRepoUrl("   ");
     expect(result).toEqual({
       ok: false,
-      reason: "Enter a GitHub repository URL.",
+      reason: "A GitHub URL is required.",
     });
   });
 

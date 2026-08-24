@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "./coverage";
 
 /**
  * Home page functional coverage (implementation-plan.md session 15). Only
@@ -28,15 +28,13 @@ test("shows an honest inline error for an empty submission", async ({
   page,
 }) => {
   await page.goto("/");
-
   await page.getByRole("button", { name: "Analyze repository" }).click();
 
-  await expect(page.getByText("Enter a GitHub repository URL.")).toBeVisible();
+  await expect(page.getByText("A GitHub URL is required.")).toBeVisible();
 });
 
 test("shows an honest inline error for a non-GitHub URL", async ({ page }) => {
   await page.goto("/");
-
   await page
     .getByLabel("GitHub repository URL")
     .fill("https://example.com/owner/repo");
