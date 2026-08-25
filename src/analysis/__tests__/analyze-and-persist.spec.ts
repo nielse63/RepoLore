@@ -86,6 +86,8 @@ function minimalJsTsExtraction() {
     testRelationships: [],
     reactComponents: [],
     externalDependencies: [],
+    callableSignatures: [],
+    callEdges: [],
     gaps: [],
   };
 }

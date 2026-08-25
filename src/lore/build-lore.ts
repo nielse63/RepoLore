@@ -23,6 +23,8 @@ import {
   evaluateMinimumValueContract,
   START_HERE_MAX_ITEMS,
   type AnalysisSnapshot,
+  type CallableSignature,
+  type CallEdge,
   type EntryPoint,
   type ExternalDependency,
   type Gap,
@@ -47,6 +49,9 @@ export interface BuildLoreExtraction {
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
   externalDependencies: ExternalDependency[];
+  /** JS/TS only for now (ADR-0012); absent for a Python extraction until its own follow-on ADR adds call-graph support. */
+  callableSignatures?: CallableSignature[];
+  callEdges?: CallEdge[];
   gaps: Gap[];
 }
 
@@ -144,6 +149,10 @@ export function buildLore(input: BuildLoreInput): Lore {
     externalDependencies: extractions.flatMap(
       (e) => e.extraction.externalDependencies
     ),
+    callableSignatures: extractions.flatMap(
+      (e) => e.extraction.callableSignatures ?? []
+    ),
+    callEdges: extractions.flatMap((e) => e.extraction.callEdges ?? []),
     startHere: mergeStartHere(extractions.map((e) => e.views.startHere)),
     findings: [],
     gaps: extractions.flatMap((e) => e.extraction.gaps),

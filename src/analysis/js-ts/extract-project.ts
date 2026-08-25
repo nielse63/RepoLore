@@ -12,6 +12,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type {
+  CallableSignature,
+  CallEdge,
   EntryPoint,
   Evidence,
   ExternalDependency,
@@ -21,6 +23,7 @@ import type {
   Relationship,
   TestRelationship,
 } from "@/lore/model";
+import { extractCallGraph } from "./call-graph";
 import { discoverSourceFiles } from "./discovery";
 import { extractEntryPoints } from "./entry-points";
 import { extractExternalDependencies } from "./external-dependencies";
@@ -41,6 +44,8 @@ export interface JsTsExtraction {
   testRelationships: TestRelationship[];
   reactComponents: DetectedReactComponent[];
   externalDependencies: ExternalDependency[];
+  callableSignatures: CallableSignature[];
+  callEdges: CallEdge[];
   gaps: Gap[];
 }
 
@@ -223,6 +228,7 @@ export function extractJsTsProject(
     importResult.externalReferences,
     projectId
   );
+  const callGraph = extractCallGraph(sourceFiles, absoluteRoot);
 
   const sourceFilePaths = sourceFiles.map((sf) =>
     path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join("/")
@@ -267,6 +273,8 @@ export function extractJsTsProject(
     testRelationships: testResult.testRelationships,
     reactComponents,
     externalDependencies,
+    callableSignatures: callGraph.callableSignatures,
+    callEdges: callGraph.callEdges,
     gaps: [...importResult.gaps, ...testResult.gaps],
   };
 }

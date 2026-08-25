@@ -147,6 +147,65 @@ export interface PublicContract {
   evidence: Evidence[];
 }
 
+export type CallableKind =
+  "function" | "method" | "arrow" | "function-expression";
+
+/**
+ * A single parameter of a `CallableSignature`. `typeAnnotation` is the
+ * parameter's explicit source type annotation, verbatim — never an inferred
+ * type (ADR-0012 keeps type detection to explicit annotations only,
+ * consistent with ADR-0003's syntactic-only scope). `certainty` is
+ * `"detected"` when an annotation is present, `"unknown"` otherwise; there
+ * is no "inferred" middle ground for a parameter type.
+ */
+export interface CallableParameter {
+  name: string;
+  typeAnnotation?: string;
+  certainty: Extract<CertaintyCategory, "detected" | "unknown">;
+}
+
+/**
+ * A named function, method, or named arrow/function-expression tracked by
+ * the call graph (ADR-0012). Anonymous function expressions and arrow
+ * functions (not assigned to a variable or property) are never represented
+ * here — there is no name to search for or display. Distinct from
+ * `PublicContract`, which records exported surface regardless of call
+ * relationships.
+ */
+export interface CallableSignature {
+  id: EntityId;
+  name: string;
+  kind: CallableKind;
+  location: SourceLocation;
+  parameters: CallableParameter[];
+  /** The function's explicit return type annotation, verbatim, if present — never inferred. */
+  returnType?: string;
+  returnCertainty: Extract<CertaintyCategory, "detected" | "unknown">;
+  evidence: Evidence[];
+}
+
+/**
+ * A statically-resolved, direct call from one `CallableSignature` to
+ * another — the call graph's edges (ADR-0012). `certainty` is always
+ * `"detected"`: an edge is only ever created when a plain-identifier call
+ * unambiguously resolves to a same-file or named-import-resolved callable,
+ * so there is no "inferred" call edge. Everything that doesn't resolve this
+ * way (method/property-access calls, calls through a variable or callback,
+ * dynamic dispatch, default-imported callables, ambiguous name matches) is
+ * deliberately not recorded here at all — see ADR-0012 for why this is a
+ * disclosed structural limitation rather than a per-call `Gap`. This models
+ * call-graph reachability only; it does not claim that any particular
+ * argument or return value is propagated between the two callables.
+ */
+export interface CallEdge {
+  id: EntityId;
+  callerId: EntityId;
+  calleeId: EntityId;
+  callSiteLocation: SourceLocation;
+  certainty: Extract<CertaintyCategory, "detected">;
+  evidence: Evidence[];
+}
+
 export type ExternalDependencyScope = "direct" | "dev" | "peer" | "optional";
 
 export type ExternalDependencyRegistry = "npm" | "pypi";
@@ -221,6 +280,8 @@ export interface Lore {
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
   externalDependencies: ExternalDependency[];
+  callableSignatures: CallableSignature[];
+  callEdges: CallEdge[];
   startHere: Recommendation[];
   findings: Finding[];
   gaps: Gap[];
@@ -252,6 +313,8 @@ function collectEvidence(lore: Lore): Evidence[] {
     ...lore.entryPoints.flatMap((e) => e.evidence),
     ...lore.relationships.flatMap((r) => r.evidence),
     ...lore.externalDependencies.flatMap((d) => d.evidence),
+    ...lore.callableSignatures.flatMap((c) => c.evidence),
+    ...lore.callEdges.flatMap((e) => e.evidence),
     ...lore.startHere.flatMap((r) => r.evidence),
   ];
 }

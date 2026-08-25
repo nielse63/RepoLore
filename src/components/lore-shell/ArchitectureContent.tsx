@@ -1,16 +1,14 @@
-import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
-import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
 import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
-import { Compass, Layers, Link2, TestTube2 } from "lucide-react";
+import { Compass, Layers, TestTube2 } from "lucide-react";
 
 export interface ArchitectureContentProps {
   lore: Lore;
@@ -178,7 +176,7 @@ export function ArchitectureContent({
         </p>
       )}
 
-      <section id="component-connections">
+      {/* <section id="component-connections">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
           <Link2 className="h-4 w-4" aria-hidden="true" /> Component Connections
         </h2>
@@ -232,7 +230,7 @@ export function ArchitectureContent({
             </p>
           )}
         </Card>
-      </section>
+      </section> */}
 
       {!!lore.entryPoints.length && (
         <section>

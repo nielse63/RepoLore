@@ -25,6 +25,8 @@ function minimalExtraction(
     testRelationships: [],
     reactComponents: [],
     externalDependencies: [],
+    callableSignatures: [],
+    callEdges: [],
     gaps: [],
     ...overrides,
   };

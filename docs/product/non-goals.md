@@ -29,10 +29,10 @@ The launch MVP does not require:
 - AI-generated explanations or chat;
 - commit and pull-request history analysis — a deliberate, narrow exception is the History page's deterministic, non-AI commit-diff classification (no narrative/LLM synthesis, no before/after diagram), see ADR-0010; this does not license pull-request analysis, architectural-diff narrative, or AI-generated history explanations, which remain excluded;
 - architectural diffs or pull-request impact analysis;
-- complete execution-flow or data-flow tracing;
+- complete execution-flow or data-flow tracing — a deliberate, narrow exception is the Data Flow page's static, syntactic call-graph extraction (which function mechanically calls which, not value-level tracing of what flows between them), see ADR-0012; this does not license tracing what value or argument actually propagates between calls, which remains excluded;
 - indirect change-impact guarantees;
 - generalized health findings or numeric health scores;
-- interactive dependency graphs (pan, zoom, drag, click-to-filter, or similar) — at the file level, or otherwise; a static, non-interactive, area-level relationship diagram is a scoped exception, see ADR-0009, and does not license file-level graphs or interactivity generally;
+- interactive dependency graphs (pan, zoom, drag, click-to-filter, or similar) — at the file level, or otherwise; a static, non-interactive, area-level relationship diagram is a scoped exception, see ADR-0009, and a second, separately-scoped exception is the Data Flow page's interactive, client-side, search-and-drilldown function-call graph, bounded to one function's local neighborhood at a time, see ADR-0012; neither exception licenses file-level graphs, or interactivity generally beyond what each ADR specifically scopes;
 - manual documentation editing;
 - arbitrary repository configuration or user-created analysis rules;
 - complete framework-specific behavioral interpretation;

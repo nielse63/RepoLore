@@ -49,6 +49,8 @@ function makeLore(structuralAreas: StructuralArea[]): Lore {
     publicContracts: [],
     testRelationships: [],
     externalDependencies: [],
+    callableSignatures: [],
+    callEdges: [],
     startHere: [],
     findings: [],
     gaps: [],

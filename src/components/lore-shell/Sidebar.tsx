@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   { slug: "architecture", label: "Architecture", icon: Network },
   // { slug: 'systems', label: 'Systems', icon: Package },
   { slug: "dependencies", label: "Dependencies", icon: Share2 },
-  { slug: "data-flow", label: "Data flow", icon: Waypoints },
+  { slug: "data-flow", label: "Data Flow", icon: Waypoints },
   { slug: "history", label: "History", icon: Clock },
 ] as const;
 
