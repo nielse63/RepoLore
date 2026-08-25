@@ -13,6 +13,7 @@ import path from "node:path";
 import type {
   EntryPoint,
   Evidence,
+  ExternalDependency,
   Gap,
   Project as LoreProject,
   PublicContract,
@@ -21,6 +22,7 @@ import type {
 } from "@/lore/model";
 import { discoverSourceFiles } from "./discovery";
 import { extractEntryPoints } from "./entry-points";
+import { extractExternalDependencies } from "./external-dependencies";
 import { extractImportRelationships } from "./imports";
 import { extractPublicSurface } from "./public-surface";
 import { readPythonProjectConfig } from "./project-config";
@@ -33,6 +35,7 @@ export interface PythonExtraction {
   entryPoints: EntryPoint[];
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
+  externalDependencies: ExternalDependency[];
   gaps: Gap[];
 }
 
@@ -94,6 +97,11 @@ export async function extractPythonProject(
     sourceFiles,
     importResult.resolvedDependenciesByFile
   );
+  const externalDependencies = extractExternalDependencies(
+    config.dependencies,
+    importResult.externalReferences,
+    projectId
+  );
 
   const sourceFilePaths = sourceFiles.map((sf) => sf.relativePath);
 
@@ -119,6 +127,7 @@ export async function extractPythonProject(
     entryPoints,
     publicContracts,
     testRelationships: testResult.testRelationships,
+    externalDependencies,
     gaps: [...importResult.gaps, ...testResult.gaps],
   };
 }

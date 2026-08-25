@@ -1,3 +1,4 @@
+import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   CertaintyBadge,
@@ -5,11 +6,8 @@ import {
 } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
-import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StepList } from "@/components/ui/StepList";
 import { formatPath } from "@/lib/format-path";
-import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import { Compass, GitCommitHorizontal, Layers } from "lucide-react";
 
@@ -45,13 +43,10 @@ export function OverviewContent({
   // The root directory ("." — a file with no directory of its own, e.g. a
   // root-level config file) adds no orientation value as its own Major Area.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
-  const areaRelationships = deriveAreaRelationships(lore.structuralAreas);
-  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
-  const architectureUrl = `/lore/${snapshot.repository.owner}/${snapshot.repository.name}/architecture`;
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
-      <div>
+      <section id="overview-header">
         <h1 className="font-serif text-4xl font-semibold text-foreground">
           Overview
         </h1>
@@ -60,15 +55,13 @@ export function OverviewContent({
             {snapshot.repository.description}
           </p>
         )}
-      </div>
+      </section>
 
       {snapshot.status !== "completed" && (
-        <section>
-          <PartialUnderstandingCard gapsCount={lore.gaps.length} />
-        </section>
+        <PartialUnderstandingCard gapsCount={lore.gaps.length} />
       )}
 
-      <section>
+      <section id="start-here">
         <h2 className="mb-3 text-lg font-semibold text-foreground">
           Start Here
         </h2>
@@ -118,7 +111,7 @@ export function OverviewContent({
         </Card>
       </section>
 
-      <section>
+      <section id="major-areas">
         <h2 className="mb-3 text-lg font-semibold text-foreground">
           Major Areas
         </h2>
@@ -170,7 +163,7 @@ export function OverviewContent({
       </section>
 
       {!!lore.entryPoints.length && (
-        <section>
+        <section id="entry-points">
           <h2 className="mb-3 text-lg font-semibold text-foreground">
             Entry Points
           </h2>

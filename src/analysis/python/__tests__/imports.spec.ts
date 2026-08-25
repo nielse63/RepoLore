@@ -46,6 +46,35 @@ describe("extractImportRelationships", () => {
     expect(gaps).toEqual([]);
   });
 
+  it("records an external reference for an unresolvable bare import, keyed by top-level name", () => {
+    const files = [file("pkg/main.py", "import requests\n")];
+    const { externalReferences } = extractImportRelationships(files, "/root");
+    expect(externalReferences).toEqual([
+      { topLevelName: "requests", importerPath: "pkg/main.py", line: 1 },
+    ]);
+  });
+
+  it("records an external reference for an unresolvable absolute from-import, once per statement", () => {
+    const files = [file("pkg/main.py", "from requests import get, post\n")];
+    const { externalReferences, gaps } = extractImportRelationships(
+      files,
+      "/root"
+    );
+    expect(gaps).toEqual([]);
+    expect(externalReferences).toEqual([
+      { topLevelName: "requests", importerPath: "pkg/main.py", line: 1 },
+    ]);
+  });
+
+  it("does not record an external reference when an absolute from-import resolves internally", () => {
+    const files = [
+      file("pkg/core.py", ""),
+      file("pkg/main.py", "from pkg import core\n"),
+    ];
+    const { externalReferences } = extractImportRelationships(files, "/root");
+    expect(externalReferences).toEqual([]);
+  });
+
   it('resolves "from pkg import core" preferring the submodule shape', () => {
     const files = [
       file("pkg/__init__.py", ""),

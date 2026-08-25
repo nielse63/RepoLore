@@ -1,7 +1,7 @@
-import type { Lore } from '@/lore/model';
-import { getDbPool } from './client';
+import type { Lore } from "@/lore/model";
+import { getDbPool } from "./client";
 
-export type AnalysisRunStatus = 'completed' | 'partial' | 'failed';
+export type AnalysisRunStatus = "completed" | "partial" | "failed";
 
 export interface AnalysisRunRow {
   id: number;
@@ -25,6 +25,20 @@ interface AnalysisRunRawRow {
   created_at: string;
 }
 
+/**
+ * `result` is a persisted JSONB document, so it only has whatever shape
+ * `Lore` had at the time it was written (ADR-0005: an old run is never
+ * migrated or backfilled, only superseded by a new run at a bumped analyzer
+ * version). `externalDependencies` was added to `Lore` after runs already
+ * existed in the database, so a pre-existing row's stored JSON may not have
+ * it — normalized to `[]` here, once, at the read boundary, rather than
+ * defensively in every consumer.
+ */
+function normalizeResult(result: Lore | null): Lore | null {
+  if (!result) return result;
+  return { ...result, externalDependencies: result.externalDependencies ?? [] };
+}
+
 function mapRow(row: AnalysisRunRawRow): AnalysisRunRow {
   return {
     id: Number(row.id),
@@ -32,7 +46,7 @@ function mapRow(row: AnalysisRunRawRow): AnalysisRunRow {
     commitSha: row.commit_sha,
     analyzerVersion: row.analyzer_version,
     status: row.status,
-    result: row.result,
+    result: normalizeResult(row.result),
     errorMessage: row.error_message,
     createdAt: row.created_at,
   };

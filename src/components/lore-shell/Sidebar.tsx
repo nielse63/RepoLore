@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
 import {
-  ChevronDown,
   Clock,
   FolderGit2,
   Home,
@@ -49,9 +48,11 @@ export function Sidebar({
       </div>
 
       <div className="px-3">
-        <button
+        <a
           type="button"
           className="flex w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left hover:bg-border/20"
+          id="lore-overview-button"
+          href={base}
         >
           <FolderGit2
             className="h-4 w-4 shrink-0 text-foreground"
@@ -65,11 +66,7 @@ export function Sidebar({
           <Badge variant="primary" className="shrink-0">
             {visibility}
           </Badge>
-          <ChevronDown
-            className="h-4 w-4 shrink-0 text-muted"
-            aria-hidden="true"
-          />
-        </button>
+        </a>
       </div>
 
       <nav

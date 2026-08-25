@@ -48,6 +48,7 @@ function makeLore(structuralAreas: StructuralArea[]): Lore {
     relationships: [],
     publicContracts: [],
     testRelationships: [],
+    externalDependencies: [],
     startHere: [],
     findings: [],
     gaps: [],

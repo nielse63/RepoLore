@@ -153,6 +153,105 @@ setup(
 
   it("returns an entirely empty config when no config files are present", async () => {
     const config = await readPythonProjectConfig(rootDir);
-    expect(config).toEqual({ consoleScripts: [] });
+    expect(config).toEqual({ consoleScripts: [], dependencies: [] });
+  });
+
+  it("reads PEP 621 [project.dependencies] and [project.optional-dependencies]", async () => {
+    await fsp.writeFile(
+      path.join(rootDir, "pyproject.toml"),
+      `
+[project]
+name = "myapp"
+dependencies = [
+  "requests>=2.31,<3",
+  "click",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+`
+    );
+
+    const config = await readPythonProjectConfig(rootDir);
+    expect(config.dependencies).toEqual([
+      {
+        name: "requests",
+        versionSpec: ">=2.31,<3",
+        scope: "direct",
+        sourceFile: "pyproject.toml",
+        configKey: "project.dependencies",
+      },
+      {
+        name: "click",
+        versionSpec: undefined,
+        scope: "direct",
+        sourceFile: "pyproject.toml",
+        configKey: "project.dependencies",
+      },
+      {
+        name: "pytest",
+        versionSpec: ">=7.0",
+        scope: "optional",
+        sourceFile: "pyproject.toml",
+        configKey: "project.optional-dependencies.dev",
+      },
+    ]);
+  });
+
+  it("reads [tool.poetry.dependencies] (string and table form) and [tool.poetry.dev-dependencies], skipping the python key", async () => {
+    await fsp.writeFile(
+      path.join(rootDir, "pyproject.toml"),
+      `
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.31"
+rich = { version = "^13.0", extras = ["jupyter"] }
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.0"
+`
+    );
+
+    const config = await readPythonProjectConfig(rootDir);
+    expect(config.dependencies).toEqual([
+      {
+        name: "requests",
+        versionSpec: "^2.31",
+        scope: "direct",
+        sourceFile: "pyproject.toml",
+        configKey: "tool.poetry.dependencies.requests",
+      },
+      {
+        name: "rich",
+        versionSpec: "^13.0",
+        scope: "direct",
+        sourceFile: "pyproject.toml",
+        configKey: "tool.poetry.dependencies.rich",
+      },
+      {
+        name: "pytest",
+        versionSpec: "^7.0",
+        scope: "dev",
+        sourceFile: "pyproject.toml",
+        configKey: "tool.poetry.dev-dependencies.pytest",
+      },
+    ]);
+  });
+
+  it("prefers PEP 621 over Poetry for a name declared in both", async () => {
+    await fsp.writeFile(
+      path.join(rootDir, "pyproject.toml"),
+      `
+[project]
+dependencies = ["requests>=2.31"]
+
+[tool.poetry.dependencies]
+requests = "^2.0"
+`
+    );
+
+    const config = await readPythonProjectConfig(rootDir);
+    expect(config.dependencies).toHaveLength(1);
+    expect(config.dependencies[0].versionSpec).toBe(">=2.31");
   });
 });

@@ -87,6 +87,13 @@ function buildRelationship(
   };
 }
 
+/** An unresolved absolute import's top-level module name — a candidate external-package usage, matched against declared `pyproject.toml` dependencies by `./external-dependencies.ts`. */
+export interface ExternalReference {
+  topLevelName: string;
+  importerPath: string;
+  line: number;
+}
+
 export interface ImportExtractionResult {
   relationships: Relationship[];
   gaps: Gap[];
@@ -96,6 +103,7 @@ export interface ImportExtractionResult {
    * so test-to-implementation linking doesn't re-implement import parsing.
    */
   resolvedDependenciesByFile: Map<string, string[]>;
+  externalReferences: ExternalReference[];
 }
 
 export function extractImportRelationships(
@@ -106,6 +114,7 @@ export function extractImportRelationships(
   const relationships: Relationship[] = [];
   const gaps: Gap[] = [];
   const resolvedDependenciesByFile = new Map<string, string[]>();
+  const externalReferences: ExternalReference[] = [];
   let count = 0;
 
   for (const sourceFile of sourceFiles) {
@@ -125,7 +134,16 @@ export function extractImportRelationships(
       };
       for (const segments of parseBareImportTargets(stmt)) {
         const resolved = resolver.resolveUnderRoots(segments);
-        if (!resolved) continue; // Standard-library/third-party; not a gap.
+        if (!resolved) {
+          // Standard-library/third-party; not a gap, but a candidate
+          // external-package usage keyed by its top-level module name.
+          externalReferences.push({
+            topLevelName: segments[0],
+            importerPath,
+            line: lineOf(stmt),
+          });
+          continue;
+        }
         if (seenTargets.has(resolved.relativePath)) continue;
         seenTargets.add(resolved.relativePath);
         count += 1;
@@ -154,6 +172,7 @@ export function extractImportRelationships(
       const { level, moduleSegments } = parseModuleNameField(moduleNameNode);
       const { names } = parseImportedNames(stmt);
       const candidateNames = names.length > 0 ? names : [undefined];
+      let anyResolved = false;
 
       for (const name of candidateNames) {
         const attempts: string[][] = name
@@ -178,6 +197,7 @@ export function extractImportRelationships(
         }`;
 
         if (resolved) {
+          anyResolved = true;
           if (seenTargets.has(resolved.relativePath)) continue;
           seenTargets.add(resolved.relativePath);
           count += 1;
@@ -204,10 +224,27 @@ export function extractImportRelationships(
           });
         }
       }
+
+      // An absolute `from x.y import ...` that didn't resolve to any
+      // discovered file is a candidate external-package usage, keyed by its
+      // top-level module name — recorded once per statement, not once per
+      // imported name.
+      if (level === 0 && !anyResolved && moduleSegments.length > 0) {
+        externalReferences.push({
+          topLevelName: moduleSegments[0],
+          importerPath,
+          line: lineOf(stmt),
+        });
+      }
     }
 
     resolvedDependenciesByFile.set(importerPath, [...seenTargets]);
   }
 
-  return { relationships, gaps, resolvedDependenciesByFile };
+  return {
+    relationships,
+    gaps,
+    resolvedDependenciesByFile,
+    externalReferences,
+  };
 }

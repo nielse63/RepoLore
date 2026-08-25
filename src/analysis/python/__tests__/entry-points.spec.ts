@@ -20,7 +20,7 @@ function file(relativePath: string, sourceText: string): PythonSourceFile {
 }
 
 function emptyConfig(): PythonProjectConfig {
-  return { consoleScripts: [] };
+  return { consoleScripts: [], dependencies: [] };
 }
 
 describe("extractEntryPoints", () => {
@@ -35,6 +35,7 @@ describe("extractEntryPoints", () => {
           configKey: "project.scripts.mycli",
         },
       ],
+      dependencies: [],
     };
 
     const entryPoints = extractEntryPoints(files, "/root", config);
@@ -90,7 +91,11 @@ describe("extractEntryPoints", () => {
 
   it("resolves the package name to its __init__.py as a library entry point", () => {
     const files = [file("myapp/__init__.py", "")];
-    const config: PythonProjectConfig = { name: "myapp", consoleScripts: [] };
+    const config: PythonProjectConfig = {
+      name: "myapp",
+      consoleScripts: [],
+      dependencies: [],
+    };
 
     const entryPoints = extractEntryPoints(files, "/root", config);
 
@@ -104,7 +109,11 @@ describe("extractEntryPoints", () => {
 
   it("normalizes hyphens to underscores when resolving the package name", () => {
     const files = [file("my_app/__init__.py", "")];
-    const config: PythonProjectConfig = { name: "my-app", consoleScripts: [] };
+    const config: PythonProjectConfig = {
+      name: "my-app",
+      consoleScripts: [],
+      dependencies: [],
+    };
 
     const entryPoints = extractEntryPoints(files, "/root", config);
     expect(entryPoints).toHaveLength(1);
@@ -141,6 +150,7 @@ describe("extractEntryPoints", () => {
           configKey: "project.scripts.mycli",
         },
       ],
+      dependencies: [],
     };
 
     const entryPoints = extractEntryPoints(files, "/root", config);

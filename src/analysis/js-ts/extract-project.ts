@@ -14,6 +14,7 @@ import path from "node:path";
 import type {
   EntryPoint,
   Evidence,
+  ExternalDependency,
   Gap,
   Project as LoreProject,
   PublicContract,
@@ -22,6 +23,7 @@ import type {
 } from "@/lore/model";
 import { discoverSourceFiles } from "./discovery";
 import { extractEntryPoints } from "./entry-points";
+import { extractExternalDependencies } from "./external-dependencies";
 import { extractImportRelationships } from "./imports";
 import { extractPublicSurface } from "./public-surface";
 import {
@@ -38,6 +40,7 @@ export interface JsTsExtraction {
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
   reactComponents: DetectedReactComponent[];
+  externalDependencies: ExternalDependency[];
   gaps: Gap[];
 }
 
@@ -48,6 +51,7 @@ interface PackageJsonMeta {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
 }
 
 function readPackageJson(rootDir: string): PackageJsonMeta | undefined {
@@ -214,6 +218,11 @@ export function extractJsTsProject(
     packageEntryPointFilePaths
   );
   const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
+  const externalDependencies = extractExternalDependencies(
+    pkg,
+    importResult.externalReferences,
+    projectId
+  );
 
   const sourceFilePaths = sourceFiles.map((sf) =>
     path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join("/")
@@ -257,6 +266,7 @@ export function extractJsTsProject(
     publicContracts,
     testRelationships: testResult.testRelationships,
     reactComponents,
+    externalDependencies,
     gaps: [...importResult.gaps, ...testResult.gaps],
   };
 }

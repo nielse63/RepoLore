@@ -36,6 +36,7 @@ function emptyLore(): Lore {
     relationships: [],
     publicContracts: [],
     testRelationships: [],
+    externalDependencies: [],
     startHere: [],
     findings: [],
     gaps: [],

@@ -24,6 +24,7 @@ function minimalExtraction(
     publicContracts: [],
     testRelationships: [],
     reactComponents: [],
+    externalDependencies: [],
     gaps: [],
     ...overrides,
   };

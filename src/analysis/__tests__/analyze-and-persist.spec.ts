@@ -85,6 +85,7 @@ function minimalJsTsExtraction() {
     publicContracts: [],
     testRelationships: [],
     reactComponents: [],
+    externalDependencies: [],
     gaps: [],
   };
 }
@@ -106,6 +107,7 @@ function minimalPythonExtraction() {
     entryPoints: [],
     publicContracts: [],
     testRelationships: [],
+    externalDependencies: [],
     gaps: [],
   };
 }

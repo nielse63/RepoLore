@@ -147,6 +147,40 @@ export interface PublicContract {
   evidence: Evidence[];
 }
 
+export type ExternalDependencyScope = "direct" | "dev" | "peer" | "optional";
+
+export type ExternalDependencyRegistry = "npm" | "pypi";
+
+/**
+ * A third-party package declared in a manifest (`package.json` /
+ * `pyproject.toml`), distinct from `Relationship`, which is strictly
+ * internal (file-to-file) dependency edges. `evidence` carries both the
+ * manifest declaration itself and one entry per file that appears to
+ * reference it — "used by" is derived by callers from the locations of
+ * evidence with kind `"import-reference"`, not stored separately. A
+ * `declaredVersion` is the manifest's own version range/spec, never a
+ * lockfile-resolved exact version (no lockfile parsing is performed).
+ * `description`/`descriptionSource` are optional package metadata fetched
+ * from a public registry at analysis time (`src/registry/`) — informational
+ * context about the package itself, not an analysis conclusion about this
+ * repository, so it's kept out of the Detected/Inferred certainty system.
+ * `keywords` is the same kind of registry-sourced metadata, fetched
+ * alongside the description.
+ */
+export interface ExternalDependency {
+  id: EntityId;
+  projectId: EntityId;
+  name: string;
+  declaredVersion?: string;
+  scope: ExternalDependencyScope;
+  registry: ExternalDependencyRegistry;
+  description?: string;
+  descriptionSource?: ExternalDependencyRegistry;
+  keywords?: string[];
+  evidence: Evidence[];
+  gaps: Gap[];
+}
+
 /** A detectable connection between a test and the implementation it exercises. */
 export interface TestRelationship {
   id: EntityId;
@@ -186,6 +220,7 @@ export interface Lore {
   relationships: Relationship[];
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
+  externalDependencies: ExternalDependency[];
   startHere: Recommendation[];
   findings: Finding[];
   gaps: Gap[];
@@ -216,6 +251,7 @@ function collectEvidence(lore: Lore): Evidence[] {
     ...lore.structuralAreas.flatMap((a) => a.evidence),
     ...lore.entryPoints.flatMap((e) => e.evidence),
     ...lore.relationships.flatMap((r) => r.evidence),
+    ...lore.externalDependencies.flatMap((d) => d.evidence),
     ...lore.startHere.flatMap((r) => r.evidence),
   ];
 }

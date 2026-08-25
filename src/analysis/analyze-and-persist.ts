@@ -41,6 +41,7 @@ import {
   resolveRepositoryHead,
 } from "@/github/client";
 import { buildLore, type BuildLoreProjectInput } from "@/lore/build-lore";
+import { enrichExternalDependencyDescriptions } from "@/registry/enrich-descriptions";
 
 function errorMessageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -141,6 +142,10 @@ export async function analyzeAndPersistRepository(
     for (const { analyzer } of detection.selectedAnalyzers) {
       extractions.push(await runAnalyzer(analyzer, acquired.dir));
     }
+
+    await enrichExternalDependencyDescriptions(
+      extractions.flatMap((e) => e.extraction.externalDependencies)
+    );
 
     const lore = buildLore({
       owner,

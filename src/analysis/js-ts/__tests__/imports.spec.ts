@@ -99,20 +99,21 @@ describe("extractImportRelationships", () => {
     expect(gaps[0].certainty).toBe("unsupported");
   });
 
-  it("ignores bare package specifiers entirely", () => {
+  it("ignores bare package specifiers as internal relationships/gaps, but records them as external references", () => {
     const project = makeProject();
     project.createSourceFile(
       "/root/src/index.ts",
       "import React from 'react';"
     );
 
-    const { relationships, gaps } = extractImportRelationships(
-      project.getSourceFiles(),
-      "/root"
-    );
+    const { relationships, gaps, externalReferences } =
+      extractImportRelationships(project.getSourceFiles(), "/root");
 
     expect(relationships).toEqual([]);
     expect(gaps).toEqual([]);
+    expect(externalReferences).toEqual([
+      { specifier: "react", importerPath: "src/index.ts", line: 1 },
+    ]);
   });
 
   it("assigns sequential, stable relationship ids", () => {

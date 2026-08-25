@@ -26,15 +26,132 @@ export interface ConsoleScript {
   configKey: string;
 }
 
+export type DeclaredDependencyScope = "direct" | "dev" | "optional";
+
+export interface DeclaredDependency {
+  name: string;
+  versionSpec?: string;
+  scope: DeclaredDependencyScope;
+  sourceFile: string;
+  configKey: string;
+}
+
 export interface PythonProjectConfig {
   name?: string;
   nameSourceFile?: string;
   nameConfigKey?: string;
   consoleScripts: ConsoleScript[];
+  dependencies: DeclaredDependency[];
 }
 
 function emptyConfig(): PythonProjectConfig {
-  return { consoleScripts: [] };
+  return { consoleScripts: [], dependencies: [] };
+}
+
+/**
+ * Splits a PEP 508 dependency specifier (`"requests[security]>=2.31,<3"`)
+ * into its package name and the rest (extras + version specifier + any
+ * environment marker), kept as one opaque display string rather than
+ * further parsed — the MVP only needs to show it, not evaluate it.
+ * Environment markers (after `;`) are intentionally left attached rather
+ * than stripped, since a marker like `; python_version < "3.11"` is
+ * meaningful context, not noise.
+ */
+function parsePep508(
+  spec: string
+): { name: string; rest?: string } | undefined {
+  const match = spec.trim().match(/^([A-Za-z0-9][A-Za-z0-9._-]*)\s*(.*)$/);
+  if (!match) return undefined;
+  const [, name, rest] = match;
+  return { name, rest: rest.trim() || undefined };
+}
+
+/** `[project.dependencies]` (a plain array of PEP 508 strings) and `[project.optional-dependencies]` (a table of group name -> array of PEP 508 strings). */
+function readPep621Dependencies(parsed: unknown): DeclaredDependency[] {
+  const dependencies: DeclaredDependency[] = [];
+
+  const direct = getIn(parsed, ["project", "dependencies"]);
+  if (Array.isArray(direct)) {
+    for (const spec of direct) {
+      if (typeof spec !== "string") continue;
+      const parsedSpec = parsePep508(spec);
+      if (!parsedSpec) continue;
+      dependencies.push({
+        name: parsedSpec.name,
+        versionSpec: parsedSpec.rest,
+        scope: "direct",
+        sourceFile: "pyproject.toml",
+        configKey: "project.dependencies",
+      });
+    }
+  }
+
+  const optionalGroups = getIn(parsed, ["project", "optional-dependencies"]);
+  if (typeof optionalGroups === "object" && optionalGroups !== null) {
+    for (const [group, specs] of Object.entries(
+      optionalGroups as Record<string, unknown>
+    )) {
+      if (!Array.isArray(specs)) continue;
+      for (const spec of specs) {
+        if (typeof spec !== "string") continue;
+        const parsedSpec = parsePep508(spec);
+        if (!parsedSpec) continue;
+        dependencies.push({
+          name: parsedSpec.name,
+          versionSpec: parsedSpec.rest,
+          scope: "optional",
+          sourceFile: "pyproject.toml",
+          configKey: `project.optional-dependencies.${group}`,
+        });
+      }
+    }
+  }
+
+  return dependencies;
+}
+
+/**
+ * `[tool.poetry.dependencies]` (direct) and the legacy
+ * `[tool.poetry.dev-dependencies]` (dev) tables — each maps a package name
+ * to either a plain version-spec string (`"^2.31"`) or a table
+ * (`{ version = "^2.31", ... }`). The modern per-group
+ * `[tool.poetry.group.<name>.dependencies]` syntax is not read — a
+ * disclosed, narrow scope decision matching this file's existing
+ * `setup.cfg` console-script limitation, not an oversight.
+ */
+function readPoetryDependencies(parsed: unknown): DeclaredDependency[] {
+  const dependencies: DeclaredDependency[] = [];
+
+  const sections: Array<[string, DeclaredDependencyScope, string]> = [
+    ["dependencies", "direct", "tool.poetry.dependencies"],
+    ["dev-dependencies", "dev", "tool.poetry.dev-dependencies"],
+  ];
+
+  for (const [key, scope, configKeyPrefix] of sections) {
+    const section = getIn(parsed, ["tool", "poetry", key]);
+    if (typeof section !== "object" || section === null) continue;
+    for (const [name, value] of Object.entries(
+      section as Record<string, unknown>
+    )) {
+      if (name === "python") continue; // The interpreter constraint, not a dependency.
+      let versionSpec: string | undefined;
+      if (typeof value === "string") {
+        versionSpec = value;
+      } else if (typeof value === "object" && value !== null) {
+        const version = (value as Record<string, unknown>).version;
+        if (typeof version === "string") versionSpec = version;
+      }
+      dependencies.push({
+        name,
+        versionSpec,
+        scope,
+        sourceFile: "pyproject.toml",
+        configKey: `${configKeyPrefix}.${name}`,
+      });
+    }
+  }
+
+  return dependencies;
 }
 
 function getIn(obj: unknown, keys: string[]): unknown {
@@ -84,6 +201,20 @@ function readPyprojectToml(rootDir: string): PythonProjectConfig | undefined {
       });
     }
   }
+
+  // PEP 621 `[project.dependencies]` takes precedence over Poetry's own
+  // table for a given name when a pyproject.toml declares both (unusual,
+  // but possible in a project mid-migration between the two).
+  const seenDependencyNames = new Set<string>();
+  for (const dep of [
+    ...readPep621Dependencies(parsed),
+    ...readPoetryDependencies(parsed),
+  ]) {
+    if (seenDependencyNames.has(dep.name)) continue;
+    seenDependencyNames.add(dep.name);
+    config.dependencies.push(dep);
+  }
+
   return config;
 }
 
@@ -202,6 +333,7 @@ export async function readPythonProjectConfig(
       merged.nameConfigKey = config.nameConfigKey;
     }
     merged.consoleScripts.push(...config.consoleScripts);
+    merged.dependencies.push(...config.dependencies);
   }
   return merged;
 }

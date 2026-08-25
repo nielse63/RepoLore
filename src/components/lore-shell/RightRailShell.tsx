@@ -28,7 +28,10 @@ export function RightRailShell({
   }
 
   return (
-    <aside className="hidden w-[360px] shrink-0 flex-col border-l border-border bg-surface lg:flex sticky">
+    <aside
+      className="sticky top-0 hidden max-h-dvh w-[360px] shrink-0 flex-col border-l border-border bg-surface lg:flex"
+      id="right-rail"
+    >
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <button

@@ -24,6 +24,7 @@ import {
   START_HERE_MAX_ITEMS,
   type AnalysisSnapshot,
   type EntryPoint,
+  type ExternalDependency,
   type Gap,
   type Lore,
   type Project,
@@ -45,6 +46,7 @@ export interface BuildLoreExtraction {
   relationships: Relationship[];
   publicContracts: PublicContract[];
   testRelationships: TestRelationship[];
+  externalDependencies: ExternalDependency[];
   gaps: Gap[];
 }
 
@@ -138,6 +140,9 @@ export function buildLore(input: BuildLoreInput): Lore {
     publicContracts: extractions.flatMap((e) => e.extraction.publicContracts),
     testRelationships: extractions.flatMap(
       (e) => e.extraction.testRelationships
+    ),
+    externalDependencies: extractions.flatMap(
+      (e) => e.extraction.externalDependencies
     ),
     startHere: mergeStartHere(extractions.map((e) => e.views.startHere)),
     findings: [],

@@ -4,18 +4,18 @@
  * (syntactic-only: based on import specifiers, not resolved types).
  */
 
-import path from 'node:path';
-import type { SourceFile } from 'ts-morph';
-import type { Gap, Relationship, SourceLocation } from '@/lore/model';
+import path from "node:path";
+import type { SourceFile } from "ts-morph";
+import type { Gap, Relationship, SourceLocation } from "@/lore/model";
 import {
   buildModuleResolutionIndex,
   isRelativeSpecifier,
   looksLikeAssetImport,
   looksLikePathAlias,
-} from './module-resolution';
+} from "./module-resolution";
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
-  return path.relative(rootDir, absoluteFilePath).split(path.sep).join('/');
+  return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
 }
 
 interface ModuleSpecifierReference {
@@ -46,9 +46,17 @@ function getModuleSpecifierReferences(
   return references;
 }
 
+/** A bare (non-relative, non-alias) import specifier referenced from a file — a candidate external-package usage, resolved against declared `package.json` dependencies by `./external-dependencies.ts`. */
+export interface ExternalReference {
+  specifier: string;
+  importerPath: string;
+  line: number;
+}
+
 export interface ImportExtractionResult {
   relationships: Relationship[];
   gaps: Gap[];
+  externalReferences: ExternalReference[];
 }
 
 export function extractImportRelationships(
@@ -58,6 +66,7 @@ export function extractImportRelationships(
   const resolver = buildModuleResolutionIndex(sourceFiles);
   const relationships: Relationship[] = [];
   const gaps: Gap[] = [];
+  const externalReferences: ExternalReference[] = [];
   let relationshipCount = 0;
 
   for (const sourceFile of sourceFiles) {
@@ -86,14 +95,14 @@ export function extractImportRelationships(
           const targetPath = toRelative(rootDir, resolved.getFilePath());
           relationships.push({
             id: `js-ts-import-${relationshipCount}`,
-            kind: 'depends-on',
+            kind: "depends-on",
             fromId: importerPath,
             toId: targetPath,
-            certainty: 'detected',
+            certainty: "detected",
             evidence: [
               {
-                kind: 'import-statement',
-                certainty: 'detected',
+                kind: "import-statement",
+                certainty: "detected",
                 location: importerLocation,
                 description: `'${importerPath}' imports from '${specifier}', resolved to '${targetPath}'.`,
               },
@@ -103,7 +112,7 @@ export function extractImportRelationships(
         }
 
         gaps.push({
-          certainty: 'unknown',
+          certainty: "unknown",
           description: `Could not resolve relative import '${specifier}' in '${importerPath}' to a discovered source file.`,
           location: importerLocation,
         });
@@ -112,7 +121,7 @@ export function extractImportRelationships(
 
       if (looksLikePathAlias(specifier)) {
         gaps.push({
-          certainty: 'unsupported',
+          certainty: "unsupported",
           description: `Import '${specifier}' in '${importerPath}' appears to use a path alias; alias resolution (tsconfig 'paths') is not yet implemented (ADR-0003, deferred to implementation session 6).`,
           location: importerLocation,
         });
@@ -120,9 +129,12 @@ export function extractImportRelationships(
       }
 
       // Bare specifiers (e.g. "react", "node:test") are external packages,
-      // not internal dependency edges — intentionally not recorded.
+      // not internal dependency edges — recorded as a candidate external
+      // reference (matched against declared package.json dependencies by
+      // ./external-dependencies.ts) rather than as a gap.
+      externalReferences.push({ specifier, importerPath, line });
     }
   }
 
-  return { relationships, gaps };
+  return { relationships, gaps, externalReferences };
 }
