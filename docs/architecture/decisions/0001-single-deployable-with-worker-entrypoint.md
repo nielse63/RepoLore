@@ -21,7 +21,7 @@ This directly matches the project's stated engineering principle of preferring o
 
 ## Consequences
 
-- Hosting must support a long-running Node process, not just serverless functions — rules out Vercel as the primary host; Fly.io or Railway is used once a public deployment is actually needed. Provisioning that host is not required to start local development.
+- Hosting must support a long-running Node process, not just serverless functions — rules out Vercel as the primary host. Provisioning a host is not required to start local development. **Revision (see `docs/architecture/implementation-plan.md`, session 17's 2026-08-25 log entry):** Render (web) with Neon (Postgres) was chosen over Fly.io/Railway, which had free tiers when this ADR was written but do not anymore; Render still satisfies this consequence's directional requirement (a real long-running container, not a serverless function).
 - **Revision (see ADR-0004):** the first vertical slice runs analysis synchronously, in-process, directly from the request/action that triggers it — there is no separate `worker` entrypoint or job queue yet. The "web + worker" split described here is the target shape once async dispatch is justified (see ADR-0004's deferral), not a session-1 requirement. This keeps the directional decision (don't assume serverless; assume a long-running process is available) while not building the worker process before there's a queue for it to serve.
 - If load or UX later requires non-blocking submission, introducing the worker entrypoint is a straightforward additive change (a new process reading from the job table added in ADR-0004), not a rearchitecture.
 

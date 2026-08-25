@@ -131,3 +131,17 @@ Neither script runs the language-detection dispatch that the real `/lore/{owner}
 Submitting the home page's form (`src/app/actions.ts`) calls `analyzeAndPersistRepository` (`src/analysis/analyze-and-persist.ts`), which resolves the repo's HEAD and GitHub's language breakdown, decides which analyzer(s) to run (ADR-0007's dispatch — `src/analysis/dispatch/detect-languages.ts`), short-circuits if that exact commit+analyzer-set has already been analyzed (ADR-0005 idempotency — no redundant tarball fetch on repeat submissions), and otherwise acquires the source once, runs every selected analyzer, enriches each extracted external dependency with a registry description (`src/registry/`, ADR-0011 — bounded, non-fatal, no `GITHUB_TOKEN`/auth needed since the npm and PyPI registries are public), merges everything into one `Lore`, persists it, and redirects to `/lore/{owner}/{repo}`. Every outcome — success, partial, or failed (including "no supported language was detected") — is persisted and rendered there; nothing is silently dropped.
 
 The "Re-analyze" button on `/lore/{owner}/{repo}` calls the same `analyzeAndPersistRepository`, rate-limited per repository (`repos.last_analysis_requested_at`, `src/analysis/reanalysis-rate-limit.ts`, one attempt per 60 seconds by default) so a rapid click can't repeatedly burn through the shared GitHub token's rate limit even when the analysis itself short-circuits on an unchanged commit. There's no scheduled/automatic refresh in the MVP — this manual action is the only way to pick up new commits.
+
+## Deployment
+
+Hosted on [Render](https://render.com) (free web service — a real long-running Node process per ADR-0001, not a serverless function) with [Neon](https://neon.tech) (free Postgres) — see `docs/architecture/implementation-plan.md`, session 17's 2026-08-25 log entry, for why these over Fly.io/Railway (both dropped their free tiers) and Render's own Postgres (free databases there expire after 30 days).
+
+`render.yaml` at the repo root is a Render [Blueprint](https://render.com/docs/blueprint-spec): `npm install && npm run build` to build, `npm run start` to run, `/api/health` as the health check path. `GITHUB_TOKEN` and `DATABASE_URL` are marked `sync: false`, so Render prompts for their real values in its dashboard at blueprint-creation time rather than reading them from this file — they are never committed.
+
+First deploy, one-time setup:
+
+1. Create a free [Neon](https://neon.tech) project and copy its pooled connection string (includes `?sslmode=require`, which `pg` honors automatically — no code change needed).
+2. Apply the schema to it: `DATABASE_URL=<neon-connection-string> npm run migrate`.
+3. Create a free [Render](https://render.com) account, connect it to this GitHub repo, and deploy `render.yaml` as a Blueprint. When prompted, paste the real `GITHUB_TOKEN` (see `.env.example`) and the Neon connection string as `DATABASE_URL`.
+
+Render's free tier spins the service down after 15 minutes idle (30–60s cold start on the next request) — an accepted trade-off while there's no live traffic or custom domain yet. Subsequent deploys happen automatically on push to `main`; re-run `npm run migrate` against the Neon `DATABASE_URL` after any change to `src/db/migrations/`.
