@@ -7,7 +7,6 @@ import {
   FolderGit2,
   Home,
   Network,
-  Settings,
   Share2,
   ShieldCheck,
   Waypoints,
@@ -112,7 +111,11 @@ export function Sidebar({
           </p>
         </div>
 
-        <Link
+        {/* Repository settings is not implemented yet; the real page lives
+            under `_repository-settings/` for future reference but is
+            excluded from routing. See systems/[[...slug]]/page.tsx for the
+            equivalent stub pattern. */}
+        {/* <Link
           href={`${base}/repository-settings`}
           aria-current={
             pathname === `${base}/repository-settings` ? "page" : undefined
@@ -126,7 +129,7 @@ export function Sidebar({
         >
           <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
           Repository settings
-        </Link>
+        </Link> */}
       </div>
     </aside>
   );
