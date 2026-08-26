@@ -108,7 +108,9 @@ Every source file under `src/` has a matching Jest unit test at `<same-directory
 
 ### Continuous integration
 
-`.github/workflows/verify.yml` runs `npm run verify` (`.bin/verify`: lint, Jest, Playwright, build) on every pull request opened against `main`, via GitHub Actions. `DATABASE_URL` is passed in from a repo secret of the same name, pointed at the same shared database used locally (see "Database" below), since `e2e/not-found.spec.ts` reads an already-persisted analysis run for a pinned fixture rather than seeding one in CI. No `GITHUB_TOKEN` is needed — nothing in the current suite calls the GitHub API.
+`.github/workflows/verify.yml` runs lint, build, and the Jest unit suite on every pull request opened against `main`, via GitHub Actions. `DATABASE_URL` is passed in from a repo secret of the same name, pointed at the same shared database used locally (see "Database" below). No `GITHUB_TOKEN` is needed — nothing in this workflow calls the GitHub API.
+
+`.github/workflows/claude-review.yml` posts an automated Claude review (via Anthropic's [`claude-code-action`](https://github.com/anthropics/claude-code-action)) as a PR comment whenever a pull request against `main` is opened or updated — advisory only, it doesn't gate merging. It reads `CLAUDE.md` for project context, checks the diff against `docs/product/mvp.md`/`non-goals.md` for scope creep and this repo's testing conventions for coverage gaps, and leaves inline comments on specific lines where relevant. Runs on the standard `pull_request` trigger (not `pull_request_target`) since all PRs here come from branches in this repo, not forks — the PR head is checked out and reviewed with no elevated access to secrets beyond `ANTHROPIC_API_KEY` itself. Requires that repo secret (an Anthropic API key from [console.anthropic.com](https://console.anthropic.com)); a `concurrency` group cancels a still-running review if the PR gets a new commit before it finishes, to avoid stacking redundant (billed) reviews.
 
 ## Analyzing a real repository from the command line
 
