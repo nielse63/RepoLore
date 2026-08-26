@@ -29,10 +29,11 @@ interface AnalysisRunRawRow {
  * `result` is a persisted JSONB document, so it only has whatever shape
  * `Lore` had at the time it was written (ADR-0005: an old run is never
  * migrated or backfilled, only superseded by a new run at a bumped analyzer
- * version). `externalDependencies` (ADR-0011) and `callableSignatures`/
- * `callEdges` (ADR-0012) were each added to `Lore` after runs already
- * existed in the database, so a pre-existing row's stored JSON may not have
- * them — normalized here, once, at the read boundary, rather than
+ * version). `externalDependencies` (ADR-0011), `callableSignatures`/
+ * `callEdges` (ADR-0012), and `behaviorNodes`/`behaviorEdges`/
+ * `functionImportance` (ADR-0013) were each added to `Lore` after runs
+ * already existed in the database, so a pre-existing row's stored JSON may
+ * not have them — normalized here, once, at the read boundary, rather than
  * defensively in every consumer.
  */
 function normalizeResult(result: Lore | null): Lore | null {
@@ -42,6 +43,9 @@ function normalizeResult(result: Lore | null): Lore | null {
     externalDependencies: result.externalDependencies ?? [],
     callableSignatures: result.callableSignatures ?? [],
     callEdges: result.callEdges ?? [],
+    behaviorNodes: result.behaviorNodes ?? [],
+    behaviorEdges: result.behaviorEdges ?? [],
+    functionImportance: result.functionImportance ?? [],
   };
 }
 

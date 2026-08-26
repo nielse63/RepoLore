@@ -27,6 +27,8 @@ function minimalExtraction(
     externalDependencies: [],
     callableSignatures: [],
     callEdges: [],
+    behaviorNodes: [],
+    behaviorEdges: [],
     gaps: [],
     ...overrides,
   };

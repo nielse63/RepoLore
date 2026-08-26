@@ -111,7 +111,13 @@ export type EntryPointKind =
   | "public-export"
   | "cli"
   | "framework"
-  | "test";
+  | "test"
+  // Program Behavior Graph (ADR-0013): Next.js convention-based entry points.
+  | "route"
+  | "http-handler"
+  | "server-action"
+  | "middleware"
+  | "ui-event";
 
 /** A probable start of execution or exposed public surface. */
 export interface EntryPoint {
@@ -206,6 +212,146 @@ export interface CallEdge {
   evidence: Evidence[];
 }
 
+/**
+ * The Program Behavior Graph (ADR-0013): explicit calls plus implicit
+ * framework/event/state/data-flow/IO relationships, layered on top of the
+ * existing call graph rather than replacing it. `CALL` edges mirror
+ * `CallEdge`s one-to-one; the other types are produced by framework-specific
+ * detectors (`src/analysis/js-ts/react-*`, `nextjs-conventions.ts`,
+ * `boundary-detectors.ts`) and by `call-graph.ts`'s own call-site analysis
+ * for `DATA_FLOW`.
+ */
+export type BehaviorEdgeType =
+  | "CALL"
+  | "EVENT"
+  | "DATA_FLOW"
+  | "STATE_READ"
+  | "STATE_WRITE"
+  | "FRAMEWORK"
+  | "IO";
+
+/**
+ * Non-function entities the behavior graph needs to represent. Deliberately
+ * narrow (ADR-0013): every function already exists as a `CallableSignature`,
+ * so only `state` (a `useState`/`useReducer` slot) and `boundary` (an IO
+ * touchpoint such as HTTP or the filesystem) get their own nodes. `Module`,
+ * `Route`, `Queue`, etc. are left for a future extension rather than
+ * modeled speculatively now.
+ */
+export type BehaviorNodeKind = "state" | "boundary";
+
+/**
+ * Whether a state node's value is observably read/written from more than
+ * one function (`shared`) or only ever touched from a single function
+ * (`local`) — inferred from distinct-reader/writer counts in the assembled
+ * graph, never from variable naming (ADR-0013, prompt §9).
+ */
+export type StateScope = "local" | "shared";
+
+export type BoundaryType =
+  | "http"
+  | "database"
+  | "filesystem"
+  | "browser-storage"
+  | "external-sdk"
+  | "other";
+
+export interface BehaviorNode {
+  id: EntityId;
+  kind: BehaviorNodeKind;
+  name: string;
+  location?: SourceLocation;
+  /** Set only when `kind` is `"state"`. */
+  stateScope?: StateScope;
+  /** Set only when `kind` is `"boundary"`. */
+  boundaryType?: BoundaryType;
+}
+
+/**
+ * A directed edge in the Program Behavior Graph. `source`/`target` may each
+ * reference either a `CallableSignature.id` or a `BehaviorNode.id` — callers
+ * resolve which by checking both `Lore.callableSignatures` and
+ * `Lore.behaviorNodes`, the same "look it up by id in whichever array has
+ * it" pattern `CallGraphContent.tsx` already uses for `CallEdge`.
+ */
+export interface BehaviorEdge {
+  id: EntityId;
+  source: EntityId;
+  target: EntityId;
+  type: BehaviorEdgeType;
+  certainty: CertaintyCategory;
+  location?: SourceLocation;
+  evidence: Evidence[];
+}
+
+/**
+ * The six-dimensional signal set behind a `FunctionImportance` score
+ * (ADR-0013, prompt §5). Each dimension is normalized 0–100 relative to the
+ * analyzed system — never a raw, unbounded count — so dimensions and the
+ * final score stay comparable across repositories.
+ */
+export interface FunctionImportanceVector {
+  reachability: number;
+  orchestration: number;
+  dataInfluence: number;
+  stateAuthority: number;
+  boundaryInfluence: number;
+  structuralCentrality: number;
+}
+
+/**
+ * Architectural roles inferred from graph/static-analysis evidence, never
+ * from a function's name. A function may carry more than one role
+ * (ADR-0013, prompt §12). `ADAPTER` and `VALIDATOR` from the original
+ * proposal are intentionally omitted — this version has no reliable static
+ * signal for either.
+ */
+export type FunctionRole =
+  | "ENTRY_POINT"
+  | "ORCHESTRATOR"
+  | "STATE_CONTROLLER"
+  | "DATA_TRANSFORMER"
+  | "BOUNDARY"
+  | "EVENT_HANDLER"
+  | "RENDERER"
+  | "UTILITY";
+
+/**
+ * A structured, machine-checkable explanation for part of a function's
+ * importance score (ADR-0013, prompt §13) — the UI renders these as the
+ * "why it matters" bullet list rather than exposing only a number.
+ */
+export type ImportanceReason =
+  | {
+      type: "HIGH_REACHABILITY";
+      reachableFunctions: number;
+      reachableModules: number;
+    }
+  | {
+      type: "CROSSES_BOUNDARY";
+      boundaryType: BoundaryType;
+      location?: SourceLocation;
+    }
+  | { type: "MUTATES_STATE"; stateId: EntityId; stateScope: StateScope }
+  | { type: "ORCHESTRATES_MODULES"; moduleCount: number }
+  | { type: "ENTRY_POINT"; entryPointKind: EntryPointKind }
+  | { type: "STRUCTURAL_HUB"; fanIn: number; fanOut: number };
+
+/**
+ * A single function's importance: an overall `score` derived from `vector`
+ * via `src/analysis/shared/function-importance-config.ts`'s weights, plus
+ * the roles and reasons that explain it. One entry per `CallableSignature`
+ * (ADR-0013); computed once, language-neutrally, over the fully-assembled
+ * `Lore` in `buildLore`.
+ */
+export interface FunctionImportance {
+  functionId: EntityId;
+  score: number;
+  vector: FunctionImportanceVector;
+  roles: FunctionRole[];
+  reasons: ImportanceReason[];
+}
+
 export type ExternalDependencyScope = "direct" | "dev" | "peer" | "optional";
 
 export type ExternalDependencyRegistry = "npm" | "pypi";
@@ -282,6 +428,12 @@ export interface Lore {
   externalDependencies: ExternalDependency[];
   callableSignatures: CallableSignature[];
   callEdges: CallEdge[];
+  /** Program Behavior Graph (ADR-0013): non-function nodes referenced by `behaviorEdges`. */
+  behaviorNodes: BehaviorNode[];
+  /** Program Behavior Graph (ADR-0013): `CALL` edges mirror `callEdges`; other types come from framework detectors. */
+  behaviorEdges: BehaviorEdge[];
+  /** ADR-0013: one entry per `CallableSignature`. */
+  functionImportance: FunctionImportance[];
   startHere: Recommendation[];
   findings: Finding[];
   gaps: Gap[];
@@ -315,6 +467,7 @@ function collectEvidence(lore: Lore): Evidence[] {
     ...lore.externalDependencies.flatMap((d) => d.evidence),
     ...lore.callableSignatures.flatMap((c) => c.evidence),
     ...lore.callEdges.flatMap((e) => e.evidence),
+    ...lore.behaviorEdges.flatMap((e) => e.evidence),
     ...lore.startHere.flatMap((r) => r.evidence),
   ];
 }

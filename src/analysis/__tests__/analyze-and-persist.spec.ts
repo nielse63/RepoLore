@@ -88,6 +88,8 @@ function minimalJsTsExtraction() {
     externalDependencies: [],
     callableSignatures: [],
     callEdges: [],
+    behaviorNodes: [],
+    behaviorEdges: [],
     gaps: [],
   };
 }

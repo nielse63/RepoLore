@@ -156,4 +156,17 @@ describe("getLatestAnalysisRunForRepo", () => {
     const result = await getLatestAnalysisRunForRepo("acme", "repo");
     expect(result?.result?.externalDependencies).toEqual([]);
   });
+
+  it("backfills behaviorNodes/behaviorEdges/functionImportance to [] for a pre-existing result stored before ADR-0013", async () => {
+    const preExistingResult = { snapshot: {}, projects: [] } as never;
+    const query = jest
+      .fn()
+      .mockResolvedValue({ rows: [{ ...rawRow, result: preExistingResult }] });
+    mockGetDbPool.mockReturnValue({ query } as never);
+
+    const result = await getLatestAnalysisRunForRepo("acme", "repo");
+    expect(result?.result?.behaviorNodes).toEqual([]);
+    expect(result?.result?.behaviorEdges).toEqual([]);
+    expect(result?.result?.functionImportance).toEqual([]);
+  });
 });
