@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { ExternalLink } from 'lucide-react';
-import { TopBar } from '@/components/lore-shell/TopBar';
-import { RepoIdentity } from '@/components/lore-shell/RepoIdentity';
-import { LorePageFrame } from '@/components/lore-shell/LorePageFrame';
-import { RightRailShell } from '@/components/lore-shell/RightRailShell';
-import { PreviewBanner } from '@/components/lore-shell/PreviewBanner';
-import { PreviewActions } from '@/components/lore-shell/PreviewActions';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import { cn } from '@/lib/cn';
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import { ExternalLink } from "lucide-react";
+import { TopBar } from "@/components/lore-shell/TopBar";
+import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { RightRailShell } from "@/components/lore-shell/RightRailShell";
+import { PreviewBanner } from "@/components/lore-shell/PreviewBanner";
+import { PreviewActions } from "@/components/lore-shell/PreviewActions";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Switch } from "@/components/ui/Switch";
+import { cn } from "@/lib/cn";
 
-const SECTIONS = ['General', 'Analysis', 'Branches', 'Access'] as const;
+const SECTIONS = ["General", "Analysis", "Branches", "Access"] as const;
 
 function Field({
   label,
@@ -54,9 +54,9 @@ function ToggleRow({
 
 export default function RepositorySettingsPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [section, setSection] = useState<(typeof SECTIONS)[number]>('General');
+  const [section, setSection] = useState<(typeof SECTIONS)[number]>("General");
   const [displayName, setDisplayName] = useState(`${owner}/${repo}`);
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState("");
 
   return (
     <LorePageFrame
@@ -127,10 +127,10 @@ export default function RepositorySettingsPage() {
                     type="button"
                     onClick={() => setSection(s)}
                     className={cn(
-                      'w-full rounded-md border-l-2 px-3 py-1.5 text-left text-sm font-medium',
+                      "w-full rounded-md border-l-2 px-3 py-1.5 text-left text-sm font-medium",
                       section === s
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted hover:text-foreground'
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted hover:text-foreground"
                     )}
                   >
                     {s}
@@ -149,7 +149,7 @@ export default function RepositorySettingsPage() {
           </nav>
 
           <div className="min-w-0 flex-1">
-            {section === 'General' && (
+            {section === "General" && (
               <div className="flex flex-col gap-6">
                 <Card>
                   <h2 className="text-base font-semibold text-foreground">
@@ -163,7 +163,7 @@ export default function RepositorySettingsPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-primary hover:underline"
                       >
-                        github.com/{owner}/{repo}{' '}
+                        github.com/{owner}/{repo}{" "}
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </Field>
@@ -173,7 +173,7 @@ export default function RepositorySettingsPage() {
                     </Field>
                     <Field label="Analysis state">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 rounded-full bg-success" />{' '}
+                        <span className="h-1.5 w-1.5 rounded-full bg-success" />{" "}
                         Current
                       </span>
                     </Field>
@@ -270,7 +270,7 @@ export default function RepositorySettingsPage() {
               </div>
             )}
 
-            {section !== 'General' && (
+            {section !== "General" && (
               <Card>
                 <p className="text-sm text-muted">
                   {section} settings aren&apos;t implemented yet.
