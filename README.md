@@ -106,6 +106,10 @@ Every source file under `src/` has a matching Jest unit test at `<same-directory
 - Every run also collects Chromium V8 coverage (`e2e/coverage.ts`, an automatic fixture) into a `monocart-reporter` coverage report at `coverage/e2e/` (`index.html` plus `lcov.info`) — a separate report from the one `show-report` opens.
 - `eslint-plugin-playwright`'s recommended rules lint `e2e/**/*.spec.ts` (see `eslint.config.mjs`).
 
+### Continuous integration
+
+`.github/workflows/verify.yml` runs `npm run verify` (`.bin/verify`: lint, Jest, Playwright, build) on every pull request opened against `main`, via GitHub Actions. It doesn't set `GITHUB_TOKEN`/`DATABASE_URL` since the current Playwright suite needs neither (see above).
+
 ## Analyzing a real repository from the command line
 
 `npm run analyze-repo` runs the fetch-extract-analyze path against any real public GitHub repository without touching the database — useful for quickly checking analyzer output on a new repo:
