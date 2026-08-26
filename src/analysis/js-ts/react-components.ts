@@ -4,7 +4,7 @@
  * detection is enrichment within JS/TS analysis, not a separate analyzer.
  */
 
-import path from 'node:path';
+import path from "node:path";
 import {
   Node,
   SyntaxKind,
@@ -13,11 +13,11 @@ import {
   type FunctionExpression,
   type ClassDeclaration,
   type SourceFile,
-} from 'ts-morph';
-import type { Evidence, SourceLocation } from '@/lore/model';
+} from "ts-morph";
+import type { Evidence, SourceLocation } from "@/lore/model";
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
-  return path.relative(rootDir, absoluteFilePath).split(path.sep).join('/');
+  return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
 }
 
 function containsJsx(node: {
@@ -38,13 +38,13 @@ function containsJsx(node: {
 function componentName(
   fn: FunctionDeclaration | FunctionExpression | ArrowFunction
 ): string {
-  if ('getName' in fn && fn.getName()) return fn.getName() as string;
+  if ("getName" in fn && fn.getName()) return fn.getName() as string;
 
   const parent = fn.getParent();
   if (Node.isVariableDeclaration(parent) || Node.isPropertyAssignment(parent)) {
     return parent.getName();
   }
-  return '<anonymous>';
+  return "<anonymous>";
 }
 
 function extendsReactComponent(classDecl: ClassDeclaration): boolean {
@@ -93,8 +93,8 @@ export function detectReactComponents(
           startLine: fn.getStartLineNumber(),
         },
         evidence: {
-          kind: 'jsx-returning-function',
-          certainty: 'detected',
+          kind: "jsx-returning-function",
+          certainty: "detected",
           location: { filePath, symbolName: name },
           description: `'${name}' in '${filePath}' returns JSX.`,
         },
@@ -104,7 +104,7 @@ export function detectReactComponents(
     for (const classDecl of sourceFile.getClasses()) {
       if (!extendsReactComponent(classDecl)) continue;
 
-      const name = classDecl.getName() ?? '<anonymous>';
+      const name = classDecl.getName() ?? "<anonymous>";
       components.push({
         name,
         location: {
@@ -113,8 +113,8 @@ export function detectReactComponents(
           startLine: classDecl.getStartLineNumber(),
         },
         evidence: {
-          kind: 'react-class-component',
-          certainty: 'detected',
+          kind: "react-class-component",
+          certainty: "detected",
           location: { filePath, symbolName: name },
           description: `'${name}' in '${filePath}' extends React's Component/PureComponent.`,
         },

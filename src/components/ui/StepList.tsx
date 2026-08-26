@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn';
+import { cn } from "@/lib/cn";
 
 export interface Step {
   id: string;
@@ -19,10 +19,10 @@ export function StepList({ steps }: { steps: Step[] }) {
             <div className="flex flex-col items-center">
               <span
                 className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-medium',
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-medium",
                   step.active
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-surface text-muted'
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-surface text-muted"
                 )}
               >
                 {i + 1}
@@ -31,11 +31,11 @@ export function StepList({ steps }: { steps: Step[] }) {
                 <span className="w-px flex-1 bg-border" aria-hidden="true" />
               )}
             </div>
-            <div className={cn('flex-1', !isLast && 'pb-6')}>
+            <div className={cn("flex-1", !isLast && "pb-6")}>
               <div className="flex items-start justify-between gap-4">
-                <h4 className="text-sm font-semibold text-foreground">
+                <h3 className="text-sm font-semibold text-foreground">
                   {step.title}
-                </h4>
+                </h3>
                 {step.meta}
               </div>
               {step.description && (

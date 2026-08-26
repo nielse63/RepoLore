@@ -3,7 +3,22 @@ import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { getAnalysisStatus } from "@/helpers";
 import { relativeTime } from "@/lib/relative-time";
+import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return buildLoreMetadata({
+    title: loreRouteTitle(owner, repo, "Dependencies"),
+    description: `External and internal dependencies for ${owner}/${repo}, with usage evidence for where each one is referenced in the analyzed source.`,
+    path: `/lore/${owner}/${repo}/dependencies`,
+  });
+}
 
 /**
  * Real Dependencies view (ADR-0011) — same fetch/render pattern as the real

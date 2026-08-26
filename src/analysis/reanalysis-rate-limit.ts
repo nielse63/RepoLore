@@ -8,7 +8,7 @@
  * (session 8).
  */
 
-import { getDbPool } from '@/db/client';
+import { getDbPool } from "@/db/client";
 
 export const REANALYSIS_COOLDOWN_SECONDS = 60;
 
@@ -17,7 +17,7 @@ export class RateLimitedError extends Error {
     super(
       `Please wait ${retryAfterSeconds}s before analyzing this repository again.`
     );
-    this.name = 'RateLimitedError';
+    this.name = "RateLimitedError";
   }
 }
 

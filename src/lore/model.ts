@@ -272,7 +272,7 @@ export interface BehaviorNode {
  * reference either a `CallableSignature.id` or a `BehaviorNode.id` — callers
  * resolve which by checking both `Lore.callableSignatures` and
  * `Lore.behaviorNodes`, the same "look it up by id in whichever array has
- * it" pattern `CallGraphContent.tsx` already uses for `CallEdge`.
+ * it" pattern `DataFlowContent.tsx` already uses for `CallEdge`.
  */
 export interface BehaviorEdge {
   id: EntityId;

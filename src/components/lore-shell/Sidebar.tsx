@@ -36,7 +36,10 @@ export function Sidebar({
   const base = `/lore/${owner}/${repo}`;
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar">
+    <aside
+      aria-label="Repository navigation and status"
+      className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar"
+    >
       <div className="px-5 py-5">
         <Link
           href="/"
@@ -106,7 +109,7 @@ export function Sidebar({
               Evidence-backed insights you can trust.
             </p>
           </div>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-2 text-sm text-muted">
             Every claim is grounded in code, configuration, and infrastructure.
           </p>
         </div>

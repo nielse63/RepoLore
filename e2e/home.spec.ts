@@ -24,6 +24,23 @@ test("renders the hero and repository URL form", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("explains scope and what analysis produces near the form", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await expect(
+    page.getByText("Works with any public GitHub repository", {
+      exact: false,
+    })
+  ).toBeVisible();
+  await expect(
+    page.getByText("evidence-backed Overview, Architecture", {
+      exact: false,
+    })
+  ).toBeVisible();
+});
+
 test("shows an honest inline error for an empty submission", async ({
   page,
 }) => {
@@ -49,6 +66,23 @@ test("focuses the repository URL input on page load", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator("#url")).toBeFocused();
+});
+
+test("has canonical and social-sharing metadata", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /^https?:\/\/[^/]+\/?$/
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    /Repo Lore/
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image"
+  );
 });
 
 test("has no broken same-origin links", async ({ page, request }) => {

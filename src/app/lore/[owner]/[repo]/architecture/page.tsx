@@ -9,9 +9,24 @@ import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { getAnalysisStatus } from "@/helpers";
 import { relativeTime } from "@/lib/relative-time";
+import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import { countEvidence, type SourceLocation } from "@/lore/model";
 import { FileText } from "lucide-react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return buildLoreMetadata({
+    title: loreRouteTitle(owner, repo, "Architecture"),
+    description: `Major structural areas, their direct relationships, and probable entry points for ${owner}/${repo}, derived from static analysis.`,
+    path: `/lore/${owner}/${repo}/architecture`,
+  });
+}
 
 /**
  * Real Architecture view (ADR-0008) — same fetch/render pattern as the real

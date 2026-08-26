@@ -58,11 +58,9 @@ export function ArchitectureContent({
         );
         return (
           <section key={project.id} className="flex flex-col gap-6">
-            {lore.projects.length > 1 && (
-              <h2 className="text-lg font-semibold text-foreground">
-                {project.name}
-              </h2>
-            )}
+            <h2 className="text-lg font-semibold text-foreground">
+              {project.name}
+            </h2>
 
             <Card>
               <div className="flex items-start gap-3">

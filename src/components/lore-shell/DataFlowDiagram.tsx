@@ -17,7 +17,7 @@ const XHTML_NAMESPACE = {
   xmlns: "http://www.w3.org/1999/xhtml",
 } as HTMLAttributes<HTMLDivElement>;
 
-export interface CallGraphDiagramProps {
+export interface DataFlowDiagramProps {
   focusId: EntityId;
   signatures: CallableSignature[];
   edges: CallEdge[];
@@ -33,12 +33,12 @@ export interface CallGraphDiagramProps {
  * navigating away. The rendered subgraph is always bounded
  * (`MAX_CALL_GRAPH_NODES`) — never the whole repository's call graph.
  */
-export function CallGraphDiagram({
+export function DataFlowDiagram({
   focusId,
   signatures,
   edges,
   onSelect,
-}: CallGraphDiagramProps) {
+}: DataFlowDiagramProps) {
   const layout = deriveCallGraphLayout(focusId, signatures, edges);
   if (!layout) return null;
 
@@ -57,7 +57,7 @@ export function CallGraphDiagram({
           width={layout.width}
           height={layout.height}
           role="img"
-          aria-label="Call graph for the selected function"
+          aria-label="Data flow diagram for the selected function"
         >
           <defs>
             <marker

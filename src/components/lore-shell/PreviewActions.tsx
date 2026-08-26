@@ -1,5 +1,5 @@
-import { RotateCw } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 /** Re-analyze action for preview/fixture pages — visually present but inert, since there's no real analysis behind these views yet. */
 export function PreviewActions() {

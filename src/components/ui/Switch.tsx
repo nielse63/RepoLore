@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import * as RadixSwitch from '@radix-ui/react-switch';
-import { cn } from '@/lib/cn';
+import * as RadixSwitch from "@radix-ui/react-switch";
+import { cn } from "@/lib/cn";
 
 export function Switch({
   className,
@@ -10,10 +10,10 @@ export function Switch({
   return (
     <RadixSwitch.Root
       className={cn(
-        'relative h-6 w-10 shrink-0 rounded-full bg-border transition-colors',
-        'data-[state=checked]:bg-primary',
-        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        "relative h-6 w-10 shrink-0 rounded-full bg-border transition-colors",
+        "data-[state=checked]:bg-primary",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}

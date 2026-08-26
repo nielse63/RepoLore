@@ -88,12 +88,10 @@ describe("enrichExternalDependencyDescriptions", () => {
   });
 
   it("adds an honest gap, not a thrown error, when the lookup fails", async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({
-        ok: false,
-        json: async () => ({}),
-      }) as unknown as typeof fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({}),
+    }) as unknown as typeof fetch;
 
     const dep = dependency();
     await enrichExternalDependencyDescriptions([dep]);

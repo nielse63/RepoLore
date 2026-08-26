@@ -1,9 +1,24 @@
-import { CallGraphContent } from "@/components/lore-shell/CallGraphContent";
+import { DataFlowContent } from "@/components/lore-shell/DataFlowContent";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { getAnalysisStatus } from "@/helpers";
 import { relativeTime } from "@/lib/relative-time";
+import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return buildLoreMetadata({
+    title: loreRouteTitle(owner, repo, "Data Flow"),
+    description: `Statically resolved calls between named functions and methods in ${owner}/${repo} — which function mechanically calls which.`,
+    path: `/lore/${owner}/${repo}/data-flow`,
+  });
+}
 
 /**
  * Real Data Flow view (ADR-0012) — same fetch/render pattern as the real
@@ -33,7 +48,7 @@ export default async function DataFlowPage({
   ].join(", ");
 
   return (
-    <CallGraphContent
+    <DataFlowContent
       owner={owner}
       repo={repo}
       lore={lore}

@@ -18,7 +18,7 @@ import {
   Settings,
   Shield,
   Zap,
-} from 'lucide-react';
+} from "lucide-react";
 
 /** Maps the small icon-name vocabulary used in fixture data to Lucide components. */
 export const ICONS: Record<string, LucideIcon> = {

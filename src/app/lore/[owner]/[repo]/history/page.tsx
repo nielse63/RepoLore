@@ -9,7 +9,22 @@ import { upsertRepo } from "@/db/repos";
 import { getAnalysisStatus } from "@/helpers";
 import { computeHistory } from "@/history/compute-history";
 import { relativeTime } from "@/lib/relative-time";
+import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
+  const { owner, repo } = await params;
+  return buildLoreMetadata({
+    title: loreRouteTitle(owner, repo, "History"),
+    description: `Meaningful structural and dependency changes to ${owner}/${repo}, detected from commit diffs on the default branch.`,
+    path: `/lore/${owner}/${repo}/history`,
+  });
+}
 
 /**
  * Real History view (ADR-0010) — same fetch/render pattern as the real
@@ -60,6 +75,7 @@ export default async function HistoryPage({
       repo={repo}
       entries={cached.entries}
       truncated={truncated}
+      nowIso={new Date().toISOString()}
       repoIdentity={{
         statusLabel: getAnalysisStatus(lore),
         statusTone: lore.snapshot.status === "completed" ? "success" : "alert",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
+import { DEFAULT_OG_IMAGE, siteMetadataBase } from "@/lib/route-metadata";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,11 +19,32 @@ const displaySerif = Source_Serif_4({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Repo Lore",
-  description:
-    "A living, evidence-backed mental model of a software repository.",
-};
+const TITLE = "Repo Lore — Understand any codebase with confidence";
+const DESCRIPTION =
+  "A living, evidence-backed mental model of a software repository.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    metadataBase: await siteMetadataBase(),
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: TITLE,
+      description: DESCRIPTION,
+      url: "/",
+      siteName: "Repo Lore",
+      type: "website",
+      images: [DEFAULT_OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: TITLE,
+      description: DESCRIPTION,
+      images: [DEFAULT_OG_IMAGE],
+    },
+  };
+}
 
 export default function RootLayout({
   children,

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/Button';
-import { FolderGit2 } from 'lucide-react';
-import { useActionState } from 'react';
-import { resolveRepository, type ResolveRepositoryState } from './actions';
+import { Button } from "@/components/ui/Button";
+import { FolderGit2 } from "lucide-react";
+import { useActionState } from "react";
+import { resolveRepository, type ResolveRepositoryState } from "./actions";
 
-const initialState: ResolveRepositoryState = { status: 'idle' };
+const initialState: ResolveRepositoryState = { status: "idle" };
 
 /**
  * Landing page: paste a public GitHub repository URL, analyze and persist
@@ -61,15 +61,25 @@ export default function Home() {
             />
           </div>
           <Button type="submit" disabled={isPending} className="px-6 py-3">
-            {isPending ? 'Analyzing…' : 'Analyze repository'}
+            {isPending ? "Analyzing…" : "Analyze repository"}
           </Button>
         </form>
 
-        {state.status === 'error' && (
+        {state.status === "error" && (
           <p role="alert" className="mt-4 text-sm text-tile-alert-fg">
             <strong>Error:</strong> {state.message}
           </p>
         )}
+
+        <p className="mt-4 text-sm text-muted">
+          Works with any public GitHub repository — submitting analyzes it
+          automatically and takes you straight to its results.
+        </p>
+        <p className="mt-8 max-w-xl text-sm text-muted">
+          You&apos;ll get an evidence-backed Overview, Architecture,
+          Dependencies, Data Flow, and History for the repository — every claim
+          links back to the exact source it came from.
+        </p>
       </main>
     </div>
   );

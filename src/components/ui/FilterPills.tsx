@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { cn } from '@/lib/cn';
+import { cn } from "@/lib/cn";
 
 export interface FilterPillOption {
   value: string;
@@ -13,12 +13,12 @@ export function FilterPills({
   options,
   value,
   onChange,
-  'aria-label': ariaLabel,
+  "aria-label": ariaLabel,
 }: {
   options: FilterPillOption[];
   value: string;
   onChange: (value: string) => void;
-  'aria-label': string;
+  "aria-label": string;
 }) {
   return (
     <div
@@ -35,10 +35,10 @@ export function FilterPills({
             aria-pressed={active}
             onClick={() => onChange(option.value)}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+              "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
               active
-                ? 'bg-tile-core-bg text-tile-core-fg'
-                : 'text-muted hover:text-foreground'
+                ? "bg-tile-core-bg text-tile-core-fg"
+                : "text-muted hover:text-foreground"
             )}
           >
             {option.icon}

@@ -1,4 +1,4 @@
-import type { SourceLocation } from '@/lore/model';
+import type { SourceLocation } from "@/lore/model";
 
 /** A GitHub blob (file) URL for a source location, pinned to the exact analyzed commit. */
 export function githubBlobUrl(
@@ -23,6 +23,6 @@ export function githubTreeUrl(
   commitSha: string,
   location: SourceLocation
 ): string {
-  const path = location.filePath === '.' ? '' : `/${location.filePath}`;
+  const path = location.filePath === "." ? "" : `/${location.filePath}`;
   return `https://github.com/${owner}/${repo}/tree/${commitSha}${path}`;
 }
