@@ -108,7 +108,7 @@ Every source file under `src/` has a matching Jest unit test at `<same-directory
 
 ### Continuous integration
 
-`.github/workflows/verify.yml` runs `npm run verify` (`.bin/verify`: lint, Jest, Playwright, build) on every pull request opened against `main`, via GitHub Actions. It doesn't set `GITHUB_TOKEN`/`DATABASE_URL` since the current Playwright suite needs neither (see above).
+`.github/workflows/verify.yml` runs `npm run verify` (`.bin/verify`: lint, Jest, Playwright, build) on every pull request opened against `main`, via GitHub Actions. `DATABASE_URL` is passed in from a repo secret of the same name, pointed at the same shared database used locally (see "Database" below), since `e2e/not-found.spec.ts` reads an already-persisted analysis run for a pinned fixture rather than seeding one in CI. No `GITHUB_TOKEN` is needed — nothing in the current suite calls the GitHub API.
 
 ## Analyzing a real repository from the command line
 
