@@ -12,6 +12,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import type {
+  BehaviorEdge,
+  BehaviorNode,
   CallableSignature,
   CallEdge,
   EntryPoint,
@@ -23,10 +25,13 @@ import type {
   Relationship,
   TestRelationship,
 } from "@/lore/model";
+import { buildCallableIndex } from "./callable-index";
 import { extractCallGraph } from "./call-graph";
+import { detectBoundaries } from "./boundary-detectors";
 import { discoverSourceFiles } from "./discovery";
 import { extractEntryPoints } from "./entry-points";
 import { extractExternalDependencies } from "./external-dependencies";
+import { FRAMEWORK_DETECTORS } from "./framework-detectors";
 import { extractImportRelationships } from "./imports";
 import { extractPublicSurface } from "./public-surface";
 import {
@@ -46,6 +51,10 @@ export interface JsTsExtraction {
   externalDependencies: ExternalDependency[];
   callableSignatures: CallableSignature[];
   callEdges: CallEdge[];
+  /** Program Behavior Graph (ADR-0013): non-function nodes (state, boundary) referenced by `behaviorEdges`. */
+  behaviorNodes: BehaviorNode[];
+  /** Program Behavior Graph (ADR-0013): CALL edges (mirroring `callEdges`) plus EVENT, DATA_FLOW, STATE_READ/WRITE, FRAMEWORK, and IO edges from the framework detectors and boundary detection. */
+  behaviorEdges: BehaviorEdge[];
   gaps: Gap[];
 }
 
@@ -228,7 +237,44 @@ export function extractJsTsProject(
     importResult.externalReferences,
     projectId
   );
-  const callGraph = extractCallGraph(sourceFiles, absoluteRoot);
+
+  // Built once and shared across the call graph and every framework
+  // detector (ADR-0013) so each doesn't independently re-walk every file's
+  // AST to rediscover the same named functions/methods/arrows.
+  const callableIndex = buildCallableIndex(sourceFiles, absoluteRoot);
+  const callGraph = extractCallGraph(sourceFiles, absoluteRoot, callableIndex);
+  const boundaries = detectBoundaries(sourceFiles, absoluteRoot, callableIndex);
+
+  const frameworkEntryPoints: EntryPoint[] = [];
+  const frameworkBehaviorNodes: BehaviorNode[] = [];
+  const frameworkBehaviorEdges: BehaviorEdge[] = [];
+  for (const detector of FRAMEWORK_DETECTORS) {
+    const result = detector.detect(sourceFiles, absoluteRoot, callableIndex);
+    frameworkEntryPoints.push(...result.entryPoints);
+    frameworkBehaviorNodes.push(...result.behaviorNodes);
+    frameworkBehaviorEdges.push(...result.behaviorEdges);
+  }
+
+  const callBehaviorEdges: BehaviorEdge[] = callGraph.callEdges.map((edge) => ({
+    id: `js-ts-behavior-call-${edge.id}`,
+    source: edge.callerId,
+    target: edge.calleeId,
+    type: "CALL",
+    certainty: edge.certainty,
+    location: edge.callSiteLocation,
+    evidence: edge.evidence,
+  }));
+
+  const behaviorNodes: BehaviorNode[] = [
+    ...frameworkBehaviorNodes,
+    ...boundaries.nodes,
+  ];
+  const behaviorEdges: BehaviorEdge[] = [
+    ...callBehaviorEdges,
+    ...callGraph.dataFlowEdges,
+    ...frameworkBehaviorEdges,
+    ...boundaries.edges,
+  ];
 
   const sourceFilePaths = sourceFiles.map((sf) =>
     path.relative(absoluteRoot, sf.getFilePath()).split(path.sep).join("/")
@@ -268,13 +314,15 @@ export function extractJsTsProject(
     project,
     sourceFilePaths,
     relationships: importResult.relationships,
-    entryPoints,
+    entryPoints: [...entryPoints, ...frameworkEntryPoints],
     publicContracts,
     testRelationships: testResult.testRelationships,
     reactComponents,
     externalDependencies,
     callableSignatures: callGraph.callableSignatures,
     callEdges: callGraph.callEdges,
+    behaviorNodes,
+    behaviorEdges,
     gaps: [...importResult.gaps, ...testResult.gaps],
   };
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
-import { CallGraphDiagram } from "@/components/lore-shell/CallGraphDiagram";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
@@ -15,12 +14,24 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
+import { buildCalleesIndex, deriveCallTreeRootIds } from "@/lore/call-tree";
+import { describeImportanceReason } from "@/lore/describe-importance";
+import type {
+  CallableSignature,
+  EntityId,
+  Evidence,
+  FunctionImportance,
+  Lore,
+} from "@/lore/model";
 import {
-  deriveCallGraphLayout,
-  MAX_CALL_GRAPH_NODES,
-} from "@/lore/call-graph-layout";
-import type { CallableSignature, EntityId, Evidence, Lore } from "@/lore/model";
-import { Braces, Component, Layers, Zap, type LucideIcon } from "lucide-react";
+  Braces,
+  ChevronDown,
+  ChevronRight,
+  Component,
+  Layers,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 const KIND_LABEL: Record<CallableSignature["kind"], string> = {
@@ -37,10 +48,34 @@ const KIND_ICON: Record<CallableSignature["kind"], LucideIcon> = {
   "function-expression": Layers,
 };
 
+const ROLE_LABEL: Record<FunctionImportance["roles"][number], string> = {
+  ENTRY_POINT: "Entry point",
+  ORCHESTRATOR: "Orchestrator",
+  STATE_CONTROLLER: "State controller",
+  DATA_TRANSFORMER: "Data transformer",
+  BOUNDARY: "Boundary",
+  EVENT_HANDLER: "Event handler",
+  RENDERER: "Renderer",
+  UTILITY: "Utility",
+};
+
+const VECTOR_LABEL: Record<keyof FunctionImportance["vector"], string> = {
+  reachability: "Reachability",
+  orchestration: "Orchestration",
+  dataInfluence: "Data influence",
+  stateAuthority: "State authority",
+  boundaryInfluence: "Boundary influence",
+  structuralCentrality: "Structural centrality",
+};
+
 const VIEWS = [
   { value: "chain", label: "Chain" },
-  { value: "diagram", label: "Diagram" },
   { value: "list", label: "List" },
+];
+
+const SORTS = [
+  { value: "name", label: "Name" },
+  { value: "importance", label: "Importance" },
 ];
 
 const LIST_CAP = 200;
@@ -77,9 +112,11 @@ export function CallGraphContent({
   lore,
   repoIdentity,
 }: CallGraphContentProps) {
-  const { callableSignatures, callEdges } = lore;
+  const { callableSignatures, callEdges, functionImportance, behaviorNodes } =
+    lore;
   const [query, setQuery] = useState("");
   const [view, setView] = useState("chain");
+  const [sort, setSort] = useState("name");
   const [focusId, setFocusId] = useState<EntityId | undefined>(
     callableSignatures[0]?.id
   );
@@ -89,6 +126,21 @@ export function CallGraphContent({
     [callableSignatures]
   );
   const focus = focusId ? byId.get(focusId) : undefined;
+
+  const importanceById = useMemo(
+    () => new Map(functionImportance.map((fi) => [fi.functionId, fi])),
+    [functionImportance]
+  );
+  const focusImportance = focusId ? importanceById.get(focusId) : undefined;
+  const stateNameById = useMemo(
+    () =>
+      new Map(
+        behaviorNodes
+          .filter((n) => n.kind === "state")
+          .map((n) => [n.id, n.name])
+      ),
+    [behaviorNodes]
+  );
 
   const edgeCountById = useMemo(() => {
     const counts = new Map<EntityId, number>();
@@ -102,21 +154,26 @@ export function CallGraphContent({
 
   const totalReferences = callableSignatures.length + callEdges.length;
 
-  const layout = useMemo(
+  const chainRootIds = useMemo(
     () =>
-      focusId
-        ? deriveCallGraphLayout(focusId, callableSignatures, callEdges)
-        : null,
-    [focusId, callableSignatures, callEdges]
+      deriveCallTreeRootIds(
+        callableSignatures,
+        callEdges,
+        lore.publicContracts,
+        lore.entryPoints
+      ),
+    [callableSignatures, callEdges, lore.publicContracts, lore.entryPoints]
   );
-  const chainNodes = useMemo(
-    () =>
-      layout ? [...layout.nodes].sort((a, b) => a.x - b.x || a.y - b.y) : [],
-    [layout]
-  );
-  const chainIndex = focusId
-    ? chainNodes.findIndex((n) => n.id === focusId)
-    : -1;
+  const calleesOf = useMemo(() => buildCalleesIndex(callEdges), [callEdges]);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  function toggleExpanded(pathKey: string) {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(pathKey)) next.delete(pathKey);
+      else next.add(pathKey);
+      return next;
+    });
+  }
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -131,8 +188,13 @@ export function CallGraphContent({
     const filtered = q
       ? callableSignatures.filter((s) => s.name.toLowerCase().includes(q))
       : callableSignatures;
-    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
-  }, [callableSignatures, query]);
+    return [...filtered].sort((a, b) =>
+      sort === "importance"
+        ? (importanceById.get(b.id)?.score ?? 0) -
+          (importanceById.get(a.id)?.score ?? 0)
+        : a.name.localeCompare(b.name)
+    );
+  }, [callableSignatures, query, sort, importanceById]);
 
   const callerEdges = useMemo(
     () => callEdges.filter((e) => e.calleeId === focusId),
@@ -200,23 +262,67 @@ export function CallGraphContent({
       }
       rightRail={
         focus ? (
-          <RightRailShell
-            title={
-              <div className="flex w-full items-center justify-between gap-3">
-                <span className="truncate">{focus.name}</span>
-                {chainIndex >= 0 && (
-                  <span className="shrink-0 text-xs font-normal text-muted">
-                    Step {chainIndex + 1} of {chainNodes.length}
-                  </span>
-                )}
-              </div>
-            }
-          >
+          <RightRailShell title={focus.name}>
             <Badge variant="primary">{KIND_LABEL[focus.kind]}</Badge>
 
             <div className="mt-3">
               <SourceLink location={focus.location} sourceUrl={sourceUrl} />
             </div>
+
+            {focusImportance && (
+              <div className="mt-6 border-t border-border pt-4">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-sm font-medium text-foreground">
+                    Importance
+                  </p>
+                  <span className="text-2xl font-semibold text-foreground">
+                    {focusImportance.score}
+                  </span>
+                </div>
+                {focusImportance.roles.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {focusImportance.roles.map((role) => (
+                      <Badge key={role}>{ROLE_LABEL[role]}</Badge>
+                    ))}
+                  </div>
+                )}
+                <ul className="mt-3 space-y-1">
+                  {(
+                    Object.entries(focusImportance.vector) as [
+                      keyof typeof focusImportance.vector,
+                      number,
+                    ][]
+                  ).map(([dimension, value]) => (
+                    <li
+                      key={dimension}
+                      className="flex items-center gap-2 text-xs text-muted"
+                    >
+                      <span className="w-36 shrink-0">
+                        {VECTOR_LABEL[dimension]}
+                      </span>
+                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{ width: `${value}%` }}
+                        />
+                      </span>
+                      <span className="w-8 shrink-0 text-right text-foreground">
+                        {value}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {focusImportance.reasons.length > 0 && (
+                  <ul className="mt-3 space-y-1 text-sm text-muted">
+                    {focusImportance.reasons.map((reason, i) => (
+                      <li key={i}>
+                        • {describeImportanceReason(reason, stateNameById)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             <div className="mt-6 border-t border-border pt-4">
               <p className="text-sm font-medium text-foreground">Parameters</p>
@@ -345,13 +451,23 @@ export function CallGraphContent({
               between them.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <FilterPills
-              aria-label="View mode"
-              options={VIEWS}
-              value={view}
-              onChange={setView}
-            />
+          <div className="flex flex-col gap-1.5 w-full">
+            <div className="flex items-center gap-2 w-full justify-between">
+              <FilterPills
+                aria-label="View mode"
+                options={VIEWS}
+                value={view}
+                onChange={setView}
+              />
+              {view === "list" && (
+                <FilterPills
+                  aria-label="Sort by"
+                  options={SORTS}
+                  value={sort}
+                  onChange={setSort}
+                />
+              )}
+            </div>
             <span className="text-xs text-muted">
               Derived from {totalReferences} references
             </span>
@@ -379,6 +495,7 @@ export function CallGraphContent({
                 const Icon = KIND_ICON[s.kind];
                 const active = s.id === focusId;
                 const refs = referencesFor(s.id);
+                const importance = importanceById.get(s.id);
                 return (
                   <li key={s.id}>
                     <button
@@ -402,7 +519,17 @@ export function CallGraphContent({
                           {formatPath(s.location.filePath)}
                         </p>
                       </div>
+                      {importance && importance.roles[0] && (
+                        <Badge variant="primary">
+                          {ROLE_LABEL[importance.roles[0]]}
+                        </Badge>
+                      )}
                       <Badge>{KIND_LABEL[s.kind]}</Badge>
+                      {importance && (
+                        <span className="shrink-0 text-sm font-semibold text-foreground">
+                          {importance.score}
+                        </span>
+                      )}
                       <span className="shrink-0 text-sm text-muted">
                         {refs} reference{refs === 1 ? "" : "s"}
                       </span>
@@ -455,78 +582,151 @@ export function CallGraphContent({
             No named functions were detected. Call graph analysis currently
             covers JavaScript and TypeScript projects only.
           </Card>
-        ) : view === "diagram" ? (
-          <div className="mt-6">
-            <CallGraphDiagram
-              focusId={focus.id}
-              signatures={callableSignatures}
-              edges={callEdges}
-              onSelect={selectFocus}
-            />
-          </div>
         ) : (
           <Card className="mt-4 p-0">
-            <ol className="divide-y divide-border">
-              {chainNodes.map((node, i) => {
-                const Icon = KIND_ICON[node.kind];
-                const active = node.id === focusId;
-                const refs = referencesFor(node.id);
-                return (
-                  <li key={node.id}>
-                    <button
-                      type="button"
-                      onClick={() => selectFocus(node.id)}
-                      aria-current={active ? "step" : undefined}
-                      className={
-                        "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
-                        (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
-                      }
-                    >
-                      <span
-                        className={
-                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold " +
-                          (active
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border text-muted")
-                        }
-                      >
-                        {i + 1}
-                      </span>
-                      <IconTile
-                        icon={Icon}
-                        variant={active ? "core" : "neutral"}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground">
-                          {node.name}
-                        </p>
-                        <p className="truncate text-sm text-muted">
-                          {formatPath(node.location.filePath)}
-                        </p>
-                      </div>
-                      <div className="hidden shrink-0 text-right sm:block">
-                        <p className="text-xs text-muted">Kind</p>
-                        <Badge>{KIND_LABEL[node.kind]}</Badge>
-                      </div>
-                      <span className="shrink-0 text-sm text-muted">
-                        {refs} reference{refs === 1 ? "" : "s"}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-            {layout?.truncated && (
-              <p className="border-t border-border px-6 py-4 text-center text-xs text-muted">
-                This function&apos;s full call chain has more than{" "}
-                {MAX_CALL_GRAPH_NODES} related functions — showing direct
-                callers and callees only.
-              </p>
-            )}
+            <ul className="divide-y divide-border">
+              {chainRootIds.map((id) => (
+                <ChainTreeRow
+                  key={id}
+                  id={id}
+                  ancestorIds={[]}
+                  depth={0}
+                  byId={byId}
+                  calleesOf={calleesOf}
+                  expandedPaths={expandedPaths}
+                  onToggle={toggleExpanded}
+                  focusId={focusId}
+                  onSelect={selectFocus}
+                  referencesFor={referencesFor}
+                />
+              ))}
+            </ul>
           </Card>
         )}
       </div>
     </LorePageFrame>
+  );
+}
+
+interface ChainTreeRowProps {
+  id: EntityId;
+  ancestorIds: EntityId[];
+  depth: number;
+  byId: Map<EntityId, CallableSignature>;
+  calleesOf: Map<EntityId, EntityId[]>;
+  expandedPaths: Set<string>;
+  onToggle: (pathKey: string) => void;
+  focusId: EntityId | undefined;
+  onSelect: (id: EntityId) => void;
+  referencesFor: (id: EntityId) => number;
+}
+
+/**
+ * One row of the Chain tab's tree: a function that can be expanded (if it
+ * has callees) to show what it calls, arbitrarily nested. `ancestorIds`
+ * tracks the branch's path from the root so a recursive/mutually-recursive
+ * callee can be detected and rendered as a non-expandable "already shown
+ * above" leaf instead of looping.
+ */
+function ChainTreeRow({
+  id,
+  ancestorIds,
+  depth,
+  byId,
+  calleesOf,
+  expandedPaths,
+  onToggle,
+  focusId,
+  onSelect,
+  referencesFor,
+}: ChainTreeRowProps) {
+  const signature = byId.get(id);
+  if (!signature) return null;
+
+  const pathKey = [...ancestorIds, id].join(">");
+  const childIds = calleesOf.get(id) ?? [];
+  const hasChildren = childIds.length > 0;
+  const expanded = hasChildren && expandedPaths.has(pathKey);
+  const active = id === focusId;
+  const Icon = KIND_ICON[signature.kind];
+  const refs = referencesFor(id);
+  const nextAncestorIds = [...ancestorIds, id];
+
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => {
+          onSelect(id);
+          if (hasChildren) onToggle(pathKey);
+        }}
+        aria-expanded={hasChildren ? expanded : undefined}
+        className={
+          "flex w-full items-center gap-3 py-4 pr-6 text-left transition-colors " +
+          (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
+        }
+        style={{ paddingLeft: `${1.5 + depth * 1.5}rem` }}
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
+          {hasChildren &&
+            (expanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            ))}
+        </span>
+        <IconTile icon={Icon} variant={active ? "core" : "neutral"} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground">
+            {signature.name}
+          </p>
+          <p className="truncate text-sm text-muted">
+            {formatPath(signature.location.filePath)}
+          </p>
+        </div>
+        <Badge>{KIND_LABEL[signature.kind]}</Badge>
+        <span className="shrink-0 text-sm text-muted">
+          {refs} reference{refs === 1 ? "" : "s"}
+        </span>
+      </button>
+      {expanded && (
+        <ul className="divide-y divide-border">
+          {childIds.map((childId) => {
+            if (nextAncestorIds.includes(childId)) {
+              const childSignature = byId.get(childId);
+              if (!childSignature) return null;
+              return (
+                <li key={childId}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(childId)}
+                    className="flex w-full items-center gap-3 py-3 pr-6 text-left text-sm text-muted italic hover:bg-border/10"
+                    style={{ paddingLeft: `${1.5 + (depth + 1) * 1.5}rem` }}
+                  >
+                    <span className="h-4 w-4 shrink-0" />
+                    {childSignature.name} — already shown above
+                  </button>
+                </li>
+              );
+            }
+            return (
+              <ChainTreeRow
+                key={childId}
+                id={childId}
+                ancestorIds={nextAncestorIds}
+                depth={depth + 1}
+                byId={byId}
+                calleesOf={calleesOf}
+                expandedPaths={expandedPaths}
+                onToggle={onToggle}
+                focusId={focusId}
+                onSelect={onSelect}
+                referencesFor={referencesFor}
+              />
+            );
+          })}
+        </ul>
+      )}
+    </li>
   );
 }

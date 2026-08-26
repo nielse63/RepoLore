@@ -19,10 +19,13 @@
  */
 
 import type { DerivedViews } from "@/analysis/shared/derive-views";
+import { computeFunctionImportance } from "@/analysis/shared/function-importance";
 import {
   evaluateMinimumValueContract,
   START_HERE_MAX_ITEMS,
   type AnalysisSnapshot,
+  type BehaviorEdge,
+  type BehaviorNode,
   type CallableSignature,
   type CallEdge,
   type EntryPoint,
@@ -52,6 +55,9 @@ export interface BuildLoreExtraction {
   /** JS/TS only for now (ADR-0012); absent for a Python extraction until its own follow-on ADR adds call-graph support. */
   callableSignatures?: CallableSignature[];
   callEdges?: CallEdge[];
+  /** Program Behavior Graph (ADR-0013), JS/TS only for now, same reasoning as `callableSignatures`/`callEdges`. */
+  behaviorNodes?: BehaviorNode[];
+  behaviorEdges?: BehaviorEdge[];
   gaps: Gap[];
 }
 
@@ -136,11 +142,22 @@ export function buildLore(input: BuildLoreInput): Lore {
     status: "partial",
   };
 
+  const callableSignatures = extractions.flatMap(
+    (e) => e.extraction.callableSignatures ?? []
+  );
+  const behaviorNodes = extractions.flatMap(
+    (e) => e.extraction.behaviorNodes ?? []
+  );
+  const behaviorEdges = extractions.flatMap(
+    (e) => e.extraction.behaviorEdges ?? []
+  );
+  const entryPoints = extractions.flatMap((e) => e.extraction.entryPoints);
+
   const lore: Lore = {
     snapshot,
     projects: extractions.map((e) => e.extraction.project),
     structuralAreas: extractions.flatMap((e) => e.views.structuralAreas),
-    entryPoints: extractions.flatMap((e) => e.extraction.entryPoints),
+    entryPoints,
     relationships: extractions.flatMap((e) => e.extraction.relationships),
     publicContracts: extractions.flatMap((e) => e.extraction.publicContracts),
     testRelationships: extractions.flatMap(
@@ -149,10 +166,19 @@ export function buildLore(input: BuildLoreInput): Lore {
     externalDependencies: extractions.flatMap(
       (e) => e.extraction.externalDependencies
     ),
-    callableSignatures: extractions.flatMap(
-      (e) => e.extraction.callableSignatures ?? []
-    ),
+    callableSignatures,
     callEdges: extractions.flatMap((e) => e.extraction.callEdges ?? []),
+    behaviorNodes,
+    behaviorEdges,
+    // ADR-0013: computed once, language-neutrally, over the fully-assembled
+    // arrays above — ready for a Python extraction the moment it starts
+    // populating callableSignatures/behaviorEdges of its own.
+    functionImportance: computeFunctionImportance(
+      callableSignatures,
+      behaviorEdges,
+      behaviorNodes,
+      entryPoints
+    ),
     startHere: mergeStartHere(extractions.map((e) => e.views.startHere)),
     findings: [],
     gaps: extractions.flatMap((e) => e.extraction.gaps),

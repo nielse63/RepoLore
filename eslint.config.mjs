@@ -23,7 +23,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "!/bin/*"
+    "!/bin/*",
+    "coverage",
+    "playwright-report",
+    "test-results",
+    ".repomap",
+    ".swc",
   ]),
 ]);
 

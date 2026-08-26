@@ -4,4 +4,4 @@
  * new `analysis_runs` rows rather than overwriting or requiring a backfill
  * migration of old ones.
  */
-export const JS_TS_ANALYZER_VERSION = "js-ts-v7";
+export const JS_TS_ANALYZER_VERSION = "js-ts-v8";

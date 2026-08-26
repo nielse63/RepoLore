@@ -138,6 +138,16 @@ function describeEntryKind(kind: EntryPoint["kind"]): string {
       return "Framework entry point";
     case "test":
       return "Test entry point";
+    case "route":
+      return "Next.js route entry point";
+    case "http-handler":
+      return "HTTP route handler entry point";
+    case "server-action":
+      return "Server Action entry point";
+    case "middleware":
+      return "Middleware entry point";
+    case "ui-event":
+      return "UI event entry point";
   }
 }
 
