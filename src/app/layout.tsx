@@ -23,28 +23,26 @@ const TITLE = "Repo Lore — Understand any codebase with confidence";
 const DESCRIPTION =
   "A living, evidence-backed mental model of a software repository.";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
-    metadataBase: await siteMetadataBase(),
+export const metadata: Metadata = {
+  metadataBase: siteMetadataBase(),
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
     title: TITLE,
     description: DESCRIPTION,
-    alternates: { canonical: "/" },
-    openGraph: {
-      title: TITLE,
-      description: DESCRIPTION,
-      url: "/",
-      siteName: "Repo Lore",
-      type: "website",
-      images: [DEFAULT_OG_IMAGE],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: TITLE,
-      description: DESCRIPTION,
-      images: [DEFAULT_OG_IMAGE],
-    },
-  };
-}
+    url: "/",
+    siteName: "Repo Lore",
+    type: "website",
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+};
 
 export default function RootLayout({
   children,

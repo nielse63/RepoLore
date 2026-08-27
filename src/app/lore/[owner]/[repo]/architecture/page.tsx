@@ -118,6 +118,7 @@ export default async function ArchitecturePage({
     >
       <ArchitectureContent
         lore={lore}
+        repo={repo}
         sourceUrl={sourceUrl}
         areaUrl={areaUrl}
       />

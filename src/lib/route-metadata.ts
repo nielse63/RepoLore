@@ -1,28 +1,32 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 
 const DEFAULT_OG_IMAGE = "/web-app-manifest-512x512.png";
+const FALLBACK_ORIGIN = "http://localhost:3000";
 
 /**
  * The deployed origin isn't a fixed, decided value yet (no custom domain —
- * `render.yaml` has no domain config, and the current host is Render's
- * auto-generated subdomain) — reversibility (ADR principle) favors deriving
- * it from the incoming request over hardcoding a hostname that's likely to
- * change. `NEXT_PUBLIC_SITE_URL` lets a future fixed domain override this
- * without another code change.
+ * `render.yaml` has no domain config). Deriving it from the incoming
+ * request's `Host` header was tried and reverted: `Host` is
+ * attacker-controllable, which would let a forged/proxied request poison the
+ * canonical/OG URLs on the one route that isn't `noindex`, and reading a
+ * request header here forces every route in the app out of static
+ * rendering. `RENDER_EXTERNAL_URL` is set automatically by Render to the
+ * current deployment's origin; `NEXT_PUBLIC_SITE_URL` lets a future fixed
+ * domain override it explicitly.
  */
-async function siteOrigin(): Promise<string> {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? "localhost:3000";
-  const proto =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
+function siteOrigin(): string {
+  const configured =
+    process.env.NEXT_PUBLIC_SITE_URL || process.env.RENDER_EXTERNAL_URL;
+  if (!configured) return FALLBACK_ORIGIN;
+  return /^https?:\/\//.test(configured) ? configured : `https://${configured}`;
 }
 
-export async function siteMetadataBase(): Promise<URL> {
-  return new URL(await siteOrigin());
+export function siteMetadataBase(): URL {
+  try {
+    return new URL(siteOrigin());
+  } catch {
+    return new URL(FALLBACK_ORIGIN);
+  }
 }
 
 /** `{owner}/{repo} {view} — Repo Lore`, or `{owner}/{repo} — Repo Lore` for the Overview route. */

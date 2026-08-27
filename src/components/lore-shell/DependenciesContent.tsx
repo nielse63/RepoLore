@@ -355,8 +355,9 @@ export function DependenciesContent({
                     return (
                       <Tr
                         key={dep.id}
+                        onClick={() => setSelectedId(dep.id)}
                         className={cn(
-                          "relative",
+                          "cursor-pointer",
                           active ? "bg-tile-core-bg/40" : "hover:bg-border/10"
                         )}
                       >
@@ -366,14 +367,13 @@ export function DependenciesContent({
                             onClick={() => setSelectedId(dep.id)}
                             aria-current={active ? "true" : undefined}
                             aria-label={`View ${dep.name} dependency details`}
-                            className="absolute inset-0 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
-                          />
-                          <div className="pointer-events-none flex items-center gap-2.5">
+                            className="flex items-center gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-primary"
+                          >
                             <IconTile icon={Icon} variant="neutral" size="sm" />
                             <p className="font-medium text-foreground">
                               {dep.name}
                             </p>
-                          </div>
+                          </button>
                         </Td>
                         <Td>
                           <Badge>{SCOPE_LABEL[dep.scope]}</Badge>
