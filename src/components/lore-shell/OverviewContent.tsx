@@ -11,7 +11,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { formatPath } from "@/lib/format-path";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
-import { Compass, GitCommitHorizontal, Layers } from "lucide-react";
+import { Compass, GapHorizontal, Layers, Milestone } from "lucide-react";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -64,8 +64,8 @@ export function OverviewContent({
       )}
 
       <section id="start-here">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          Start Here
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Milestone className="h-4 w-4" aria-hidden="true" /> Start Here
         </h2>
         <Card>
           {lore.startHere.length === 0 ? (
@@ -114,8 +114,8 @@ export function OverviewContent({
       </section>
 
       <section id="major-areas">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">
-          Major Areas
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {majorAreas.map((area) => (
@@ -192,7 +192,7 @@ export function OverviewContent({
 
       <section id="gaps">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <GitCommitHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
+          <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
         </h2>
         <GapsList
           gaps={lore.gaps}

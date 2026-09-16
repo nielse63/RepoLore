@@ -10,7 +10,7 @@ import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
-import { Compass, GitCommitHorizontal, Layers, TestTube2 } from "lucide-react";
+import { Compass, GapHorizontal, Layers, TestTube2 } from "lucide-react";
 
 export interface ArchitectureContentProps {
   lore: Lore;
@@ -69,7 +69,7 @@ export function ArchitectureContent({
         const projectLabel = lore.projects.length > 1 ? project.name : repo;
         return (
           <section key={project.id} className="flex flex-col gap-6">
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg font-semibold text-foreground font-mono">
               {projectLabel}
             </h2>
 
@@ -119,8 +119,8 @@ export function ArchitectureContent({
             </Card>
 
             <div>
-              <h3 className="mb-3 text-base font-semibold text-foreground">
-                Major Areas
+              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+                <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
               </h3>
               <Card className="p-0">
                 <ul className="divide-y divide-border">
@@ -268,7 +268,7 @@ export function ArchitectureContent({
 
       <section id="gaps">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <GitCommitHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
+          <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
         </h2>
         <GapsList
           gaps={lore.gaps}

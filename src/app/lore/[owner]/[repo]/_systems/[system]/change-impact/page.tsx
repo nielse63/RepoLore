@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Copy, Download } from "lucide-react";
+import { AlertTriangle, Ban, Copy, Download, Eye } from "lucide-react";
 import { TopBar } from "@/components/lore-shell/TopBar";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
@@ -145,7 +145,8 @@ export default async function ChangeImpactPage({
 
         <section>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
-            Likely affected
+            <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Likely
+            affected
           </h2>
           <Card className="p-0">
             <ul className="divide-y divide-border">
@@ -171,8 +172,8 @@ export default async function ChangeImpactPage({
         </section>
 
         <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-            Review recommended
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+            <Eye className="h-4 w-4" aria-hidden="true" /> Review recommended
           </h2>
           <p className="-mt-2 mb-3 text-sm text-muted">
             Lower-confidence or indirect relationships.
@@ -201,8 +202,9 @@ export default async function ChangeImpactPage({
         </section>
 
         <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-            Unrelated in current evidence
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+            <Ban className="h-4 w-4" aria-hidden="true" /> Unrelated in current
+            evidence
           </h2>
           <Card>
             <p className="text-sm text-muted">No relevant connections found.</p>
