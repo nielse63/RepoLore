@@ -20,6 +20,11 @@ describe("isTestFile", () => {
     expect(isTestFile("tests/foo.js")).toBe(true);
   });
 
+  it("recognizes files under a top-level e2e/ directory, spec suffix or not", () => {
+    expect(isTestFile("e2e/home.spec.ts")).toBe(true);
+    expect(isTestFile("e2e/coverage.ts")).toBe(true);
+  });
+
   it("is false for ordinary implementation files", () => {
     expect(isTestFile("src/math.ts")).toBe(false);
   });
@@ -105,6 +110,41 @@ describe("extractTestRelationships", () => {
     });
   });
 
+  it("does not report an e2e spec's import of a sibling e2e helper as an implementation match", () => {
+    // Reproduces a real false positive against this repo's own e2e/: a spec
+    // importing a fixture/harness helper under the same e2e/ directory (not
+    // named *.test./*.spec., so previously fell through to "implementation
+    // file") must not be treated as the thing the spec tests.
+    const project = makeProject();
+    project.createSourceFile("/root/e2e/coverage.ts", "");
+    project.createSourceFile(
+      "/root/e2e/home.spec.ts",
+      "import { test } from './coverage';"
+    );
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      project.getSourceFiles(),
+      "/root"
+    );
+
+    // Neither file resolves to an implementation match — coverage.ts is now
+    // itself recognized as a test-support file (not home.spec.ts's subject),
+    // and it has no implementation of its own to match either, so it
+    // honestly gets its own unknown gap too, the same as any other
+    // unmatched file under a recognized test root.
+    expect(testRelationships).toEqual([]);
+    expect(gaps).toHaveLength(2);
+    expect(gaps.map((g) => g.location?.filePath).sort()).toEqual([
+      "e2e/coverage.ts",
+      "e2e/home.spec.ts",
+    ]);
+    expect(
+      gaps.every(
+        (g) => g.certainty === "unknown" && g.description.includes("e2e spec")
+      )
+    ).toBe(true);
+  });
+
   it("records an unknown gap when no implementation can be matched", () => {
     const project = makeProject();
     project.createSourceFile("/root/src/orphan.test.ts", "");
@@ -116,6 +156,10 @@ describe("extractTestRelationships", () => {
 
     expect(testRelationships).toEqual([]);
     expect(gaps).toHaveLength(1);
-    expect(gaps[0].certainty).toBe("unknown");
+    expect(gaps[0]).toMatchObject({
+      certainty: "unknown",
+      description:
+        "Could not determine which implementation file 'src/orphan.test.ts' tests.",
+    });
   });
 });

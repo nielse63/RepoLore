@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { ChevronRight, Copy, ExternalLink, ShieldCheck } from "lucide-react";
+import {
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  FileText,
+  Package,
+  ShieldCheck,
+  Star,
+} from "lucide-react";
 import { TopBar } from "@/components/lore-shell/TopBar";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
@@ -175,8 +183,8 @@ export default function SearchPage() {
 
           <div className="min-w-0 flex-1">
             <section>
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-                Best match
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+                <Star className="h-4 w-4" aria-hidden="true" /> Best match
               </h2>
               <Card>
                 <div className="flex items-start gap-3">
@@ -202,8 +210,8 @@ export default function SearchPage() {
             </section>
 
             <section className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-                Systems (2)
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+                <Package className="h-4 w-4" aria-hidden="true" /> Systems (2)
               </h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[paymentService, worker].map((system) => {
@@ -235,8 +243,8 @@ export default function SearchPage() {
             </section>
 
             <section className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-                Evidence (8)
+              <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+                <FileText className="h-4 w-4" aria-hidden="true" /> Evidence (8)
               </h2>
               <div className="flex flex-col gap-3">
                 {FILE_RESULTS.map((r) => (

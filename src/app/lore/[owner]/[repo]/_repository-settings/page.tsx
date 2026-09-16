@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Files, FolderGit2, RotateCw, Type } from "lucide-react";
 import { TopBar } from "@/components/lore-shell/TopBar";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
@@ -152,7 +152,8 @@ export default function RepositorySettingsPage() {
             {section === "General" && (
               <div className="flex flex-col gap-6">
                 <Card>
-                  <h2 className="text-base font-semibold text-foreground">
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <FolderGit2 className="h-4 w-4" aria-hidden="true" />{" "}
                     Repository
                   </h2>
                   <div className="mt-2 divide-y divide-border">
@@ -181,7 +182,8 @@ export default function RepositorySettingsPage() {
                 </Card>
 
                 <Card>
-                  <h2 className="text-base font-semibold text-foreground">
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <RotateCw className="h-4 w-4" aria-hidden="true" />{" "}
                     Automatic analysis
                   </h2>
                   <div className="mt-2 divide-y divide-border">
@@ -194,8 +196,8 @@ export default function RepositorySettingsPage() {
                 </Card>
 
                 <Card>
-                  <h2 className="text-base font-semibold text-foreground">
-                    Content
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Files className="h-4 w-4" aria-hidden="true" /> Content
                   </h2>
                   <div className="mt-2 divide-y divide-border">
                     <ToggleRow
@@ -216,8 +218,8 @@ export default function RepositorySettingsPage() {
                 </Card>
 
                 <Card>
-                  <h2 className="text-base font-semibold text-foreground">
-                    Display
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                    <Type className="h-4 w-4" aria-hidden="true" /> Display
                   </h2>
                   <div className="mt-4 flex flex-col gap-4">
                     <label className="block">

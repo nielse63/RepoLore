@@ -1,3 +1,5 @@
+import { GapsList } from "@/components/lore-shell/GapsList";
+import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
@@ -8,7 +10,7 @@ import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
-import { Compass, Layers, TestTube2 } from "lucide-react";
+import { Compass, GapHorizontal, Layers, TestTube2 } from "lucide-react";
 
 export interface ArchitectureContentProps {
   lore: Lore;
@@ -67,7 +69,7 @@ export function ArchitectureContent({
         const projectLabel = lore.projects.length > 1 ? project.name : repo;
         return (
           <section key={project.id} className="flex flex-col gap-6">
-            <h2 className="text-lg font-semibold text-foreground">
+            <h2 className="text-lg font-semibold text-foreground font-mono">
               {projectLabel}
             </h2>
 
@@ -117,8 +119,8 @@ export function ArchitectureContent({
             </Card>
 
             <div>
-              <h3 className="mb-3 text-base font-semibold text-foreground">
-                Major Areas
+              <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
+                <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
               </h3>
               <Card className="p-0">
                 <ul className="divide-y divide-border">
@@ -244,46 +246,34 @@ export function ArchitectureContent({
           <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
             <Compass className="h-4 w-4" aria-hidden="true" /> Entry Points
           </h2>
-          <Card className="p-0">
-            <ul className="divide-y divide-border">
-              {lore.entryPoints.map((ep) => (
-                <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
-                  <span className="flex-1 text-sm text-foreground">
-                    <span className="font-medium">{startCase(ep.kind)}</span>{" "}
-                    <SourceLink location={ep.location} sourceUrl={sourceUrl} />
-                  </span>
-                  <CertaintyBadge certainty={ep.certainty} />
-                </li>
-              ))}
-              {lore.entryPoints.length === 0 && (
-                <li className="px-6 py-3 text-sm text-muted">
-                  No entry points detected.
-                </li>
-              )}
-            </ul>
-          </Card>
+          <PaginatedList
+            items={lore.entryPoints.map((ep) => (
+              <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
+                <span className="flex-1 text-sm text-foreground">
+                  <span className="font-medium">{startCase(ep.kind)}</span>{" "}
+                  <SourceLink location={ep.location} sourceUrl={sourceUrl} />
+                </span>
+                <CertaintyBadge certainty={ep.certainty} />
+              </li>
+            ))}
+            storageKey={`entry-points-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
+            emptyState={
+              <li className="px-6 py-3 text-sm text-muted">
+                No entry points detected.
+              </li>
+            }
+          />
         </section>
       )}
 
       <section id="gaps">
-        <h2 className="mb-3 text-lg font-semibold text-foreground">Gaps</h2>
-        {lore.gaps.length === 0 ? (
-          <p className="text-sm text-muted">None.</p>
-        ) : (
-          <Card className="p-0">
-            <ul className="divide-y divide-border">
-              {lore.gaps.map((gap, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 px-6 py-3 text-sm justify-between"
-                >
-                  <CertaintyBadge certainty={gap.certainty} />
-                  <span className="text-foreground">{gap.description}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+          <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
+        </h2>
+        <GapsList
+          gaps={lore.gaps}
+          storageKey={`gaps-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
+        />
       </section>
 
       <section id="test-relationships">
@@ -291,29 +281,28 @@ export function ArchitectureContent({
           <TestTube2 className="h-4 w-4" aria-hidden="true" /> Test
           Relationships
         </h2>
-        <Card className="p-0">
-          <ul className="divide-y divide-border">
-            {lore.testRelationships.map((tr) => (
-              <li
-                key={tr.id}
-                className="flex flex-wrap items-center gap-2 px-6 py-3 text-sm"
-              >
-                <CertaintyBadge certainty={tr.certainty} />
-                <SourceLink location={tr.testLocation} sourceUrl={sourceUrl} />
-                <span className="text-muted">tests</span>
-                <SourceLink
-                  location={tr.implementationLocation}
-                  sourceUrl={sourceUrl}
-                />
-              </li>
-            ))}
-            {lore.testRelationships.length === 0 && (
-              <li className="px-6 py-3 text-sm text-muted">
-                No test relationships detected.
-              </li>
-            )}
-          </ul>
-        </Card>
+        <PaginatedList
+          items={lore.testRelationships.map((tr) => (
+            <li
+              key={tr.id}
+              className="flex flex-wrap items-center gap-2 px-6 py-3 text-sm"
+            >
+              <CertaintyBadge certainty={tr.certainty} />
+              <SourceLink location={tr.testLocation} sourceUrl={sourceUrl} />
+              <span className="text-muted">tests</span>
+              <SourceLink
+                location={tr.implementationLocation}
+                sourceUrl={sourceUrl}
+              />
+            </li>
+          ))}
+          storageKey={`test-relationships-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
+          emptyState={
+            <li className="px-6 py-3 text-sm text-muted">
+              No test relationships detected.
+            </li>
+          }
+        />
       </section>
     </div>
   );

@@ -1,9 +1,9 @@
 "use client";
 
+import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
 import { FolderGit2 } from "lucide-react";
 import { useActionState } from "react";
-import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
 
 const initialState: ResolveRepositoryState = { status: "idle" };
 
@@ -74,16 +74,6 @@ export function HomeContent() {
             <strong>Error:</strong> {state.message}
           </p>
         )}
-
-        <p className="mt-4 text-sm text-muted">
-          Works with any public GitHub repository — submitting analyzes it
-          automatically and takes you straight to its results.
-        </p>
-        <p className="mt-8 max-w-xl text-sm text-muted">
-          You&apos;ll get an evidence-backed Overview, Architecture,
-          Dependencies, Data Flow, and History for the repository — every claim
-          links back to the exact source it came from.
-        </p>
       </main>
     </div>
   );

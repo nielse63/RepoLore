@@ -16,7 +16,12 @@ import { githubBlobUrl } from "@/github/urls";
 import type { HistoryChangeKind, HistoryEntry } from "@/history/model";
 import { formatPath } from "@/lib/format-path";
 import type { Lore } from "@/lore/model";
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 const KIND_FILTERS: { value: HistoryChangeKind | "all"; label: string }[] = [
@@ -305,8 +310,8 @@ export function HistoryContent({
           if (groupEntries.length === 0) return null;
           return (
             <section key={group} className="mb-6">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-                {group}
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted">
+                <Calendar className="h-4 w-4" aria-hidden="true" /> {group}
               </h2>
               <Card className="p-0">
                 <ul className="divide-y divide-border">

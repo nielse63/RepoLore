@@ -22,7 +22,7 @@ See `docs/product/mvp.md` for the full MVP specification, `docs/product/mission.
 
 ## Design system and UI routes
 
-The UI is built with Tailwind CSS v4 (`src/app/globals.css` defines the color/font tokens as CSS custom properties, themed for light and dark via `prefers-color-scheme`) plus a handful of Radix UI primitives (`@radix-ui/react-tabs`, `-switch`) for accessible tab and toggle behavior, and `lucide-react` for icons. Reusable design-system components live in `src/components/ui/` (Card, Badge, IconTile, Button, Tabs, Table, SearchInput, FilterPills, StepList, …) and the shared `/lore/{owner}/{repo}` page shell (Sidebar, TopBar, RepoIdentity, RightRailShell, LorePageFrame) lives in `src/components/lore-shell/`. Headings use a serif display font (Source Serif 4) paired with Geist Sans for UI text, matching `docs/designs/`.
+The UI is built with Tailwind CSS v4 (`src/app/globals.css` defines the color/font tokens as CSS custom properties, themed for light and dark via `prefers-color-scheme`) plus a handful of Radix UI primitives (`@radix-ui/react-tabs`, `-switch`) for accessible tab and toggle behavior, and `lucide-react` for icons. Reusable design-system components live in `src/components/ui/` (Card, Badge, IconTile, Button, Tabs, Table, SearchInput, FilterPills, StepList, Pagination, …) and the shared `/lore/{owner}/{repo}` page shell (Sidebar, TopBar, RepoIdentity, RightRailShell, LorePageFrame) lives in `src/components/lore-shell/`. Headings use a serif display font (Source Serif 4) paired with Geist Sans for UI text, matching `docs/designs/`.
 
 Every view from `docs/designs/` has a route under `/lore/{owner}/{repo}/`:
 
