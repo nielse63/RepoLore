@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { RotateCw } from "lucide-react";
 import { reanalyzeRepository, type ReanalyzeState } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/cn";
 
 const initialState: ReanalyzeState = { status: "idle" };
 
@@ -28,7 +29,10 @@ export function ReanalyzeButton({
   return (
     <form action={formAction} className="flex flex-col items-end gap-2">
       <Button type="submit" variant="secondary" disabled={isPending}>
-        <RotateCw className="h-4 w-4" aria-hidden="true" />
+        <RotateCw
+          className={cn("h-4 w-4", isPending && "animate-spin")}
+          aria-hidden="true"
+        />
         {isPending ? "Re-analyzing…" : "Re-analyze"}
       </Button>
       {state.status === "done" && (

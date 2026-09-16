@@ -62,6 +62,38 @@ test("shows an honest inline error for a non-GitHub URL", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("shows a staged loading view while the Server Action is pending", async ({
+  page,
+}) => {
+  // Delays the browser's dispatch of the form's POST (the Server Action
+  // invocation) so the pending window is long enough to assert against,
+  // without needing GITHUB_TOKEN/a database — the delay happens before the
+  // request ever reaches the server, so this works regardless of which
+  // branch (validation error vs. real analysis) handles it.
+  await page.route("/", async (route) => {
+    if (route.request().method() === "POST") {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+    await route.continue();
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Analyze repository" }).click();
+
+  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page.getByText("Fetching repository source…")).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Understand any codebase with confidence.",
+    })
+  ).toBeHidden();
+
+  // Resolves back to the form with the pre-analysis validation error, since
+  // this test submits an empty URL.
+  await expect(page.getByText("A GitHub URL is required.")).toBeVisible();
+  await expect(page.getByRole("status")).toBeHidden();
+});
+
 test("focuses the repository URL input on page load", async ({ page }) => {
   await page.goto("/");
 
