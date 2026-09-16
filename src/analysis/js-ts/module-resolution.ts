@@ -5,10 +5,10 @@
  * resolution (e.g. tsconfig `paths`) is deferred to implementation session 6.
  */
 
-import path from 'node:path';
-import type { SourceFile } from 'ts-morph';
+import path from "node:path";
+import type { SourceFile } from "ts-morph";
 
-const RESOLVABLE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'];
+const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 
 export interface ModuleResolutionIndex {
   resolve(
@@ -45,12 +45,12 @@ export function buildModuleResolutionIndex(
 }
 
 export function isRelativeSpecifier(specifier: string): boolean {
-  return specifier.startsWith('./') || specifier.startsWith('../');
+  return specifier.startsWith("./") || specifier.startsWith("../");
 }
 
 /** Heuristic for an unresolved path-alias-style specifier, e.g. "@/components/Header". */
 export function looksLikePathAlias(specifier: string): boolean {
-  return specifier.startsWith('@/');
+  return specifier.startsWith("@/");
 }
 
 /**
@@ -64,28 +64,28 @@ export function looksLikePathAlias(specifier: string): boolean {
  * limitation.
  */
 const ASSET_EXTENSIONS = [
-  '.css',
-  '.scss',
-  '.sass',
-  '.less',
-  '.svg',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.webp',
-  '.ico',
-  '.bmp',
-  '.woff',
-  '.woff2',
-  '.ttf',
-  '.eot',
-  '.otf',
-  '.mp4',
-  '.mp3',
-  '.wav',
-  '.webm',
-  '.pdf',
+  ".css",
+  ".scss",
+  ".sass",
+  ".less",
+  ".svg",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".ico",
+  ".bmp",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".eot",
+  ".otf",
+  ".mp4",
+  ".mp3",
+  ".wav",
+  ".webm",
+  ".pdf",
 ];
 
 export function looksLikeAssetImport(specifier: string): boolean {

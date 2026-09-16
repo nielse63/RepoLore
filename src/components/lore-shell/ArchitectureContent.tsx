@@ -12,6 +12,7 @@ import { Compass, Layers, TestTube2 } from "lucide-react";
 
 export interface ArchitectureContentProps {
   lore: Lore;
+  repo: string;
   sourceUrl?: (location: SourceLocation) => string;
   areaUrl?: (location: SourceLocation) => string;
 }
@@ -28,6 +29,7 @@ export interface ArchitectureContentProps {
  */
 export function ArchitectureContent({
   lore,
+  repo,
   sourceUrl,
   areaUrl = sourceUrl,
 }: ArchitectureContentProps) {
@@ -56,13 +58,18 @@ export function ArchitectureContent({
         const projectAreas = lore.structuralAreas.filter(
           (area) => area.projectId === project.id && area.name !== "."
         );
+        // A single-project repo's `project.name` falls back to the
+        // extraction directory's basename when `package.json` has no
+        // `"name"` — always the internal literal "source"
+        // (`extract-tarball.ts`), not a name worth surfacing. The repo name
+        // is meaningful in every case; the package name only adds
+        // information when there's more than one project to distinguish.
+        const projectLabel = lore.projects.length > 1 ? project.name : repo;
         return (
           <section key={project.id} className="flex flex-col gap-6">
-            {lore.projects.length > 1 && (
-              <h2 className="text-lg font-semibold text-foreground">
-                {project.name}
-              </h2>
-            )}
+            <h2 className="text-lg font-semibold text-foreground">
+              {projectLabel}
+            </h2>
 
             <Card>
               <div className="flex items-start gap-3">
@@ -73,7 +80,7 @@ export function ArchitectureContent({
                       location={{ filePath: project.rootPath }}
                       sourceUrl={areaUrl}
                     >
-                      {project.name}
+                      {projectLabel}
                     </SourceLink>
                   </CardTitle>
                   <CardDescription className="mt-1">

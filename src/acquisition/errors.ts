@@ -1,10 +1,10 @@
 export type AcquisitionErrorCode =
-  | 'github-error'
-  | 'tarball-too-large'
-  | 'extracted-too-large'
-  | 'too-many-files'
-  | 'unsafe-entry'
-  | 'timeout';
+  | "github-error"
+  | "tarball-too-large"
+  | "extracted-too-large"
+  | "too-many-files"
+  | "unsafe-entry"
+  | "timeout";
 
 /**
  * Thrown for any failure in fetching or safely extracting a repository's
@@ -16,7 +16,7 @@ export class AcquisitionError extends Error {
 
   constructor(code: AcquisitionErrorCode, message: string) {
     super(message);
-    this.name = 'AcquisitionError';
+    this.name = "AcquisitionError";
     this.code = code;
   }
 }

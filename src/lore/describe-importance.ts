@@ -1,6 +1,6 @@
 /**
  * Human-readable text for a structured `ImportanceReason` (ADR-0013, prompt
- * §13) — the "why it matters" bullet list `CallGraphContent.tsx`'s detail
+ * §13) — the "why it matters" bullet list `DataFlowContent.tsx`'s detail
  * panel renders for a focused function's importance score. Kept separate
  * from the component so the same descriptions can be reused by a future
  * non-UI surface (e.g. a CLI/debug dump) without pulling in React.

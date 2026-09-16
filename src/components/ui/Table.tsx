@@ -1,4 +1,4 @@
-import { cn } from '@/lib/cn';
+import { cn } from "@/lib/cn";
 
 export function Table({
   className,
@@ -7,7 +7,7 @@ export function Table({
   return (
     <div className="overflow-x-auto">
       <table
-        className={cn('w-full border-collapse text-sm', className)}
+        className={cn("w-full border-collapse text-sm", className)}
         {...props}
       />
     </div>
@@ -19,7 +19,7 @@ export function Thead({
   ...props
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <thead className={cn('border-b border-border', className)} {...props} />
+    <thead className={cn("border-b border-border", className)} {...props} />
   );
 }
 
@@ -31,7 +31,7 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        'px-3 py-2 text-left text-xs font-medium text-muted',
+        "px-3 py-2 text-left text-sm font-medium text-muted",
         className
       )}
       {...props}
@@ -45,7 +45,7 @@ export function Tr({
 }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn('border-b border-border last:border-0', className)}
+      className={cn("border-b border-border last:border-0", className)}
       {...props}
     />
   );
@@ -57,7 +57,7 @@ export function Td({
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn('px-3 py-3 align-top text-foreground', className)}
+      className={cn("px-3 py-3 align-top text-foreground", className)}
       {...props}
     />
   );

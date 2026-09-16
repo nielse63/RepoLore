@@ -73,7 +73,7 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground"
+        className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground"
       >
         {label}
         <Icon
@@ -121,6 +121,7 @@ export function DependenciesContent({
   lore,
   repoIdentity,
 }: DependenciesContentProps) {
+  const [tab, setTab] = useState<"external" | "internal">("external");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<{
     column: SortColumn;
@@ -247,7 +248,7 @@ export function DependenciesContent({
                       )}
                       <CertaintyBadge certainty={evidence.certainty} />
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">
+                    <p className="mt-0.5 text-sm text-muted">
                       {evidence.description}
                     </p>
                   </li>
@@ -262,7 +263,7 @@ export function DependenciesContent({
                   {selected.gaps.map((gap, i) => (
                     <li key={i} className="text-sm">
                       <CertaintyBadge certainty={gap.certainty} />
-                      <p className="mt-1 text-xs text-muted">
+                      <p className="mt-1 text-sm text-muted">
                         {gap.description}
                       </p>
                     </li>
@@ -282,15 +283,33 @@ export function DependenciesContent({
           What this repository relies on, and where those dependencies are used.
         </p>
 
-        <Tabs defaultValue="external" className="mt-6">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as typeof tab)}
+          className="mt-6"
+        >
           <TabsList>
-            <TabsTrigger value="external">External</TabsTrigger>
-            <TabsTrigger value="internal">Internal</TabsTrigger>
+            <TabsTrigger
+              value="external"
+              tabIndex={tab === "external" ? 0 : -1}
+            >
+              External
+            </TabsTrigger>
+            <TabsTrigger
+              value="internal"
+              tabIndex={tab === "internal" ? 0 : -1}
+            >
+              Internal
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="external">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label htmlFor="dependency-search" className="sr-only">
+                Search dependencies
+              </label>
               <SearchInput
+                id="dependency-search"
                 placeholder="Search dependencies…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -298,7 +317,8 @@ export function DependenciesContent({
                 className="sm:max-w-xs"
               />
               <p className="text-sm text-muted">
-                {filtered.length} dependencies
+                {filtered.length}{" "}
+                {filtered.length === 1 ? "dependency" : "dependencies"}
               </p>
             </div>
 
@@ -336,24 +356,29 @@ export function DependenciesContent({
                       <Tr
                         key={dep.id}
                         onClick={() => setSelectedId(dep.id)}
-                        aria-current={active ? "true" : undefined}
-                        className={
-                          "cursor-pointer " +
-                          (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
-                        }
+                        className={cn(
+                          "cursor-pointer",
+                          active ? "bg-tile-core-bg/40" : "hover:bg-border/10"
+                        )}
                       >
                         <Td>
-                          <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedId(dep.id)}
+                            aria-current={active ? "true" : undefined}
+                            aria-label={`View ${dep.name} dependency details`}
+                            className="flex items-center gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-primary"
+                          >
                             <IconTile icon={Icon} variant="neutral" size="sm" />
-                            <p className="font-medium text-foreground">
+                            <span className="font-medium text-foreground">
                               {dep.name}
-                            </p>
-                          </div>
+                            </span>
+                          </button>
                         </Td>
                         <Td>
                           <Badge>{SCOPE_LABEL[dep.scope]}</Badge>
                         </Td>
-                        <Td className="font-mono text-xs">
+                        <Td className="font-mono text-sm">
                           {dep.declaredVersion ?? "—"}
                         </Td>
                         <Td>

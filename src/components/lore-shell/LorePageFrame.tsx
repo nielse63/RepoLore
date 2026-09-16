@@ -11,7 +11,11 @@ export function LorePageFrame({
     <div className="flex min-w-0 flex-1 flex-col">
       {topBar}
       <div className="flex min-h-0 flex-1">
-        <main className="min-w-0 flex-1 overflow-y-auto px-8 py-8">
+        <main
+          id="lore-main-content"
+          tabIndex={-1}
+          className="min-w-0 flex-1 overflow-y-auto px-8 py-8"
+        >
           {children}
         </main>
         {rightRail}

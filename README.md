@@ -31,6 +31,8 @@ Every view from `docs/designs/` has a route under `/lore/{owner}/{repo}/`:
 - **Deliberately not built:** `evidence-library.png` (inconsistent with the rest of the design set; deferred for later reconciliation, per product direction).
 - **Built, then pulled from navigation:** `systems` (list, `systems/{system}` detail, and `systems/{system}/change-impact`, including the `change-impact` view that mirrors a capability explicitly excluded from the MVP per `docs/product/mvp.md`, "Explicit MVP Exclusions") is deferred as a future feature. The Sidebar link is commented out, and the scaffolded pages still exist for reference under `src/app/lore/[owner]/[repo]/_systems/` — the `_` prefix excludes them from Next.js routing. `/lore/{owner}/{repo}/systems` and everything under it now resolve through a catch-all stub (`systems/[[...slug]]/page.tsx`) that calls `notFound()`, rendering the app-wide branded 404 page (`src/app/not-found.tsx`).
 
+Every repository route now has its own `generateMetadata` (unique `<title>`, description, self-referencing canonical, Open Graph/Twitter cards, `noindex, follow`), a skip-to-content link, named landmark regions, and a corrected heading hierarchy, following an external UX/SEO/accessibility audit — see `docs/architecture/ux-seo-a11y-remediation-plan.md` for the audit's accuracy review, what was fixed, and what's still open (a seeded-database Playwright fixture for these routes doesn't exist yet).
+
 ## Local development
 
 ```

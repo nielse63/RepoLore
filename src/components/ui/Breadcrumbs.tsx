@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 export interface Crumb {
   label: string;
@@ -25,8 +25,8 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
               </Link>
             ) : (
               <span
-                className={isLast ? 'text-foreground' : undefined}
-                aria-current={isLast ? 'page' : undefined}
+                className={isLast ? "text-foreground" : undefined}
+                aria-current={isLast ? "page" : undefined}
               >
                 {item.label}
               </span>

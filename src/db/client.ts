@@ -4,7 +4,7 @@
  * reuse one pool instead of opening a fresh connection per call.
  */
 
-import { Pool } from 'pg';
+import { Pool } from "pg";
 
 let pool: Pool | undefined;
 
@@ -14,7 +14,7 @@ export function getDbPool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error(
-      'No DATABASE_URL is configured. Set DATABASE_URL in .env.local (see .env.example).'
+      "No DATABASE_URL is configured. Set DATABASE_URL in .env.local (see .env.example)."
     );
   }
 

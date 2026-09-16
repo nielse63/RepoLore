@@ -16,7 +16,7 @@ import { githubBlobUrl } from "@/github/urls";
 import type { HistoryChangeKind, HistoryEntry } from "@/history/model";
 import { formatPath } from "@/lib/format-path";
 import type { Lore } from "@/lore/model";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 
 const KIND_FILTERS: { value: HistoryChangeKind | "all"; label: string }[] = [
@@ -32,17 +32,27 @@ const KIND_LABEL: Record<HistoryChangeKind, string> = {
   "data-flow": "Data flow change",
 };
 
+// Bucketing and every rendered date/time below use UTC explicitly, not the
+// host's local timezone. This component renders once on the server (UTC on
+// Render) and again during hydration (the viewer's local timezone); an
+// unpinned `Date#getMonth`/`toLocaleString` call can disagree between the
+// two and trip React's hydration mismatch error (#418) — the same failure
+// mode `nowIso` (see HistoryContentProps) fixes for the "now" value itself.
 function bucketFor(occurredAt: string, now: Date): string {
   const date = new Date(occurredAt);
   const diffDays = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
   if (diffDays < 7) return "This week";
   if (
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
+    date.getUTCMonth() === now.getUTCMonth() &&
+    date.getUTCFullYear() === now.getUTCFullYear()
   ) {
     return "Earlier this month";
   }
-  return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+  return date.toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function startOfDay(date: Date): Date {
@@ -81,6 +91,16 @@ export interface HistoryContentProps {
   /** The analyzed commit SHA — used to build GitHub source links client-side (`githubBlobUrl` is a pure string builder, safe here). */
   commitSha?: string;
   lore: Lore;
+  /**
+   * Reference "now" as an ISO string computed once, server-side, in
+   * `history/page.tsx`. Constructing `new Date()` directly in this Client
+   * Component would run once during SSR and again during hydration with a
+   * different (client) clock value, which is exactly the non-deterministic
+   * render React's hydration diffing can't tolerate (minified error #418).
+   * Deriving `now` from a value the server already committed to the HTML
+   * keeps the SSR and hydration renders identical.
+   */
+  nowIso: string;
 }
 
 export function HistoryContent({
@@ -91,10 +111,11 @@ export function HistoryContent({
   repoIdentity,
   commitSha,
   lore,
+  nowIso,
 }: HistoryContentProps) {
   const [kind, setKind] = useState<HistoryChangeKind | "all">("all");
   const [selectedId, setSelectedId] = useState(entries[0]?.id);
-  const now = useMemo(() => new Date(), []);
+  const now = useMemo(() => new Date(nowIso), [nowIso]);
   const defaultRange = useMemo<DateRange>(
     () => ({
       from: new Date(now.getTime() - HISTORY_LOOKBACK_DAYS * 86_400_000),
@@ -195,12 +216,17 @@ export function HistoryContent({
                     })}
                     target="_blank"
                     rel="noreferrer"
-                    className="font-mono text-xs text-primary underline"
+                    className="inline-flex items-center gap-1 font-mono text-sm text-primary underline"
                   >
                     {formatPath(selected.primaryFilePath)}
+                    <ExternalLink
+                      className="h-3 w-3 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 ) : (
-                  <p className="font-mono text-xs text-foreground">
+                  <p className="font-mono text-sm text-foreground">
                     {formatPath(selected.primaryFilePath)}
                   </p>
                 )}
@@ -253,7 +279,7 @@ export function HistoryContent({
         </div>
 
         {truncated && (
-          <p className="mb-4 text-xs text-muted">
+          <p className="mb-4 text-sm text-muted">
             More commits exist in this window than could be inspected — showing
             the most recent commits only.
           </p>
@@ -310,12 +336,14 @@ export function HistoryContent({
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
+                                timeZone: "UTC",
                               })}
                             </p>
-                            <p className="text-xs text-muted">
+                            <p className="text-sm text-muted">
                               {date.toLocaleTimeString("en-US", {
                                 hour: "numeric",
                                 minute: "2-digit",
+                                timeZone: "UTC",
                               })}
                             </p>
                           </div>
@@ -326,7 +354,7 @@ export function HistoryContent({
                             <p className="mt-0.5 text-sm text-muted">
                               {entry.summary}
                             </p>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
                               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-border/60 text-[10px] font-semibold text-foreground">
                                 {authorInitials(authorCommit.authorName)}
                               </span>

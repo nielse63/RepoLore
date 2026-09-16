@@ -1,4 +1,4 @@
-import { getDbPool } from './client';
+import { getDbPool } from "./client";
 
 export interface RepoRow {
   id: number;

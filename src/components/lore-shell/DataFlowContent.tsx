@@ -81,7 +81,7 @@ const SORTS = [
 const LIST_CAP = 200;
 const SEARCH_MATCH_CAP = 20;
 
-export interface CallGraphContentProps {
+export interface DataFlowContentProps {
   owner: string;
   repo: string;
   lore: Lore;
@@ -106,12 +106,12 @@ export interface CallGraphContentProps {
  * picks the focus function; clicking any step, list row, or diagram node
  * re-focuses (the "drilldown" requirement) rather than navigating away.
  */
-export function CallGraphContent({
+export function DataFlowContent({
   owner,
   repo,
   lore,
   repoIdentity,
-}: CallGraphContentProps) {
+}: DataFlowContentProps) {
   const { callableSignatures, callEdges, functionImportance, behaviorNodes } =
     lore;
   const [query, setQuery] = useState("");
@@ -468,19 +468,23 @@ export function CallGraphContent({
                 />
               )}
             </div>
-            <span className="text-xs text-muted">
+            <span className="text-sm text-muted">
               Derived from {totalReferences} references
             </span>
           </div>
         </div>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-sm text-muted">
           Method calls, callbacks, and dynamic dispatch aren&apos;t resolved —
           real repositories dominated by these call shapes will show sparser
           graphs than reading the code directly would suggest.
         </p>
 
         <div className="mt-6">
+          <label htmlFor="function-search" className="sr-only">
+            Search functions
+          </label>
           <SearchInput
+            id="function-search"
             placeholder="Search functions…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -544,7 +548,7 @@ export function CallGraphContent({
               )}
             </ul>
             {listItems.length > LIST_CAP && (
-              <p className="border-t border-border px-6 py-3 text-center text-xs text-muted">
+              <p className="border-t border-border px-6 py-3 text-center text-sm text-muted">
                 Showing the first {LIST_CAP} of {listItems.length} matching
                 functions — refine your search to narrow the list.
               </p>
@@ -579,7 +583,7 @@ export function CallGraphContent({
           </Card>
         ) : !focus ? (
           <Card className="mt-6 p-6 text-center text-sm text-muted">
-            No named functions were detected. Call graph analysis currently
+            No named functions were detected. Data Flow analysis currently
             covers JavaScript and TypeScript projects only.
           </Card>
         ) : (

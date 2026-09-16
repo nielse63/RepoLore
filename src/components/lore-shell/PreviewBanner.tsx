@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react';
+import { Info } from "lucide-react";
 
 /** Marks a page as example/placeholder content — see docs/product/mvp.md's MVP exclusions. */
 export function PreviewBanner({ children }: { children: React.ReactNode }) {

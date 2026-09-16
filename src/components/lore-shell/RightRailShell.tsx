@@ -1,7 +1,7 @@
 "use client";
 
 import { PanelRightOpen, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export function RightRailShell({
   title,
@@ -11,6 +11,7 @@ export function RightRailShell({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(true);
+  const headingId = useId();
 
   if (!open) {
     return (
@@ -31,9 +32,12 @@ export function RightRailShell({
     <aside
       className="sticky top-0 hidden max-h-dvh w-[360px] shrink-0 flex-col border-l border-border bg-surface lg:flex"
       id="right-rail"
+      aria-labelledby={headingId}
     >
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <h2 id={headingId} className="text-lg font-semibold text-foreground">
+          {title}
+        </h2>
         <button
           type="button"
           onClick={() => setOpen(false)}

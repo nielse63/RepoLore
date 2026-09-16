@@ -10,14 +10,14 @@
  * a partial, misleading analysis.
  */
 
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import * as tar from 'tar';
-import { AcquisitionError } from './errors';
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import * as tar from "tar";
+import { AcquisitionError } from "./errors";
 
 export interface ExtractionLimits {
   /** Hard cap on the gzip-compressed tarball download, in bytes. */
@@ -41,7 +41,7 @@ export const DEFAULT_EXTRACTION_LIMITS: ExtractionLimits = {
   maxFileCount: 20_000,
 };
 
-const ALLOWED_ENTRY_TYPES = new Set(['File', 'Directory']);
+const ALLOWED_ENTRY_TYPES = new Set(["File", "Directory"]);
 
 function byteLimiter(maxBytes: number, buildError: () => Error): Transform {
   let total = 0;
@@ -76,7 +76,7 @@ async function downloadTarball(
     maxBytes,
     () =>
       new AcquisitionError(
-        'tarball-too-large',
+        "tarball-too-large",
         `Tarball download exceeded the ${maxBytes}-byte limit.`
       )
   );
@@ -88,7 +88,7 @@ async function downloadTarball(
     await fsp.rm(destPath, { force: true });
     if (
       error instanceof Error &&
-      error.name === 'AbortError' &&
+      error.name === "AbortError" &&
       signal?.reason instanceof Error
     ) {
       throw signal.reason;
@@ -129,9 +129,9 @@ async function extractSafely(
       if (violation) return false;
       const entry = rawEntry as unknown as { type?: string; size?: number };
 
-      if (!ALLOWED_ENTRY_TYPES.has(entry.type ?? '')) {
+      if (!ALLOWED_ENTRY_TYPES.has(entry.type ?? "")) {
         violation = new AcquisitionError(
-          'unsafe-entry',
+          "unsafe-entry",
           `Tarball entry "${entryPath}" has an unsupported type (${entry.type}); only regular files and directories are allowed.`
         );
         return false;
@@ -140,25 +140,25 @@ async function extractSafely(
       const resolved = path.resolve(destDir, entryPath);
       if (resolved !== destDir && !resolved.startsWith(destDir + path.sep)) {
         violation = new AcquisitionError(
-          'unsafe-entry',
+          "unsafe-entry",
           `Tarball entry "${entryPath}" resolves outside the extraction directory.`
         );
         return false;
       }
 
-      if (entry.type === 'File') {
+      if (entry.type === "File") {
         fileCount += 1;
         extractedBytes += entry.size ?? 0;
         if (fileCount > limits.maxFileCount) {
           violation = new AcquisitionError(
-            'too-many-files',
+            "too-many-files",
             `Repository has more than ${limits.maxFileCount} files.`
           );
           return false;
         }
         if (extractedBytes > limits.maxExtractedBytes) {
           violation = new AcquisitionError(
-            'extracted-too-large',
+            "extracted-too-large",
             `Repository's extracted size exceeds ${limits.maxExtractedBytes} bytes.`
           );
           return false;
@@ -192,9 +192,9 @@ export async function acquireTarballSource(
   limits: ExtractionLimits = DEFAULT_EXTRACTION_LIMITS,
   signal?: AbortSignal
 ): Promise<AcquiredSource> {
-  const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'repolore-'));
-  const destDir = path.join(workDir, 'source');
-  const tarballPath = path.join(workDir, 'repo.tar.gz');
+  const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), "repolore-"));
+  const destDir = path.join(workDir, "source");
+  const tarballPath = path.join(workDir, "repo.tar.gz");
   const cleanup = () => fsp.rm(workDir, { recursive: true, force: true });
 
   try {

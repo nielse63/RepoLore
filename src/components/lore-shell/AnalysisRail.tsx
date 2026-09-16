@@ -36,7 +36,7 @@ export function AnalysisRail({
                 <dt className="text-muted">
                   <strong>Languages</strong>
                 </dt>
-                <dd className="truncate font-mono text-xs text-foreground">
+                <dd className="truncate font-mono text-sm text-foreground">
                   {project.languages.length > 0 ? (
                     project.languages.map((lang) => (
                       <Badge key={lang}>{lang}</Badge>
@@ -74,7 +74,7 @@ export function AnalysisRail({
           <dt className="text-muted">
             <strong>Commit</strong>
           </dt>
-          <dd className="truncate font-mono text-xs text-foreground">
+          <dd className="truncate font-mono text-sm text-foreground">
             {snapshot.commitSha.slice(0, 7)}
           </dd>
         </div>

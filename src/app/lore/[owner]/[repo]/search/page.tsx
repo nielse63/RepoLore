@@ -47,6 +47,7 @@ export default function SearchPage() {
   const [facet, setFacet] = useState("All");
   const paymentService = SYSTEMS.find((s) => s.slug === "payment-service")!;
   const worker = SYSTEMS.find((s) => s.slug === "worker")!;
+  const [detailTab, setDetailTab] = useState("details");
 
   return (
     <LorePageFrame
@@ -67,10 +68,20 @@ export default function SearchPage() {
       }
       rightRail={
         <RightRailShell title="Payment retries are processed asynchronously">
-          <Tabs defaultValue="details">
+          <Tabs value={detailTab} onValueChange={setDetailTab}>
             <TabsList>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="references">References (7)</TabsTrigger>
+              <TabsTrigger
+                value="details"
+                tabIndex={detailTab === "details" ? 0 : -1}
+              >
+                Details
+              </TabsTrigger>
+              <TabsTrigger
+                value="references"
+                tabIndex={detailTab === "references" ? 0 : -1}
+              >
+                References (7)
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="details">
               <p className="text-sm font-medium text-foreground">Explanation</p>
@@ -117,7 +128,11 @@ export default function SearchPage() {
       }
     >
       <div className="max-w-4xl">
+        <label htmlFor="repo-search" className="sr-only">
+          Search this repository
+        </label>
         <SearchInput
+          id="repo-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onClear={() => setQuery("")}

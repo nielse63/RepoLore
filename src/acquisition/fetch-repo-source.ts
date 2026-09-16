@@ -8,13 +8,13 @@
  * fixtures.
  */
 
-import { fetchRepositoryTarball, resolveRepositoryHead } from '@/github/client';
-import { AcquisitionError } from './errors';
+import { fetchRepositoryTarball, resolveRepositoryHead } from "@/github/client";
+import { AcquisitionError } from "./errors";
 import {
   acquireTarballSource,
   DEFAULT_EXTRACTION_LIMITS,
   type ExtractionLimits,
-} from './extract-tarball';
+} from "./extract-tarball";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -59,7 +59,7 @@ export async function acquireRepositorySource(
   const timer = setTimeout(() => {
     controller.abort(
       new AcquisitionError(
-        'timeout',
+        "timeout",
         `Fetching ${owner}/${repo}@${headSha} took longer than ${timeoutMs}ms.`
       )
     );
@@ -74,7 +74,7 @@ export async function acquireRepositorySource(
     );
     if (!tarballRes.body) {
       throw new AcquisitionError(
-        'github-error',
+        "github-error",
         `GitHub returned an empty tarball body for ${owner}/${repo}@${headSha}.`
       );
     }

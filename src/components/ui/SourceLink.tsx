@@ -1,5 +1,6 @@
 import type { SourceLocation } from "@/lore/model";
 import { formatPath } from "@/lib/format-path";
+import { ExternalLink } from "lucide-react";
 
 export function SourceLink({
   location,
@@ -17,7 +18,7 @@ export function SourceLink({
       : "";
   if (!sourceUrl) {
     return (
-      <code className="rounded bg-border/40 px-1.5 py-0.5 font-mono text-xs text-foreground">
+      <code className="rounded bg-border/40 px-1.5 py-0.5 font-mono text-sm text-foreground">
         {label}
         {lines}
       </code>
@@ -28,10 +29,12 @@ export function SourceLink({
       href={sourceUrl(location)}
       target="_blank"
       rel="noopener noreferrer"
-      className="rounded bg-border/40 px-1.5 py-0.5 font-mono text-xs text-primary hover:underline"
+      className="inline-flex items-center gap-1 rounded bg-border/40 px-1.5 py-0.5 font-mono text-sm text-primary hover:underline"
     >
       {label}
       {lines}
+      <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+      <span className="sr-only"> (opens in a new tab)</span>
     </a>
   );
 }
