@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import {
@@ -12,10 +13,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/Pagination";
 import { getPageItems } from "@/lib/pagination-range";
+import { useFitPageSize } from "@/lib/use-fit-page-size";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import type { Gap } from "@/lore/model";
 
-const PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 25;
 
 export interface GapsListProps {
   gaps: Gap[];
@@ -27,22 +29,29 @@ export interface GapsListProps {
   storageKey: string;
 }
 
-/** Paginated gaps list (25 per page), shared by the Overview and Architecture pages. */
+/**
+ * Paginated gaps list, shared by the Overview and Architecture pages. The
+ * page size defaults to (and never exceeds) 25, but shrinks once, right
+ * after load, to however many rows actually fit on screen without
+ * scrolling — see `useFitPageSize`.
+ */
 export function GapsList({ gaps, storageKey }: GapsListProps) {
-  const pageCount = Math.max(Math.ceil(gaps.length / PAGE_SIZE), 1);
+  const listRef = useRef<HTMLUListElement>(null);
+  const pageSize = useFitPageSize(listRef, MAX_PAGE_SIZE);
+  const pageCount = Math.max(Math.ceil(gaps.length / pageSize), 1);
   const [page, setPage] = usePersistedPage(storageKey, pageCount);
 
   if (gaps.length === 0) {
     return <p className="text-sm text-muted">None.</p>;
   }
 
-  const start = (page - 1) * PAGE_SIZE;
-  const pageGaps = gaps.slice(start, start + PAGE_SIZE);
+  const start = (page - 1) * pageSize;
+  const pageGaps = gaps.slice(start, start + pageSize);
 
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-0">
-        <ul className="divide-y divide-border">
+        <ul ref={listRef} className="divide-y divide-border">
           {pageGaps.map((gap, i) => (
             <li
               key={start + i}
@@ -55,7 +64,7 @@ export function GapsList({ gaps, storageKey }: GapsListProps) {
         </ul>
       </Card>
 
-      {gaps.length > PAGE_SIZE && (
+      {gaps.length > pageSize && (
         <Pagination>
           <PaginationContent>
             <PaginationItem>
