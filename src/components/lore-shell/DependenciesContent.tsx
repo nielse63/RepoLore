@@ -2,6 +2,7 @@
 
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { MAX_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { TopBar } from "@/components/lore-shell/TopBar";
@@ -9,6 +10,15 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
@@ -17,6 +27,9 @@ import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { cn } from "@/lib/cn";
 import { dependencyCategoryIcon } from "@/lib/dependency-category";
 import { formatPath } from "@/lib/format-path";
+import { getPageItems } from "@/lib/pagination-range";
+import { useFitPageSize } from "@/lib/use-fit-page-size";
+import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type {
   ExternalDependency,
@@ -31,7 +44,7 @@ import {
   FileText,
   Link2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const SCOPE_LABEL: Record<ExternalDependencyScope, string> = {
   direct: "Production",
@@ -163,6 +176,28 @@ export function DependenciesContent({
     const sorted = [...matches].sort(compare);
     return sort.direction === "asc" ? sorted : sorted.reverse();
   }, [dependencies, query, sort]);
+
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const pageSize = useFitPageSize(tbodyRef, MAX_PAGE_SIZE);
+  const pageCount = Math.max(Math.ceil(filtered.length / pageSize), 1);
+  const [page, setPage] = usePersistedPage(
+    `dependencies-page:${owner}/${repo}:external`,
+    pageCount
+  );
+  // Reset to page 1 whenever the search or sort actually changes — but not
+  // on the initial mount, which would stomp the page restored from
+  // sessionStorage before the user has touched either control.
+  const skipNextReset = useRef(true);
+  useEffect(() => {
+    if (skipNextReset.current) {
+      skipNextReset.current = false;
+      return;
+    }
+    setPage(1);
+  }, [query, sort.column, sort.direction, setPage]);
+  const start = (page - 1) * pageSize;
+  const pageFiltered = filtered.slice(start, start + pageSize);
+
   const [selectedId, setSelectedId] = useState(dependencies[0]?.id);
   const selected =
     filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? dependencies[0];
@@ -347,8 +382,8 @@ export function DependenciesContent({
                     />
                   </Tr>
                 </Thead>
-                <tbody>
-                  {filtered.map((dep) => {
+                <tbody ref={tbodyRef}>
+                  {pageFiltered.map((dep) => {
                     const Icon = dependencyCategoryIcon(dep);
                     const active = dep.id === selected?.id;
                     const referenceCount = usageEvidence(dep).length;
@@ -401,6 +436,41 @@ export function DependenciesContent({
                 </p>
               )}
             </Card>
+
+            {filtered.length > pageSize && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      disabled={page === 1}
+                      onClick={() => setPage(page - 1)}
+                    />
+                  </PaginationItem>
+                  {getPageItems(page, pageCount).map((item, i) =>
+                    item === "ellipsis-start" || item === "ellipsis-end" ? (
+                      <PaginationItem key={`${item}-${i}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          isActive={item === page}
+                          onClick={() => setPage(item)}
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      disabled={page === pageCount}
+                      onClick={() => setPage(page + 1)}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </TabsContent>
 
           <TabsContent value="internal">

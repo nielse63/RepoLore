@@ -1,4 +1,5 @@
 import { GapsList } from "@/components/lore-shell/GapsList";
+import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
@@ -165,28 +166,27 @@ export function OverviewContent({
 
       {!!lore.entryPoints.length && (
         <section id="entry-points">
-          <h2 className="mb-3 text-lg font-semibold text-foreground">
-            Entry Points
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+            <Compass className="h-4 w-4" aria-hidden="true" /> Entry Points
           </h2>
-          <Card className="p-0">
-            <ul className="divide-y divide-border">
-              {lore.entryPoints.map((ep) => (
-                <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
-                  <IconTile icon={Compass} variant="supporting" size="sm" />
-                  <span className="flex-1 text-sm text-foreground">
-                    <span className="font-medium">{ep.kind}</span>{" "}
-                    <SourceLink location={ep.location} sourceUrl={sourceUrl} />
-                  </span>
-                  <CertaintyBadge certainty={ep.certainty} />
-                </li>
-              ))}
-              {lore.entryPoints.length === 0 && (
-                <li className="px-6 py-3 text-sm text-muted">
-                  No entry points detected.
-                </li>
-              )}
-            </ul>
-          </Card>
+          <PaginatedList
+            items={lore.entryPoints.map((ep) => (
+              <li key={ep.id} className="flex items-center gap-3 px-6 py-3">
+                <IconTile icon={Compass} variant="supporting" size="sm" />
+                <span className="flex-1 text-sm text-foreground">
+                  <span className="font-medium">{ep.kind}</span>{" "}
+                  <SourceLink location={ep.location} sourceUrl={sourceUrl} />
+                </span>
+                <CertaintyBadge certainty={ep.certainty} />
+              </li>
+            ))}
+            storageKey={`entry-points-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
+            emptyState={
+              <li className="px-6 py-3 text-sm text-muted">
+                No entry points detected.
+              </li>
+            }
+          />
         </section>
       )}
 

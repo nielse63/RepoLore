@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 function readStoredPage(storageKey: string): number | null {
   try {
@@ -45,6 +45,13 @@ function getServerSnapshot(): number {
  * `useState` + a mount effect, since sessionStorage doesn't exist during SSR
  * and this avoids both a hydration mismatch and a synchronous setState-in-
  * effect render cascade.
+ *
+ * The returned `setPage` is stable across renders (its identity depends only
+ * on `storageKey`, via a ref for the latest `pageCount` rather than a
+ * dependency) — so a caller can safely put it in an effect's dependency
+ * array (e.g. to reset to page 1 when a search/sort/filter changes) without
+ * that effect re-firing every time `pageCount` happens to change for an
+ * unrelated reason, like the fit-to-screen page size adjusting after load.
  */
 export function usePersistedPage(
   storageKey: string,
@@ -60,15 +67,26 @@ export function usePersistedPage(
     getServerSnapshot
   );
 
+  // Kept in a ref (updated in an effect, never written during render) so
+  // `setPage` can read the latest `pageCount` without depending on it —
+  // that's what keeps `setPage`'s own identity stable across renders.
+  const pageCountRef = useRef(pageCount);
+  useEffect(() => {
+    pageCountRef.current = pageCount;
+  });
+
   const page = Math.min(rawPage, Math.max(pageCount, 1));
 
   const setPage = useCallback(
     (next: number) => {
-      const clamped = Math.min(Math.max(next, 1), Math.max(pageCount, 1));
+      const clamped = Math.min(
+        Math.max(next, 1),
+        Math.max(pageCountRef.current, 1)
+      );
       writeStoredPage(storageKey, clamped);
       listeners.forEach((listener) => listener());
     },
-    [storageKey, pageCount]
+    [storageKey]
   );
 
   return [page, setPage] as const;
