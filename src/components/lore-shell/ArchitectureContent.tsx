@@ -1,3 +1,4 @@
+import { GapsList } from "@/components/lore-shell/GapsList";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
@@ -267,23 +268,10 @@ export function ArchitectureContent({
 
       <section id="gaps">
         <h2 className="mb-3 text-lg font-semibold text-foreground">Gaps</h2>
-        {lore.gaps.length === 0 ? (
-          <p className="text-sm text-muted">None.</p>
-        ) : (
-          <Card className="p-0">
-            <ul className="divide-y divide-border">
-              {lore.gaps.map((gap, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 px-6 py-3 text-sm justify-between"
-                >
-                  <CertaintyBadge certainty={gap.certainty} />
-                  <span className="text-foreground">{gap.description}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        <GapsList
+          gaps={lore.gaps}
+          storageKey={`gaps-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
+        />
       </section>
 
       <section id="test-relationships">

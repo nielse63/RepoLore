@@ -1,3 +1,4 @@
+import { GapsList } from "@/components/lore-shell/GapsList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
@@ -193,23 +194,10 @@ export function OverviewContent({
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
           <GitCommitHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
         </h2>
-        {lore.gaps.length === 0 ? (
-          <p className="text-sm text-muted">None.</p>
-        ) : (
-          <Card className="p-0">
-            <ul className="divide-y divide-border">
-              {lore.gaps.map((gap, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 px-6 py-3 text-sm"
-                >
-                  <CertaintyBadge certainty={gap.certainty} />
-                  <span className="text-foreground">{gap.description}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+        <GapsList
+          gaps={lore.gaps}
+          storageKey={`gaps-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
+        />
       </section>
     </div>
   );
