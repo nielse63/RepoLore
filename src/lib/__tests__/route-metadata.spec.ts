@@ -36,6 +36,20 @@ describe("buildLoreMetadata", () => {
   it("sets the Open Graph url to the same path", () => {
     expect(metadata.openGraph?.url).toBe("/lore/acme/widgets/architecture");
   });
+
+  it("passes the title and description through to Open Graph and Twitter", () => {
+    expect(metadata.openGraph?.title).toBe(
+      "acme/widgets Architecture — Repo Lore"
+    );
+    expect(metadata.openGraph?.description).toBe(
+      "How the major parts of acme/widgets work together."
+    );
+    expect(metadata.twitter).toMatchObject({
+      card: "summary_large_image",
+      title: "acme/widgets Architecture — Repo Lore",
+      description: "How the major parts of acme/widgets work together.",
+    });
+  });
 });
 
 describe("siteMetadataBase", () => {
@@ -74,5 +88,15 @@ describe("siteMetadataBase", () => {
   it("falls back to localhost for an unparseable configured origin", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "not a url";
     expect(siteMetadataBase().origin).toBe("http://localhost:3000");
+  });
+
+  it("warns in production when no origin is configured, instead of silently falling back to localhost", () => {
+    (process.env as { NODE_ENV: string }).NODE_ENV = "production";
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    expect(siteMetadataBase().origin).toBe("http://localhost:3000");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/NEXT_PUBLIC_SITE_URL/)
+    );
+    warn.mockRestore();
   });
 });

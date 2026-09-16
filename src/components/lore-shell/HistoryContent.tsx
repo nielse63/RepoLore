@@ -32,17 +32,27 @@ const KIND_LABEL: Record<HistoryChangeKind, string> = {
   "data-flow": "Data flow change",
 };
 
+// Bucketing and every rendered date/time below use UTC explicitly, not the
+// host's local timezone. This component renders once on the server (UTC on
+// Render) and again during hydration (the viewer's local timezone); an
+// unpinned `Date#getMonth`/`toLocaleString` call can disagree between the
+// two and trip React's hydration mismatch error (#418) — the same failure
+// mode `nowIso` (see HistoryContentProps) fixes for the "now" value itself.
 function bucketFor(occurredAt: string, now: Date): string {
   const date = new Date(occurredAt);
   const diffDays = Math.floor((now.getTime() - date.getTime()) / 86_400_000);
   if (diffDays < 7) return "This week";
   if (
-    date.getMonth() === now.getMonth() &&
-    date.getFullYear() === now.getFullYear()
+    date.getUTCMonth() === now.getUTCMonth() &&
+    date.getUTCFullYear() === now.getUTCFullYear()
   ) {
     return "Earlier this month";
   }
-  return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+  return date.toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function startOfDay(date: Date): Date {
@@ -326,12 +336,14 @@ export function HistoryContent({
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
+                                timeZone: "UTC",
                               })}
                             </p>
                             <p className="text-sm text-muted">
                               {date.toLocaleTimeString("en-US", {
                                 hour: "numeric",
                                 minute: "2-digit",
+                                timeZone: "UTC",
                               })}
                             </p>
                           </div>

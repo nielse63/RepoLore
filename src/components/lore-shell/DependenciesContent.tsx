@@ -370,9 +370,9 @@ export function DependenciesContent({
                             className="flex items-center gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-primary"
                           >
                             <IconTile icon={Icon} variant="neutral" size="sm" />
-                            <p className="font-medium text-foreground">
+                            <span className="font-medium text-foreground">
                               {dep.name}
-                            </p>
+                            </span>
                           </button>
                         </Td>
                         <Td>

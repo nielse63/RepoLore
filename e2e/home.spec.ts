@@ -71,10 +71,14 @@ test("focuses the repository URL input on page load", async ({ page }) => {
 test("has canonical and social-sharing metadata", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
-    "href",
-    /^https?:\/\/[^/]+\/?$/
-  );
+  // Asserts the path, not just "some origin + /" — Playwright runs against
+  // localhost itself, so a regex matching any origin can't distinguish a
+  // correctly configured canonical from siteMetadataBase()'s localhost
+  // fallback (src/lib/route-metadata.ts).
+  const canonical = await page
+    .locator('link[rel="canonical"]')
+    .getAttribute("href");
+  expect(new URL(canonical!).pathname).toBe("/");
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
     "content",
     /Repo Lore/
