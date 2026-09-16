@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import {
   Pagination,
@@ -14,8 +13,9 @@ import {
 import { getPageItems } from "@/lib/pagination-range";
 import { useFitPageSize } from "@/lib/use-fit-page-size";
 import { usePersistedPage } from "@/lib/use-persisted-page";
+import { useRef } from "react";
 
-export const MAX_PAGE_SIZE = 25;
+export const MAX_PAGE_SIZE = 15;
 
 export interface PaginatedListProps {
   /**
@@ -38,7 +38,7 @@ export interface PaginatedListProps {
 /**
  * Shared pagination chrome for the simple Card > ul > li lists across the
  * Lore pages (Gaps, Entry Points, Test Relationships): a page size that
- * fits the screen at load (capped at 25 — see `useFitPageSize`), a page
+ * fits the screen at load (capped at 15 — see `useFitPageSize`), a page
  * number persisted per `storageKey` (see `usePersistedPage`), and controls
  * that only appear once there's more than one page.
  */

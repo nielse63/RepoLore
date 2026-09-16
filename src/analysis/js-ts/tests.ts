@@ -4,12 +4,22 @@
  * (`foo.test.ts` / `foo.spec.ts` -> `foo.ts`) when no such import exists
  * (inferred).
  *
- * A file also counts as a test file when it lives under a top-level `test/`
- * or `tests/` directory (mocha/tape/ava-style layouts, e.g. `test/foo.js`,
- * as opposed to Jest's `foo.test.js` co-located convention) — validated
- * against a real repository (`sindresorhus/globby`) in implementation
- * session 6, where every test lived under `tests/` with no matching
- * filename suffix.
+ * A file also counts as a test file when it lives under a top-level `test/`,
+ * `tests/`, or `e2e/` directory (mocha/tape/ava-style layouts, e.g.
+ * `test/foo.js`, as opposed to Jest's `foo.test.js` co-located convention;
+ * `e2e/` is Playwright/Cypress's own convention). `test`/`tests` was
+ * validated against a real repository (`sindresorhus/globby`) in
+ * implementation session 6, where every test lived under `tests/` with no
+ * matching filename suffix. `e2e` was added after this repo's own analysis
+ * of itself surfaced a false test relationship: `e2e/home.spec.ts` imports
+ * `e2e/coverage.ts` (a Playwright fixture wrapper adding coverage
+ * collection, not implementation code — see that file), and without `e2e`
+ * recognized as a test root, `coverage.ts` fell through to the
+ * "implementation file" bucket and got reported as something `home.spec.ts`
+ * tests. Deliberately not extended to `findDirectoryMirrorMatch` below:
+ * unlike `test/<path>` → `lib/<path>` unit-test layouts, an e2e spec
+ * exercises a page or user flow end-to-end, not one implementation file
+ * mirrored by path.
  *
  * A test file's relative imports are filtered against the package's
  * declared entry point (`package.json` main/module/exports): when the only
@@ -43,8 +53,19 @@ export function isTestFile(relativeFilePath: string): boolean {
     TEST_FILE_PATTERN.test(relativeFilePath) ||
     segments.includes("__tests__") ||
     segments[0] === "test" ||
-    segments[0] === "tests"
+    segments[0] === "tests" ||
+    segments[0] === "e2e"
   );
+}
+
+/**
+ * An e2e spec exercises a running page/flow rather than importing one
+ * module, so it has no single-file subject the way a unit test does —
+ * distinguished so the unmatched-subject gap below can say that plainly
+ * instead of implying the analyzer merely failed to find one.
+ */
+function isE2eRootFile(relativeFilePath: string): boolean {
+  return relativeFilePath.split("/")[0] === "e2e";
 }
 
 export interface TestExtractionResult {
@@ -205,7 +226,9 @@ export function extractTestRelationships(
 
     gaps.push({
       certainty: "unknown",
-      description: `Could not determine which implementation file '${testPath}' tests.`,
+      description: isE2eRootFile(testPath)
+        ? `No relative import or naming convention identifies a single implementation file for '${testPath}' — expected for a page/flow-level e2e spec, which doesn't test one importable module the way a unit test does.`
+        : `Could not determine which implementation file '${testPath}' tests.`,
       location: testLocation,
     });
   }
