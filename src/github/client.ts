@@ -119,6 +119,22 @@ export async function resolveRepositoryHead(
       `GitHub did not report visibility for ${owner}/${repo}.`
     );
   }
+  if (repoData.private) {
+    // GITHUB_TOKEN is a single credential shared across every visitor's
+    // request (see docs/architecture/decisions/0002-tarball-source-acquisition.md).
+    // Without this check, anyone could type in a repository the token
+    // happens to have private access to (the operator's own, or one they
+    // collaborate on) and have Repo Lore fetch, analyze, and publish it at a
+    // public, unauthenticated `/lore/{owner}/{repo}` URL — a confused-deputy
+    // exposure of private source. Reported identically to a nonexistent
+    // repository (same "not found" message GitHub itself gives an
+    // unauthenticated caller) so a private repo's existence isn't leaked
+    // either.
+    throw new GitHubApiError(
+      "not-found",
+      `Repository ${owner}/${repo} not found — it may not exist, or it may be private.`
+    );
+  }
 
   const commitRes = await githubApiFetch(
     `/repos/${owner}/${repo}/commits/${encodeURIComponent(defaultBranch)}`
