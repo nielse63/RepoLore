@@ -2,7 +2,7 @@
 
 This document protects focus. A non-goal is not necessarily a bad idea; it is an explicit decision not to spend scarce product and engineering capacity on it now.
 
-The detailed MVP specification is the source of truth when another document appears to conflict with this one.
+`docs/product/mission.md` is the source of truth when another document appears to conflict with this one.
 
 ## Not the Product
 
@@ -16,9 +16,9 @@ Repo Lore is not:
 - a dashboard of activity metrics or arbitrary health scores;
 - a platform for manually authored internal wikis.
 
-## Explicit MVP Exclusions
+## Explicit Exclusions
 
-The launch MVP does not require:
+Repo Lore does not require:
 
 - private repository support;
 - user accounts, organizations, or team invitations;
@@ -58,7 +58,7 @@ Repo Lore should identify these limitations and explain their effect. It should 
 
 ## Deferred Customer Segments
 
-The MVP is not optimized for large enterprises or highly regulated procurement environments. Defer:
+Repo Lore is not optimized for large enterprises or highly regulated procurement environments. Defer:
 
 - SAML and enterprise SSO;
 - complex RBAC;

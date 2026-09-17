@@ -1,4 +1,4 @@
-# The Repo Lore Model and MVP Output
+# The Repo Lore Model and Output
 
 ## Purpose
 
@@ -6,9 +6,9 @@ A Lore is a living, evidence-backed mental model of a software repository.
 
 It is not a generated document, file inventory, dependency dump, or AI summary. Those may be representations of the model. The model itself is the durable product: a structured set of repository facts, relationships, interpretations, evidence, and explicit gaps tied to an exact analysis snapshot.
 
-The MVP output should help an unfamiliar engineer move from “I do not know where anything is” to a correct, justified orientation.
+Repo Lore's output should help an unfamiliar engineer move from “I do not know where anything is” to a correct, justified orientation.
 
-## MVP Value Contract
+## Value Contract
 
 For a conventionally structured repository in a supported language, a Lore must provide:
 
@@ -19,7 +19,7 @@ For a conventionally structured repository in a supported language, a Lore must 
 5. important direct dependency relationships;
 6. traceable evidence and explicit analysis gaps.
 
-If Repo Lore can list files and imports but cannot create a useful reading path, the analysis has not met the MVP promise.
+If Repo Lore can list files and imports but cannot create a useful reading path, the analysis has not met the product promise.
 
 ## Analysis Snapshot
 
@@ -32,7 +32,7 @@ The user supplies a public GitHub repository URL. Repo Lore:
 5. publishes the result at a stable repository-specific Lore URL;
 6. permits manual reanalysis when the repository changes.
 
-The MVP does not require account creation, branch selection, commit selection, scheduled refresh, GitHub Actions, webhooks, repository configuration, or CI integration.
+Repo Lore does not require account creation, branch selection, commit selection, scheduled refresh, GitHub Actions, webhooks, repository configuration, or CI integration.
 
 Every displayed result belongs to a specific snapshot. The interface should make that identity visible so users know exactly which repository state supports the conclusions.
 
@@ -55,9 +55,9 @@ An unfamiliar engineer should be able to:
 
 Engineering managers should use the same Lore to understand broad system shape, discuss areas with shared terminology, recognize important dependencies and gaps, and participate in planning conversations with better context.
 
-The MVP does not require a separate management dashboard.
+Repo Lore does not require a separate management dashboard.
 
-## MVP Lore Page
+## Lore Page
 
 The page should be calm, readable, and progressively disclosed. The initial view should prioritize the reading path and structural model, not a dashboard of metrics.
 
@@ -77,7 +77,7 @@ Clearly distinguish repository-provided metadata from conclusions produced by Re
 
 ### 2. Start Here
 
-Start Here is the primary MVP experience.
+Start Here is the primary experience.
 
 Present an ordered path of approximately three to seven source locations or structural areas. Adapt the path to available evidence; do not force a fixed template when the repository does not support it.
 
@@ -172,7 +172,7 @@ Prioritize:
 
 Do not display every extracted edge by default. Use tables and short lists unless a richer visualization clearly improves the user’s mental model.
 
-The MVP does not promise a complete runtime call graph or indirect change-impact guarantee.
+Repo Lore does not promise a complete runtime call graph or indirect change-impact guarantee.
 
 ### 6. Things to Investigate
 
@@ -228,7 +228,7 @@ The durable model should use language-neutral concepts:
 
 Language extractors produce evidence for these shared concepts. A relationship might be supported by a TypeScript import, a CommonJS `require`, or a Python import; the durable concept remains a dependency relationship.
 
-The MVP needs a small shared analyzer contract, not a generalized plugin system:
+Repo Lore needs a small shared analyzer contract, not a generalized plugin system:
 
 - detect projects;
 - discover relevant source;
@@ -241,7 +241,7 @@ The MVP needs a small shared analyzer contract, not a generalized plugin system:
 
 ## Language Support Contract
 
-The public MVP supports TypeScript, JavaScript, and Python. All advertised languages must meet the same minimum value contract.
+Repo Lore supports TypeScript, JavaScript, and Python. All advertised languages must meet the same minimum value contract.
 
 ### JavaScript and TypeScript
 
@@ -318,7 +318,7 @@ Avoid:
 
 ## Product Evolution
 
-### MVP
+### Shipped
 
 - public GitHub repository input;
 - latest default-branch commit;
@@ -326,12 +326,12 @@ Avoid:
 - TypeScript, JavaScript, and Python support;
 - Start Here, major areas, entry points, direct relationships, evidence, and gaps;
 - stable Lore URL;
-- manual reanalysis.
+- manual reanalysis;
+- pull-triggered background re-analysis for stale (>1 day old) repositories, rate-limited per repository (ADR-0013);
+- a dismissible staleness notice on the Overview page describing that check.
 
 ### Soon
 
-- scheduled default-branch checks;
-- visible freshness and stale-state handling;
 - stronger framework-aware enrichment;
 - improved reading-path validation on representative repositories;
 - one evidence-backed execution-flow capability after orientation is strong.

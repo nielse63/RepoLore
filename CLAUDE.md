@@ -26,18 +26,18 @@ Every source code change must leave the test suites reflecting the new behavior,
 
 ## Product
 
-**Repo Lore** (always two words) builds a living, evidence-backed mental model of a software repository so an unfamiliar engineer can understand it with justified confidence, without relying on tribal knowledge — at a stable URL (`/lore/{owner}/{repo}`). The MVP targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change. Full mission: `docs/product/mission.md`. `docs/product/mvp.md` is the source-of-truth MVP specification — treat every other product document as subordinate to it and update it if it conflicts.
+**Repo Lore** (always two words) builds a living, evidence-backed mental model of a software repository so an unfamiliar engineer can understand it with justified confidence, without relying on tribal knowledge — at a stable URL (`/lore/{owner}/{repo}`). Repo Lore targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change. Full mission: `docs/product/mission.md`; explicit non-goals and scope boundaries: `docs/product/non-goals.md`.
 
-Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/product/mvp.md` and `docs/product/non-goals.md`):
+Constraints that should shape any proposed feature or dependency (see `product-scope-guardian` below for the full checklist; full detail in `docs/product/mission.md` and `docs/product/non-goals.md`):
 
 - Maintained by one engineer as a side project (~5–8 hrs/week, never more than 10), targeting roughly $2,000 MRR.
 - Initial customer: startups / small-to-medium engineering orgs.
 - Initial supported ecosystem: TypeScript, JavaScript, and Python, sharing one language-neutral Lore model. React is framework-aware enrichment within the JavaScript/TypeScript analyzer, not a separate analyzer or product.
-- No headless scheduled refresh in the MVP (cron, webhooks, polling with no visitor) — analysis runs on submission, on manual re-analysis, or on a background re-analysis attempt pull-triggered by an actual page view of a stale (>1 day) repository, rate-limited per repository via the existing manual re-analysis claim (ADR-0013).
-- No health scores or generalized health findings in the MVP.
+- No headless scheduled refresh (cron, webhooks, polling with no visitor) — analysis runs on submission, on manual re-analysis, or on a background re-analysis attempt pull-triggered by an actual page view of a stale (>1 day) repository, rate-limited per repository via the existing manual re-analysis claim (ADR-0013).
+- No health scores or generalized health findings.
 - Prefer managed services, standard libraries, deterministic analysis, and reversible decisions.
 - Reject speculative scalability, enterprise requirements, and premature customization.
-- AI explains evidence-backed analysis; it does not replace deterministic code analysis, and it is not required for the MVP.
+- AI explains evidence-backed analysis; it does not replace deterministic code analysis, and it is not required.
 
 ## Design
 
@@ -51,7 +51,7 @@ First-slice architecture and the reasoning behind it live in `docs/architecture/
 
 Two project-specific subagents are defined in `.claude/agents/` and should be invoked proactively when their trigger conditions apply:
 
-- **`product-scope-guardian`** — use before adopting new infrastructure, integrations, frameworks, or major features. Evaluates proposals for mission alignment, MVP necessity, maintenance cost, operational risk, and simpler alternatives.
+- **`product-scope-guardian`** — use before adopting new infrastructure, integrations, frameworks, or major features. Evaluates proposals for mission alignment, necessity, maintenance cost, operational risk, and simpler alternatives.
 - **`analysis-integrity-reviewer`** — use after modifying analyzers, documentation generation, or AI explanations. Checks that factual claims are traceable to source, that deterministic findings are separated from AI inference/heuristics, and that uncertainty is surfaced using the Detected/Inferred/Unknown/Unsupported categories rather than hidden.
 
 ## Git Workflow

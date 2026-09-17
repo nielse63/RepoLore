@@ -2,13 +2,13 @@
 
 Repo Lore builds a living, evidence-backed mental model of a software repository. These principles govern product, design, and technical decisions.
 
-The MVP specification defines current scope. These principles explain how to make decisions within and beyond that scope.
+`docs/product/mission.md` and `docs/product/non-goals.md` define current scope. These principles explain how to make decisions within and beyond that scope.
 
 ## 1. Optimize for Time to Confidence
 
 Repo Lore should shorten the time required for an unfamiliar engineer to form a correct orientation and choose a justified next step.
 
-The MVP targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a sensible place to begin investigating a change.
+Repo Lore targets **orientation confidence**: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a sensible place to begin investigating a change.
 
 The product should not maximize the amount of extracted data. It should select the information that most improves the user’s mental model.
 
@@ -54,7 +54,7 @@ Important conclusions must begin with observable evidence from source, imports, 
 
 AI may summarize or explain a verified model when doing so improves comprehension. It must not replace deterministic extraction, invent architectural intent, or present speculation as fact.
 
-The MVP does not require AI-generated prose. Deterministic, template-based explanations are preferable when they are clear and trustworthy.
+Repo Lore does not require AI-generated prose. Deterministic, template-based explanations are preferable when they are clear and trustworthy.
 
 **Decision test:** Can the conclusion be produced and verified without trusting a model’s unsupported interpretation?
 
@@ -115,7 +115,7 @@ Mixed-language repositories should be presented as one repository-level model, b
 
 ## 9. Keep the Experience Automatic and Calm
 
-For the public MVP, pasting a GitHub repository URL should be enough. Do not require accounts, repository configuration, GitHub Actions, webhooks, scripts, CI integration, or manual documentation.
+Pasting a GitHub repository URL should be enough. Do not require accounts, repository configuration, GitHub Actions, webhooks, scripts, CI integration, or manual documentation.
 
 Use progressive disclosure. Lead with a readable overview and short reading path, then let users inspect relationships and evidence. Avoid dense dashboards, arbitrary metrics, and visual complexity that does not improve comprehension.
 

@@ -93,6 +93,6 @@ Repo Lore is designed to become a durable small business, not an infrastructure 
 
 We favor depth over breadth, useful tables over premature graph interfaces, deterministic templates over unnecessary AI, and operational simplicity over speculative scale.
 
-The MVP succeeds when an unfamiliar engineer can open a Lore and, within 15 minutes, identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change.
+Repo Lore succeeds when an unfamiliar engineer can open a Lore and, within 15 minutes, identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change.
 
 That is not complete understanding. It is the shortest trustworthy path from unfamiliarity to justified confidence.

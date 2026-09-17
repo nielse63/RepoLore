@@ -34,7 +34,7 @@ Closes #
 <!-- Delete if not applicable. -->
 
 - [ ] Consistent with `docs/architecture/decisions/` (ADR-0001–0006); if it deviates, explain why
-- [ ] Consistent with `docs/product/mvp.md` / `docs/product/non-goals.md` (no speculative scale, no out-of-scope features)
+- [ ] Consistent with `docs/product/mission.md` / `docs/product/non-goals.md` (no speculative scale, no out-of-scope features)
 - [ ] `README.md` updated to reflect any new features, dev-lifecycle, or deployment changes
 
 ## Related docs

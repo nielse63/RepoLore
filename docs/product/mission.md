@@ -22,7 +22,7 @@ Repo Lore should help an experienced engineer who is new to a repository answer:
 - Where should I begin investigating a proposed change?
 - Which conclusions are detected, inferred, unknown, or unsupported?
 
-The long-term ambition is for an engineer to speak confidently about an unfamiliar system by the next day. The MVP targets the first measurable step: within 15 minutes of opening a Lore, an engineer should be able to form a correct orientation and choose a justified place to start.
+The long-term ambition is for an engineer to speak confidently about an unfamiliar system by the next day. Repo Lore targets the first measurable step: within 15 minutes of opening a Lore, an engineer should be able to form a correct orientation and choose a justified place to start.
 
 ## Who It Serves
 
@@ -58,7 +58,7 @@ Every important conclusion should identify its evidence, the relevant source or 
 
 Repo Lore is a living model of a repository. Documentation, tables, diagrams, reading paths, and future interactive explanations are views of that model—not the durable product itself.
 
-For the MVP, the central experience is an evidence-backed **Start Here** path supported by a concise major-area model, probable entry points, direct dependency relationships, and explicit gaps.
+The central experience is an evidence-backed **Start Here** path supported by a concise major-area model, probable entry points, direct dependency relationships, and explicit gaps.
 
 The product is successful when it reduces uncertainty without manufacturing certainty.
 
