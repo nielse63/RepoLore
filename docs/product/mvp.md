@@ -496,7 +496,7 @@ The launch MVP does not require:
 - Full execution-flow tracing
 - Indirect change-impact analysis
 - Commit or pull-request history analysis
-- Scheduled refresh
+- Headless scheduled refresh (cron, webhooks, or polling with no visitor — a bounded, pull-triggered exception exists for re-analysis tied to an actual stale page view; see ADR-0013 and `non-goals.md`)
 - Notifications
 - User accounts
 - Private repository support
@@ -523,7 +523,7 @@ This broader language scope should be paid for by reducing other launch requirem
 
 The recommended tradeoff is:
 
-> Add Python, but exclude health findings, AI explanations, scheduled refresh, sophisticated visualization, and deep framework-specific interpretation from the launch MVP.
+> Add Python, but exclude health findings, AI explanations, headless scheduled refresh, sophisticated visualization, and deep framework-specific interpretation from the launch MVP.
 
 This preserves the product’s core value while expanding its useful audience.
 

@@ -1,6 +1,7 @@
 import { GapsList } from "@/components/lore-shell/GapsList";
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
+import { StaleAnalysisCard } from "@/components/lore-shell/StaleAnalysisCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import {
   CertaintyBadge,
@@ -9,6 +10,7 @@ import {
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
+import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import { Compass, GapHorizontal, Layers, Milestone } from "lucide-react";
@@ -61,6 +63,10 @@ export function OverviewContent({
 
       {snapshot.status !== "completed" && (
         <PartialUnderstandingCard gapsCount={lore.gaps.length} />
+      )}
+
+      {isAnalysisStale(snapshot.analyzedAt) && (
+        <StaleAnalysisCard analyzedAt={snapshot.analyzedAt} />
       )}
 
       <section id="start-here">

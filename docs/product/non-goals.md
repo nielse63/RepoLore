@@ -24,7 +24,7 @@ The launch MVP does not require:
 - user accounts, organizations, or team invitations;
 - billing or fine-grained plans;
 - branch or commit selection;
-- scheduled refresh, webhooks, or real-time synchronization;
+- headless scheduled refresh, webhooks, or real-time synchronization — anything that runs unattended, on a timer or a push notification, for a repository nobody is currently visiting; a deliberate, narrow exception is a pull-triggered, staleness-gated background re-analysis attempt tied to an actual page view of a repository whose latest analysis is more than a day old, rate-limited per repository via the existing manual re-analysis claim so it can never run unattended or faster than that limit — see ADR-0013;
 - notifications;
 - AI-generated explanations or chat;
 - commit and pull-request history analysis — a deliberate, narrow exception is the History page's deterministic, non-AI commit-diff classification (no narrative/LLM synthesis, no before/after diagram), see ADR-0010; this does not license pull-request analysis, architectural-diff narrative, or AI-generated history explanations, which remain excluded;

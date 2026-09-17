@@ -1,8 +1,8 @@
 "use server";
 
 import { analyzeAndPersistRepository } from "@/analysis/analyze-and-persist";
+import { reanalyzeAndRefreshHistory } from "@/analysis/reanalyze-and-refresh-history";
 import { RateLimitedError } from "@/analysis/reanalysis-rate-limit";
-import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { saveHistoryEntries } from "@/db/history-entries";
 import { upsertRepo } from "@/db/repos";
 import { GitHubApiError } from "@/github/client";
@@ -77,11 +77,9 @@ export async function reanalyzeRepository(
   _formData: FormData
 ): Promise<ReanalyzeState> {
   /* eslint-enable @typescript-eslint/no-unused-vars */
-  const previousRun = await getLatestAnalysisRunForRepo(owner, repo);
-
-  let run;
+  let result;
   try {
-    run = await analyzeAndPersistRepository(owner, repo);
+    result = await reanalyzeAndRefreshHistory(owner, repo);
   } catch (error) {
     if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
       return { status: "error", message: error.message };
@@ -94,35 +92,11 @@ export async function reanalyzeRepository(
   }
 
   revalidatePath(`/lore/${owner}/${repo}`);
-
-  const changed = run.id !== previousRun?.id;
-  if (changed) {
-    // History is a separate cache keyed only on repo (not commit), so a new
-    // analysis run leaves it stale until recomputed — refresh it here rather
-    // than waiting for a user to separately hit "Refresh history". This
-    // deliberately bypasses `claimHistoryRefresh`'s cooldown: that limit
-    // exists to stop rapid-fire manual refresh clicks, not to gate a refresh
-    // that's a direct consequence of an already-rate-limited re-analysis
-    // (`claimReanalysisAttempt`). A failure here shouldn't make re-analysis
-    // itself look like it failed, since the structural analysis did succeed.
-    try {
-      const repoRow = await upsertRepo(owner, repo);
-      const { entries, computedThroughSha } = await computeHistory(owner, repo);
-      await saveHistoryEntries({
-        repoId: repoRow.id,
-        computedThroughSha,
-        entries,
-      });
-      revalidatePath(`/lore/${owner}/${repo}/history`);
-    } catch (error) {
-      console.error(
-        `reanalyzeRepository(${owner}/${repo}): history refresh failed:`,
-        error
-      );
-    }
+  if (result.historyRefreshed) {
+    revalidatePath(`/lore/${owner}/${repo}/history`);
   }
 
-  return { status: "done", changed };
+  return { status: "done", changed: result.changed };
 }
 
 export type RefreshHistoryState =
