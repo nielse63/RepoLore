@@ -51,7 +51,7 @@ describe("github/client", () => {
           jsonResponse(200, {
             default_branch: "main",
             description: "A repo",
-            private: true,
+            private: false,
           })
         )
         .mockResolvedValueOnce(jsonResponse(200, { sha: "deadbeef" }));
@@ -62,7 +62,7 @@ describe("github/client", () => {
         defaultBranch: "main",
         headSha: "deadbeef",
         description: "A repo",
-        isPrivate: true,
+        isPrivate: false,
       });
       expect(fetchMock).toHaveBeenNthCalledWith(
         1,
@@ -78,6 +78,29 @@ describe("github/client", () => {
         "https://api.github.com/repos/owner/repo/commits/main",
         expect.anything()
       );
+    });
+
+    it("throws not-found (indistinguishable from a nonexistent repo) when the repo is private", async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse(200, {
+          default_branch: "main",
+          description: "A repo",
+          private: true,
+        })
+      );
+
+      await expect(
+        resolveRepositoryHead("owner", "repo")
+      ).rejects.toMatchObject({
+        code: "not-found",
+        message: expect.stringContaining("may not exist, or it may be private"),
+      });
+      // Never fetches the commit SHA (or anything else) for a repo it just
+      // refused to resolve — GITHUB_TOKEN is a single credential shared
+      // across every visitor's request, so a repo the token happens to have
+      // private access to must not be acquired, analyzed, or persisted on an
+      // anonymous caller's behalf.
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
     it("omits description when GitHub reports none", async () => {
