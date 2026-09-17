@@ -2,26 +2,15 @@
 
 import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
 import { Button } from "@/components/ui/Button";
+import {
+  getDelayAfterStage,
+  getStageLabel,
+} from "@/lib/analysis-loading-stages";
 import { cn } from "@/lib/cn";
 import { FolderGit2, RotateCw } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 
 const initialState: ResolveRepositoryState = { status: "idle" };
-
-/**
- * Simulated stage labels shown while `analyzeAndPersistRepository` runs
- * (`src/analysis/analyze-and-persist.ts`) — there's no real progress channel
- * from that single awaited Server Action call back to the client, so this is
- * a best-effort narration of its actual phases (acquire source, run
- * analyzer(s), persist), not measured progress. Holds on the last stage
- * rather than looping if analysis runs longer than the sequence.
- */
-const ANALYSIS_STAGES = [
-  "Fetching repository source…",
-  "Analyzing code…",
-  "Building your Lore…",
-];
-const STAGE_INTERVAL_MS = 2500;
 
 /**
  * Landing page content: paste a public GitHub repository URL, analyze and
@@ -52,13 +41,16 @@ export function HomeContent() {
     setStageIndex(0);
   }
 
+  // Re-schedules on every stageIndex change (rather than a single interval)
+  // because the delay isn't constant: it's STAGE_INTERVAL_MS while narrating
+  // real phases, then a randomized 30-45s once into REASSURANCE_STAGES.
   useEffect(() => {
     if (!isPending) return;
-    const interval = setInterval(() => {
-      setStageIndex((i) => Math.min(i + 1, ANALYSIS_STAGES.length - 1));
-    }, STAGE_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [isPending]);
+    const timeoutId = setTimeout(() => {
+      setStageIndex((i) => i + 1);
+    }, getDelayAfterStage(stageIndex));
+    return () => clearTimeout(timeoutId);
+  }, [isPending, stageIndex]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
@@ -84,7 +76,7 @@ export function HomeContent() {
               className="text-lg font-medium text-foreground"
               aria-live="polite"
             >
-              {ANALYSIS_STAGES[stageIndex]}
+              {getStageLabel(stageIndex)}
             </p>
           </div>
         ) : (
