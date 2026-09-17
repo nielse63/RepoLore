@@ -15,6 +15,7 @@ import { HISTORY_LOOKBACK_DAYS } from "@/github/commits";
 import { githubBlobUrl } from "@/github/urls";
 import type { HistoryChangeKind, HistoryEntry } from "@/history/model";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import type { Lore } from "@/lore/model";
 import {
   Calendar,
@@ -188,8 +189,8 @@ export function HistoryContent({
                 What changed
               </p>
               <ul className="mt-1 list-disc space-y-1 pl-4 text-sm text-muted">
-                {selected.whatChanged.map((c) => (
-                  <li key={c}>{c}</li>
+                {selected.whatChanged.map((c, i) => (
+                  <li key={listItemKey(i)}>{c}</li>
                 ))}
               </ul>
             </div>
@@ -205,8 +206,8 @@ export function HistoryContent({
                   Affected systems
                 </p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {selected.affectedAreas.map((s) => (
-                    <Badge key={s}>{s}</Badge>
+                  {selected.affectedAreas.map((s, i) => (
+                    <Badge key={listItemKey(i)}>{s}</Badge>
                   ))}
                 </div>
               </div>

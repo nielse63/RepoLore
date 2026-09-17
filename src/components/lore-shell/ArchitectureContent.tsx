@@ -6,6 +6,7 @@ import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
@@ -95,8 +96,8 @@ export function ArchitectureContent({
                   <dt>Languages</dt>
                   <dd className="mt-1 flex flex-wrap gap-1">
                     {project.languages.length > 0 ? (
-                      project.languages.map((lang) => (
-                        <Badge key={lang}>{lang}</Badge>
+                      project.languages.map((lang, i) => (
+                        <Badge key={listItemKey(i)}>{lang}</Badge>
                       ))
                     ) : (
                       <span className="text-foreground">None detected</span>
@@ -107,8 +108,8 @@ export function ArchitectureContent({
                   <dt>Frameworks</dt>
                   <dd className="mt-1 flex flex-wrap gap-1">
                     {project.frameworks.length > 0 ? (
-                      project.frameworks.map((fw) => (
-                        <Badge key={fw}>{fw}</Badge>
+                      project.frameworks.map((fw, i) => (
+                        <Badge key={listItemKey(i)}>{fw}</Badge>
                       ))
                     ) : (
                       <span className="text-foreground">None detected</span>

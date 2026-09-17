@@ -1,5 +1,6 @@
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { Badge } from "@/components/ui/Badge";
+import { listItemKey } from "@/lib/list-item-key";
 import { relativeTime } from "@/lib/relative-time";
 import type { AnalysisSnapshot, Gap, Project } from "@/lore/model";
 import startCase from "lodash.startcase";
@@ -38,8 +39,8 @@ export function AnalysisRail({
                 </dt>
                 <dd className="truncate font-mono text-sm text-foreground">
                   {project.languages.length > 0 ? (
-                    project.languages.map((lang) => (
-                      <Badge key={lang}>{lang}</Badge>
+                    project.languages.map((lang, i) => (
+                      <Badge key={listItemKey(i)}>{lang}</Badge>
                     ))
                   ) : (
                     <span className="text-foreground">None Detected</span>
@@ -52,7 +53,9 @@ export function AnalysisRail({
                 </dt>
                 <dd className="text-foreground">
                   {project.frameworks.length > 0 ? (
-                    project.frameworks.map((fw) => <Badge key={fw}>{fw}</Badge>)
+                    project.frameworks.map((fw, i) => (
+                      <Badge key={listItemKey(i)}>{fw}</Badge>
+                    ))
                   ) : (
                     <span className="text-foreground">None Detected</span>
                   )}

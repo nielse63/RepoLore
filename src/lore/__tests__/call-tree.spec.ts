@@ -4,7 +4,11 @@ import type {
   EntryPoint,
   PublicContract,
 } from "../model";
-import { buildCalleesIndex, deriveCallTreeRootIds } from "../call-tree";
+import {
+  buildCalleesIndex,
+  deriveCallTreeRootIds,
+  resolveUniqueSignatures,
+} from "../call-tree";
 
 function signature(
   id: string,
@@ -135,5 +139,55 @@ describe("buildCalleesIndex", () => {
 
   it("returns an empty map for no edges", () => {
     expect(buildCalleesIndex([]).size).toBe(0);
+  });
+});
+
+describe("resolveUniqueSignatures", () => {
+  it("dedupes when the same callee is called from more than one call site", () => {
+    const a = signature("a", "a");
+    const b = signature("b", "b");
+    const byId = new Map([
+      ["a", a],
+      ["b", b],
+    ]);
+    const edges = [edge("e1", "a", "b"), edge("e2", "a", "b")];
+
+    const callees = resolveUniqueSignatures(edges, (e) => e.calleeId, byId);
+
+    expect(callees).toEqual([b]);
+  });
+
+  it("preserves first-occurrence order across distinct targets", () => {
+    const a = signature("a", "a");
+    const b = signature("b", "b");
+    const c = signature("c", "c");
+    const byId = new Map([
+      ["a", a],
+      ["b", b],
+      ["c", c],
+    ]);
+    const edges = [
+      edge("e1", "a", "c"),
+      edge("e2", "a", "b"),
+      edge("e3", "a", "c"),
+    ];
+
+    const callees = resolveUniqueSignatures(edges, (e) => e.calleeId, byId);
+
+    expect(callees).toEqual([c, b]);
+  });
+
+  it("skips edges whose target id isn't in byId", () => {
+    const a = signature("a", "a");
+    const byId = new Map([["a", a]]);
+    const edges = [edge("e1", "x", "unresolved")];
+
+    expect(resolveUniqueSignatures(edges, (e) => e.calleeId, byId)).toEqual([]);
+  });
+
+  it("returns an empty array for no edges", () => {
+    expect(resolveUniqueSignatures([], (e) => e.calleeId, new Map())).toEqual(
+      []
+    );
   });
 });
