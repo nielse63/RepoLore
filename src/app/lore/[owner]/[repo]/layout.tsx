@@ -1,3 +1,4 @@
+import { scheduleBackgroundReanalysisIfStale } from "@/analysis/background-reanalysis";
 import { Sidebar } from "@/components/lore-shell/Sidebar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 
@@ -13,6 +14,18 @@ export default async function LoreLayout({
   const visibility = run?.result?.snapshot.repository.isPrivate
     ? "Private"
     : "Public";
+
+  // Pull-triggered, staleness-gated background re-analysis (ADR-0013) — a
+  // no-op unless this run is over a day old. Covers every page under this
+  // layout, not just Overview, since it's already fetching `run` here.
+  if (run?.status !== "failed" && run?.result) {
+    scheduleBackgroundReanalysisIfStale(
+      owner,
+      repo,
+      run.result.snapshot.analyzedAt
+    );
+  }
+
   return (
     <div className="flex min-h-dvh bg-background">
       <a

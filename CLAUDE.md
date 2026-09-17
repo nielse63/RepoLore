@@ -33,7 +33,7 @@ Constraints that should shape any proposed feature or dependency (see `product-s
 - Maintained by one engineer as a side project (~5–8 hrs/week, never more than 10), targeting roughly $2,000 MRR.
 - Initial customer: startups / small-to-medium engineering orgs.
 - Initial supported ecosystem: TypeScript, JavaScript, and Python, sharing one language-neutral Lore model. React is framework-aware enrichment within the JavaScript/TypeScript analyzer, not a separate analyzer or product.
-- No scheduled or automatic refresh in the MVP — analysis runs on submission and on manual re-analysis only.
+- No headless scheduled refresh in the MVP (cron, webhooks, polling with no visitor) — analysis runs on submission, on manual re-analysis, or on a background re-analysis attempt pull-triggered by an actual page view of a stale (>1 day) repository, rate-limited per repository via the existing manual re-analysis claim (ADR-0013).
 - No health scores or generalized health findings in the MVP.
 - Prefer managed services, standard libraries, deterministic analysis, and reversible decisions.
 - Reject speculative scalability, enterprise requirements, and premature customization.
