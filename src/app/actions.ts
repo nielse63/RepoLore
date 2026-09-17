@@ -3,6 +3,10 @@
 import { analyzeAndPersistRepository } from "@/analysis/analyze-and-persist";
 import { reanalyzeAndRefreshHistory } from "@/analysis/reanalyze-and-refresh-history";
 import { RateLimitedError } from "@/analysis/reanalysis-rate-limit";
+import {
+  SubmissionRateLimitedError,
+  claimSubmissionAttempt,
+} from "@/analysis/submission-rate-limit";
 import { saveHistoryEntries } from "@/db/history-entries";
 import { upsertRepo } from "@/db/repos";
 import { GitHubApiError } from "@/github/client";
@@ -12,6 +16,7 @@ import {
   HistoryRateLimitedError,
   claimHistoryRefresh,
 } from "@/history/history-rate-limit";
+import { requestIdentifier } from "@/lib/request-identifier";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -39,9 +44,14 @@ export async function resolveRepository(
 
   const { owner, repo } = parsed.value;
   try {
+    await claimSubmissionAttempt(await requestIdentifier());
     await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
-    if (error instanceof GitHubApiError || error instanceof RateLimitedError) {
+    if (
+      error instanceof GitHubApiError ||
+      error instanceof RateLimitedError ||
+      error instanceof SubmissionRateLimitedError
+    ) {
       return { status: "error", message: error.message };
     }
     console.error(`resolveRepository(${owner}/${repo}) failed:`, error);

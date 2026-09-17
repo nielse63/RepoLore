@@ -3,13 +3,28 @@ import { revalidatePath } from "next/cache";
 import { analyzeAndPersistRepository } from "@/analysis/analyze-and-persist";
 import { reanalyzeAndRefreshHistory } from "@/analysis/reanalyze-and-refresh-history";
 import { RateLimitedError } from "@/analysis/reanalysis-rate-limit";
+import {
+  SubmissionRateLimitedError,
+  claimSubmissionAttempt,
+} from "@/analysis/submission-rate-limit";
 import { GitHubApiError } from "@/github/client";
+import { requestIdentifier } from "@/lib/request-identifier";
 import { resolveRepository, reanalyzeRepository } from "../actions";
 
 jest.mock("next/navigation");
 jest.mock("next/cache");
 jest.mock("@/analysis/analyze-and-persist");
 jest.mock("@/analysis/reanalyze-and-refresh-history");
+// A plain `jest.mock("@/analysis/submission-rate-limit")` would auto-mock
+// `SubmissionRateLimitedError` too, replacing its real constructor (which
+// sets `.message`) with a no-op — breaking the
+// `error instanceof SubmissionRateLimitedError` test below, which relies on
+// the real class. Only `claimSubmissionAttempt` needs mocking.
+jest.mock("@/analysis/submission-rate-limit", () => ({
+  ...jest.requireActual("@/analysis/submission-rate-limit"),
+  claimSubmissionAttempt: jest.fn(),
+}));
+jest.mock("@/lib/request-identifier");
 
 const mockRedirect = redirect as jest.MockedFunction<typeof redirect>;
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<
@@ -23,6 +38,11 @@ const mockReanalyzeAndRefreshHistory =
   reanalyzeAndRefreshHistory as jest.MockedFunction<
     typeof reanalyzeAndRefreshHistory
   >;
+const mockClaimSubmissionAttempt =
+  claimSubmissionAttempt as jest.MockedFunction<typeof claimSubmissionAttempt>;
+const mockRequestIdentifier = requestIdentifier as jest.MockedFunction<
+  typeof requestIdentifier
+>;
 
 function formDataWithUrl(url: string): FormData {
   const formData = new FormData();
@@ -31,6 +51,11 @@ function formDataWithUrl(url: string): FormData {
 }
 
 describe("resolveRepository", () => {
+  beforeEach(() => {
+    mockRequestIdentifier.mockResolvedValue("1.2.3.4");
+    mockClaimSubmissionAttempt.mockResolvedValue(undefined);
+  });
+
   it("returns an error without analyzing when the URL is invalid", async () => {
     const result = await resolveRepository(
       { status: "idle" },
@@ -82,6 +107,24 @@ describe("resolveRepository", () => {
     );
 
     expect(result.status).toBe("error");
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("returns the SubmissionRateLimitedError message inline without ever analyzing", async () => {
+    mockClaimSubmissionAttempt.mockRejectedValue(
+      new SubmissionRateLimitedError(10)
+    );
+
+    const result = await resolveRepository(
+      { status: "idle" },
+      formDataWithUrl("https://github.com/acme/widgets")
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please wait 10s before submitting another repository.",
+    });
+    expect(mockAnalyzeAndPersistRepository).not.toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
   });
 
