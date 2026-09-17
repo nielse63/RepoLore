@@ -14,7 +14,11 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
-import { buildCalleesIndex, deriveCallTreeRootIds } from "@/lore/call-tree";
+import {
+  buildCalleesIndex,
+  deriveCallTreeRootIds,
+  resolveUniqueSignatures,
+} from "@/lore/call-tree";
 import { describeImportanceReason } from "@/lore/describe-importance";
 import type {
   CallableSignature,
@@ -205,17 +209,11 @@ export function DataFlowContent({
     [callEdges, focusId]
   );
   const callers = useMemo(
-    () =>
-      callerEdges
-        .map((e) => byId.get(e.callerId))
-        .filter((s): s is CallableSignature => s !== undefined),
+    () => resolveUniqueSignatures(callerEdges, (e) => e.callerId, byId),
     [callerEdges, byId]
   );
   const callees = useMemo(
-    () =>
-      calleeEdges
-        .map((e) => byId.get(e.calleeId))
-        .filter((s): s is CallableSignature => s !== undefined),
+    () => resolveUniqueSignatures(calleeEdges, (e) => e.calleeId, byId),
     [calleeEdges, byId]
   );
   const focusEvidence: Evidence[] = useMemo(

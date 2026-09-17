@@ -108,3 +108,29 @@ export function buildCalleesIndex(
   }
   return new Map([...seen].map(([id, callees]) => [id, [...callees]]));
 }
+
+/**
+ * Resolves a list of `CallEdge`s to the distinct `CallableSignature`s at
+ * `pick(edge)`, in first-occurrence order. A function can have more than one
+ * call edge to (or from) the same other function — e.g. two call sites to
+ * the same callee within one body — so this de-dupes on the resolved
+ * signature's id, same discipline `buildCalleesIndex` uses for the tree
+ * view's per-caller callee lists. Used by the Data Flow focus panel's
+ * "Called by"/"Calls" lists.
+ */
+export function resolveUniqueSignatures(
+  edges: CallEdge[],
+  pick: (edge: CallEdge) => EntityId,
+  byId: Map<EntityId, CallableSignature>
+): CallableSignature[] {
+  const seen = new Set<EntityId>();
+  const result: CallableSignature[] = [];
+  for (const edge of edges) {
+    const id = pick(edge);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const signature = byId.get(id);
+    if (signature) result.push(signature);
+  }
+  return result;
+}
