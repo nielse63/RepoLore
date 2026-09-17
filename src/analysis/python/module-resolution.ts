@@ -5,8 +5,8 @@
  *
  * Absolute imports (`import foo.bar`, `from foo.bar import baz`) are
  * resolved against detected source roots — the repository root itself, plus
- * a top-level `src/` directory when present (the conventional layout
- * `docs/product/mvp.md` calls out). Relative imports (`from . import x`,
+ * a top-level `src/` directory when present (a conventional Python project
+ * layout). Relative imports (`from . import x`,
  * `from .foo import bar`, `from ..pkg import x`) are resolved directly
  * against the importing file's own package directory, walking up one
  * directory per additional leading dot.

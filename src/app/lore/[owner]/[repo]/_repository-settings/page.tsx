@@ -114,8 +114,8 @@ export default function RepositorySettingsPage() {
 
         <PreviewBanner>
           Showing example data for illustration. Repository settings aren&apos;t
-          implemented yet — see docs/product/mvp.md&apos;s MVP exclusions (no
-          scheduled or automatic refresh).
+          implemented yet — see docs/product/non-goals.md&apos;s Explicit
+          Exclusions (no scheduled or automatic refresh).
         </PreviewBanner>
 
         <div className="flex gap-8">

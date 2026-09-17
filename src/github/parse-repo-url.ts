@@ -1,6 +1,6 @@
 /**
  * Parses and normalizes user-pasted input into a GitHub `{ owner, repo }`
- * identity (MVP core user journey step 1–2, docs/product/mvp.md). Accepts the
+ * identity — the first step of the core user journey. Accepts the
  * shapes people actually paste — with or without a scheme, `www.`, a
  * trailing slash, a `.git` suffix, or extra path segments like `/tree/main`
  * — and rejects anything that isn't recognizably a github.com repository URL

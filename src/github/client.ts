@@ -1,10 +1,10 @@
 /**
- * Minimal GitHub REST API client covering what the MVP core user journey
- * needs so far (docs/product/mvp.md, steps 2–5): resolve a repository's
- * default branch and HEAD commit SHA, and fetch the source tarball at a
- * given ref (ADR-0002). This is the first code path that calls the GitHub
- * API, so it's also the first to require a PAT (ADR-0002's consequence:
- * unauthenticated access is capped at 60 requests/hour).
+ * Minimal GitHub REST API client covering what the core analysis pipeline
+ * needs so far: resolve a repository's default branch and HEAD commit SHA,
+ * and fetch the source tarball at a given ref (ADR-0002). This is the first
+ * code path that calls the GitHub API, so it's also the first to require a
+ * PAT (ADR-0002's consequence: unauthenticated access is capped at 60
+ * requests/hour).
  */
 
 const API_BASE = "https://api.github.com";

@@ -14,12 +14,12 @@ const initialState: ResolveRepositoryState = { status: "idle" };
 
 /**
  * Landing page content: paste a public GitHub repository URL, analyze and
- * persist it, and land on its stable `/lore/{owner}/{repo}` page (MVP core
- * user journey, docs/product/mvp.md). On success the Server Action redirects
- * there directly, so this page only ever needs to show an error for
- * failures that happen before a run exists to redirect to. Reflects the
- * hero from docs/designs/home.png; the marketing imagery below the fold is
- * deferred.
+ * persist it, and land on its stable `/lore/{owner}/{repo}` page (the core
+ * user journey — see docs/product/mission.md). On success the Server
+ * Action redirects there directly, so this page only ever needs to show
+ * an error for failures that happen before a run exists to redirect to.
+ * Reflects the hero from docs/designs/home.png; the marketing imagery
+ * below the fold is deferred.
  *
  * A separate client component from `src/app/page.tsx` so the route file can
  * stay a Server Component and export its own route-specific metadata

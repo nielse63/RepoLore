@@ -7,6 +7,7 @@ import {
   FolderGit2,
   Home,
   Network,
+  Package,
   Share2,
   ShieldCheck,
   Waypoints,
@@ -17,7 +18,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { slug: "", label: "Overview", icon: Home },
   { slug: "architecture", label: "Architecture", icon: Network },
-  // { slug: 'systems', label: 'Systems', icon: Package },
+  { slug: "systems", label: "Systems", icon: Package },
   { slug: "dependencies", label: "Dependencies", icon: Share2 },
   { slug: "data-flow", label: "Data Flow", icon: Waypoints },
   { slug: "history", label: "History", icon: Clock },
@@ -116,8 +117,8 @@ export function Sidebar({
 
         {/* Repository settings is not implemented yet; the real page lives
             under `_repository-settings/` for future reference but is
-            excluded from routing. See systems/[[...slug]]/page.tsx for the
-            equivalent stub pattern. */}
+            excluded from routing by the `_` prefix (the same pattern
+            Systems used before ADR-0014 implemented it for real). */}
         {/* <Link
           href={`${base}/repository-settings`}
           aria-current={

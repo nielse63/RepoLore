@@ -325,8 +325,8 @@ function buildStartHere(
   // a real repository, `TheAlgorithms/Python`, in implementation session
   // 13) can otherwise produce hundreds of simultaneous "bootstrap" entry
   // points, one per script, defeating Start Here's own conciseness
-  // requirement (`docs/product/mvp.md`'s ~3–7 items) before steps 2–4 ever
-  // run.
+  // requirement (`START_HERE_MIN_ITEMS`/`START_HERE_MAX_ITEMS`, ~3–7 items)
+  // before steps 2–4 ever run.
   const applicationEntries = entryPoints.filter((ep) =>
     STARTING_ENTRY_KINDS.includes(ep.kind)
   );
