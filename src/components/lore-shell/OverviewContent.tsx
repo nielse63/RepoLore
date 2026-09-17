@@ -190,15 +190,17 @@ export function OverviewContent({
         </section>
       )}
 
-      <section id="gaps">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
-        </h2>
-        <GapsList
-          gaps={lore.gaps}
-          storageKey={`gaps-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
-        />
-      </section>
+      {!!lore.gaps.length && (
+        <section id="gaps">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+            <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
+          </h2>
+          <GapsList
+            gaps={lore.gaps}
+            storageKey={`gaps-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
+          />
+        </section>
+      )}
     </div>
   );
 }

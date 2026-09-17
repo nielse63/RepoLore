@@ -266,15 +266,17 @@ export function ArchitectureContent({
         </section>
       )}
 
-      <section id="gaps">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
-          <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
-        </h2>
-        <GapsList
-          gaps={lore.gaps}
-          storageKey={`gaps-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
-        />
-      </section>
+      {!!lore.gaps.length && (
+        <section id="gaps">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+            <GapHorizontal className="h-4 w-4" aria-hidden="true" /> Gaps
+          </h2>
+          <GapsList
+            gaps={lore.gaps}
+            storageKey={`gaps-page:${lore.snapshot.repository.owner}/${lore.snapshot.repository.name}:architecture`}
+          />
+        </section>
+      )}
 
       <section id="test-relationships">
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
