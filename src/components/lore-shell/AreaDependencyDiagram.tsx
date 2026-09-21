@@ -110,7 +110,7 @@ export function AreaDependencyDiagram({
   // rather than being centered in extra empty space: scaling only the
   // height while width stays container-fit wouldn't enlarge anything,
   // since the SVG would still be scaled-to-fit by the unchanged width.
-  const DISPLAY_SCALE = 1.5;
+  const DISPLAY_SCALE = 1;
 
   const legendEntries = Array.from(
     new Map(
@@ -128,14 +128,16 @@ export function AreaDependencyDiagram({
   );
 
   return (
-    <div>
+    <div id="area-dependency-diagram">
       <div className="overflow-x-auto">
         <svg
           viewBox={`0 0 ${layout.width} ${layout.height}`}
           width={layout.width * DISPLAY_SCALE}
           height={layout.height * DISPLAY_SCALE}
+          className="h-auto w-auto max-h-dvh"
           role="img"
           aria-label="Diagram of how major areas depend on each other"
+          id="area-dependency-diagram-svg"
         >
           <defs>
             <marker
