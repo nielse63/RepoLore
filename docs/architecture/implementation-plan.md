@@ -712,3 +712,30 @@ Manually verified against `fixtures/ts-react-app` (whose `tsconfig.json` declare
 Verified: `npm run test` (79 Jest suites / 619 tests, up from 70/519 — some of that growth predates this session; 43/43 Playwright e2e, unchanged), `npx tsc --noEmit`, `npm run lint`, all clean.
 
 **Next smallest task:** unchanged from before this session — resume session 17 (deploy), then `search`'s scope review.
+
+### 2026-09-21 — `/lore/{owner}/{repo}/search` removed, at the product owner's direction
+
+**Decision:** rather than run the scope review this plan had queued for it, the product owner asked to remove the `search` route outright. It was the last fixture-scaffolded preview page left (`repository-settings` is a separate, not-yet-routed case — see README), never linked from `Sidebar`'s `NAV_ITEMS`, and had already been flagged as a candidate for removal in `docs/architecture/ux-seo-a11y-remediation-plan.md`'s "Deferred" section (its missing route-specific metadata was left unfixed pending exactly this decision).
+
+**Removed:** `src/app/lore/[owner]/[repo]/search/page.tsx`, and the two fixture modules it was the sole importer of: `src/lib/fixtures/payments-service.ts` (`SYSTEMS`, `DEPENDENCIES`, `DATA_FLOW_STEPS`, `HISTORY_ENTRIES`, `getSystemDetail`, etc. — all already superseded by real-data pages per ADR-0008/0010/0011/0012/0014, per those ADRs' own "left in place, matching precedent" notes; this page was the last consumer) and `src/lib/fixtures/icons.ts` (`ICONS`), plus both files' Jest specs (`src/lib/fixtures/__tests__/payments-service.spec.ts`, `icons.spec.ts`). `SearchInput` (`src/components/ui/SearchInput.tsx`) is unaffected — Dependencies, Data Flow, and Systems all still use it for their own client-side list filtering.
+
+**Updated:** `e2e/mobile-responsive.spec.ts` (`/search` dropped from `SHELL_ROUTES`, the "Search page facets" describe block removed); `src/app/page.tsx`'s canonical-metadata doc comment (no longer names `/search` as the concrete example route the layout-inheritance bug hit); `README.md`'s "Design system and UI routes" section (search dropped from the scaffolded-pages list; corrected the `repository-settings` bullet in passing, which had inaccurately implied it also renders a live `PreviewBanner` — it actually 404s, with its reference implementation parked at `_repository-settings/page.tsx`, unrouted); `docs/architecture/ux-seo-a11y-remediation-plan.md`'s "Deferred" bullet marked resolved.
+
+Verified: `npm run test:unit` (77 suites / 613 tests, down from 79/619 — the two removed fixture specs), `npm run test:e2e` (40/40, down from 43 — the removed `/search` overflow check and its two-test "Search page facets" describe block), `npx tsc --noEmit`, and `npm run lint` all clean; `grep -ri` across `src`/`e2e`/`README.md` confirmed no leftover imports or references to the removed route or fixtures.
+
+**Next smallest task:** resume session 17 (deploy). The Python call-graph follow-on ADR remains unscoped.
+
+### 2026-09-21 — Two more unused leftovers removed: the unwired Data Flow diagram code, and the unrouted `_repository-settings/` reference page
+
+**Decision:** a follow-up audit for other removable pages/files (prompted by the `search` removal above) turned up two more, both confirmed unreferenced anywhere in `src`, `e2e`, or the build output before removal. The product owner asked to remove both.
+
+**Removed:**
+
+- `src/components/lore-shell/DataFlowDiagram.tsx` and `src/lore/call-graph-layout.ts` (`deriveCallGraphLayout`), plus the latter's spec (`src/lore/__tests__/call-graph-layout.spec.ts`). These had been left unwired-but-in-place since the 2026-08-26 Data Flow tree-view switch (see ADR-0012's addendum), on the theory that restoring the diagram view would be a re-wiring rather than a rewrite. A month on with no page importing either, the product owner chose outright deletion over continuing to carry them. `src/analysis/js-ts/call-graph.ts`, `CallableSignature`, `CallEdge`, and `MAX_CALL_GRAPH_NODES` are unaffected — the live tree view still depends on them directly.
+- `src/app/lore/[owner]/[repo]/_repository-settings/page.tsx` — a mockup-faithful reference implementation excluded from routing by its `_` prefix, parked "for future reference" (same pattern `_systems/` used before ADR-0014 built it for real), never wired to the Sidebar. The routed `/repository-settings` stub (`repository-settings/[[...slug]]/page.tsx`) already renders `notFound()` regardless, so nothing user-facing changes.
+
+**Updated:** the two comments that pointed at the now-deleted `_repository-settings/` (the routed stub's own doc comment; `Sidebar.tsx`'s comment above the commented-out nav link); `README.md`'s `repository-settings` bullet (no longer describes a reference implementation that no longer exists); `docs/architecture/decisions/0012-call-graph.md` got a new dated Consequences bullet recording the diagram-code deletion; `docs/architecture/ux-seo-a11y-remediation-plan.md`'s RL-009 bullet updated (`CallGraphDiagram` renamed/since-removed, `AreaDependencyDiagram`'s "dead/unwired" note caveated as true only at that pass's time, since ADR-0014 later wired it for real).
+
+Verified: `npm run test:unit` (76 suites / 610 tests, down from 77/613 — the removed `call-graph-layout.spec.ts`), `npm run test:e2e` (40/40, unchanged — neither removed file had test coverage), `npx tsc --noEmit`, and `npm run lint` all clean.
+
+**Next smallest task:** unchanged — resume session 17 (deploy). The Python call-graph follow-on ADR remains unscoped.

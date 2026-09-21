@@ -87,7 +87,10 @@
   },
   "homepage": "https://github.com/nielse63/RepoLore#readme",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": "eslint --fix --cache",
-    "*.{ts,tsx,js,jsx,md,json}": "prettier --write --cache"
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix --cache",
+      "prettier --write --cache"
+    ],
+    "*.{md,json,yaml,yml}": "prettier --write --cache"
   }
 }

@@ -16,8 +16,8 @@ const MOBILE_VIEWPORT = { width: 375, height: 812 };
 const DESKTOP_VIEWPORT = { width: 1280, height: 900 };
 
 // Every routed page that renders inside the shared app shell — used for the
-// generic no-horizontal-overflow sweep. `_repository-settings` is excluded
-// from routing (see Sidebar.tsx) and intentionally not covered here.
+// generic no-horizontal-overflow sweep. `repository-settings` isn't built yet
+// (404s, see Sidebar.tsx) and intentionally not covered here.
 const SHELL_ROUTES = [
   repoUrl,
   `${repoUrl}/architecture`,
@@ -26,7 +26,6 @@ const SHELL_ROUTES = [
   `${repoUrl}/dependencies`,
   `${repoUrl}/data-flow`,
   `${repoUrl}/history`,
-  `${repoUrl}/search`,
 ];
 
 test.describe("Sidebar mobile drawer", () => {
@@ -135,40 +134,6 @@ test.describe("No horizontal overflow at 375px", () => {
       expect(overflowing).toBeLessThanOrEqual(viewportWidth);
     });
   }
-});
-
-test.describe("Search page facets", () => {
-  test("facets stack above results below the lg breakpoint", async ({
-    page,
-  }) => {
-    await page.setViewportSize(MOBILE_VIEWPORT);
-    await page.goto(`${repoUrl}/search`);
-
-    const facets = page.getByRole("navigation", { name: "Search facets" });
-    const results = page.getByRole("heading", { name: "Best match" });
-
-    const facetsBox = await facets.boundingBox();
-    const resultsBox = await results.boundingBox();
-    expect(facetsBox).not.toBeNull();
-    expect(resultsBox).not.toBeNull();
-    expect(facetsBox!.y + facetsBox!.height).toBeLessThanOrEqual(resultsBox!.y);
-  });
-
-  test("facets sit beside results at the lg breakpoint and above", async ({
-    page,
-  }) => {
-    await page.setViewportSize(DESKTOP_VIEWPORT);
-    await page.goto(`${repoUrl}/search`);
-
-    const facets = page.getByRole("navigation", { name: "Search facets" });
-    const results = page.getByRole("heading", { name: "Best match" });
-
-    const facetsBox = await facets.boundingBox();
-    const resultsBox = await results.boundingBox();
-    expect(facetsBox).not.toBeNull();
-    expect(resultsBox).not.toBeNull();
-    expect(facetsBox!.x + facetsBox!.width).toBeLessThanOrEqual(resultsBox!.x);
-  });
 });
 
 test.describe("Data Flow toolbar", () => {

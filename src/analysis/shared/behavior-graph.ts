@@ -1,9 +1,8 @@
 /**
  * Generic graph algorithms over the Program Behavior Graph (ADR-0013),
  * operating on plain `EntityId`s so they work identically for
- * `CallableSignature` and `BehaviorNode` ids. Mirrors
- * `src/lore/call-graph-layout.ts`'s existing `buildAdjacency`/BFS style
- * rather than introducing a graph library — the codebase has twice
+ * `CallableSignature` and `BehaviorNode` ids. Uses a plain `buildAdjacency`/BFS
+ * style rather than introducing a graph library — the codebase has twice
  * (ADR-0009, ADR-0012) rejected one for surfaces this small.
  *
  * No general graph library is used here either: these primitives back
