@@ -5,13 +5,20 @@ name: Coverage
 # in coverage, not just the current totals. The base commit is checked out
 # and tested alongside the PR commit (rather than relying on a cached
 # artifact from a prior base-branch run) so the diff is always against the
-# exact commit the PR is built on, with no dependency on another workflow
-# having run first.
+# exact commit the PR is built on.
+#
+# Runs only after the Verify workflow completes successfully on the same
+# commit (via workflow_run), so coverage is never reported for a PR that
+# fails lint/build/tests. PR/commit info comes from the workflow_run event's
+# pull_requests list, which GitHub only populates for same-repo PRs (not
+# forks).
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - Verify
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -19,6 +26,7 @@ permissions:
 
 jobs:
   coverage:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -26,12 +34,13 @@ jobs:
       - name: Checkout PR commit
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           path: pr
 
       - name: Checkout base commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.workflow_run.pull_requests[0].base.sha }}
           path: base
 
       - uses: actions/setup-node@v4
@@ -59,7 +68,7 @@ jobs:
       - name: Comment unit test coverage
         uses: Nef10/lcov-reporter-action@v0.6.1
         with:
-          pr-number: ${{ github.event.pull_request.number }}
+          pr-number: ${{ github.event.workflow_run.pull_requests[0].number }}
           lcov-file: pr/coverage/lcov.info
           lcov-base: base/coverage/lcov.info
           title: "Unit Test Coverage"
