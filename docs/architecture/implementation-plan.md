@@ -696,3 +696,46 @@ Verified against the real running app (local Postgres + `GITHUB_TOKEN`, dev serv
 Verified: `npm run test:unit` (70 suites / 519 tests, unchanged), `npm run test:e2e` (25/25, up from 16), `npx tsc --noEmit`, `npx eslint e2e/systems.spec.ts e2e/not-found.spec.ts` all clean.
 
 **Next smallest task:** unchanged — resume session 17 (deploy), then `search`'s scope review. The broader, long-disclosed gap (no Playwright coverage yet for Overview/Architecture/Dependencies/Data Flow/History's real-data rendering, only for 404 and Systems) is unchanged by this session and wasn't in scope — each would need its own pass to pick good real-data assertions the way this session did for Systems.
+
+### 2026-09-21 — JS/TS path-alias resolution (GitHub issue #24, ADR-0015)
+
+Resolved the long-disclosed gap ADR-0003 flagged since session 4/6: any alias-shaped import specifier (e.g. `@/components/Header`) was reported as an `unsupported` Gap rather than resolved, since `module-resolution.ts` only ever handled relative (`./`, `../`) specifiers.
+
+New `src/analysis/js-ts/project-config.ts` reads and merges path-alias configuration from up to ten sources, per issue #24 and ADR-0015: `tsconfig.json`/`jsconfig.json` (via `ts-morph`'s re-exported `ts.readConfigFile`/`parseJsonConfigFileContent`, resolving `extends` chains — no new dependency), `package.json`'s `imports` field, and, parsed syntactically via ts-morph AST and never executed (per `docs/product/non-goals.md`'s "no executing analyzed-repository code" exclusion), `vite.config.*`, `webpack.config.*`, `rsbuild.config.*`, `rollup.config.js` (`@rollup/plugin-alias`'s `entries` shape), `nuxt.config.*`, `next.config.*` (only its `webpack(config) {...}` mutation pattern), and `.babelrc`/`babel.config.*` (`babel-plugin-module-resolver`'s `alias` option). A fixed precedence order resolves conflicts across sources; a computed/dynamic alias target (anything beyond a string literal or a `path.resolve`/`path.join` call with literal arguments) is left unresolved and reported as an honest Gap rather than guessed.
+
+`module-resolution.ts`'s `buildModuleResolutionIndex` gained `rootDir`/`aliases` parameters and now resolves non-relative specifiers against the longest-matching configured alias through the same extension/index-file candidate logic already used for relative imports; `imports.ts` attempts this for every non-relative specifier before falling back to the existing alias-shaped-but-unresolved Gap, and cites the winning config file/key in its evidence. `extract-project.ts` wires `readJsTsProjectConfig` in once per run. `JS_TS_ANALYZER_VERSION` bumped `js-ts-v9` → `js-ts-v10` (ADR-0005) since previously-gapped aliased imports now resolve to real Relationships for many repositories.
+
+New `project-config.spec.ts` (16 cases covering all ten sources, precedence, `extends`, malformed-file and computed-value Gaps); `module-resolution.spec.ts` and `imports.spec.ts` extended with alias-resolution cases. Four other call sites of `buildModuleResolutionIndex` (`call-graph.ts`, `react-effects.ts`, `react-events.ts`, `tests.ts`) updated for the new required `rootDir` parameter — they don't need alias awareness themselves, only relative resolution, so `aliases` is left at its default `[]`.
+
+Manually verified against `fixtures/ts-react-app` (whose `tsconfig.json` declares `"@/*": ["src/*"]`): `App.tsx`'s `@/components/Header`/`@/components/Footer` imports, previously two `unsupported` Gaps, now resolve to real `depends-on` Relationships with evidence citing `tsconfig.json`.
+
+Verified: `npm run test` (79 Jest suites / 619 tests, up from 70/519 — some of that growth predates this session; 43/43 Playwright e2e, unchanged), `npx tsc --noEmit`, `npm run lint`, all clean.
+
+**Next smallest task:** unchanged from before this session — resume session 17 (deploy), then `search`'s scope review.
+
+### 2026-09-21 — `/lore/{owner}/{repo}/search` removed, at the product owner's direction
+
+**Decision:** rather than run the scope review this plan had queued for it, the product owner asked to remove the `search` route outright. It was the last fixture-scaffolded preview page left (`repository-settings` is a separate, not-yet-routed case — see README), never linked from `Sidebar`'s `NAV_ITEMS`, and had already been flagged as a candidate for removal in `docs/architecture/ux-seo-a11y-remediation-plan.md`'s "Deferred" section (its missing route-specific metadata was left unfixed pending exactly this decision).
+
+**Removed:** `src/app/lore/[owner]/[repo]/search/page.tsx`, and the two fixture modules it was the sole importer of: `src/lib/fixtures/payments-service.ts` (`SYSTEMS`, `DEPENDENCIES`, `DATA_FLOW_STEPS`, `HISTORY_ENTRIES`, `getSystemDetail`, etc. — all already superseded by real-data pages per ADR-0008/0010/0011/0012/0014, per those ADRs' own "left in place, matching precedent" notes; this page was the last consumer) and `src/lib/fixtures/icons.ts` (`ICONS`), plus both files' Jest specs (`src/lib/fixtures/__tests__/payments-service.spec.ts`, `icons.spec.ts`). `SearchInput` (`src/components/ui/SearchInput.tsx`) is unaffected — Dependencies, Data Flow, and Systems all still use it for their own client-side list filtering.
+
+**Updated:** `e2e/mobile-responsive.spec.ts` (`/search` dropped from `SHELL_ROUTES`, the "Search page facets" describe block removed); `src/app/page.tsx`'s canonical-metadata doc comment (no longer names `/search` as the concrete example route the layout-inheritance bug hit); `README.md`'s "Design system and UI routes" section (search dropped from the scaffolded-pages list; corrected the `repository-settings` bullet in passing, which had inaccurately implied it also renders a live `PreviewBanner` — it actually 404s, with its reference implementation parked at `_repository-settings/page.tsx`, unrouted); `docs/architecture/ux-seo-a11y-remediation-plan.md`'s "Deferred" bullet marked resolved.
+
+Verified: `npm run test:unit` (77 suites / 613 tests, down from 79/619 — the two removed fixture specs), `npm run test:e2e` (40/40, down from 43 — the removed `/search` overflow check and its two-test "Search page facets" describe block), `npx tsc --noEmit`, and `npm run lint` all clean; `grep -ri` across `src`/`e2e`/`README.md` confirmed no leftover imports or references to the removed route or fixtures.
+
+**Next smallest task:** resume session 17 (deploy). The Python call-graph follow-on ADR remains unscoped.
+
+### 2026-09-21 — Two more unused leftovers removed: the unwired Data Flow diagram code, and the unrouted `_repository-settings/` reference page
+
+**Decision:** a follow-up audit for other removable pages/files (prompted by the `search` removal above) turned up two more, both confirmed unreferenced anywhere in `src`, `e2e`, or the build output before removal. The product owner asked to remove both.
+
+**Removed:**
+
+- `src/components/lore-shell/DataFlowDiagram.tsx` and `src/lore/call-graph-layout.ts` (`deriveCallGraphLayout`), plus the latter's spec (`src/lore/__tests__/call-graph-layout.spec.ts`). These had been left unwired-but-in-place since the 2026-08-26 Data Flow tree-view switch (see ADR-0012's addendum), on the theory that restoring the diagram view would be a re-wiring rather than a rewrite. A month on with no page importing either, the product owner chose outright deletion over continuing to carry them. `src/analysis/js-ts/call-graph.ts`, `CallableSignature`, `CallEdge`, and `MAX_CALL_GRAPH_NODES` are unaffected — the live tree view still depends on them directly.
+- `src/app/lore/[owner]/[repo]/_repository-settings/page.tsx` — a mockup-faithful reference implementation excluded from routing by its `_` prefix, parked "for future reference" (same pattern `_systems/` used before ADR-0014 built it for real), never wired to the Sidebar. The routed `/repository-settings` stub (`repository-settings/[[...slug]]/page.tsx`) already renders `notFound()` regardless, so nothing user-facing changes.
+
+**Updated:** the two comments that pointed at the now-deleted `_repository-settings/` (the routed stub's own doc comment; `Sidebar.tsx`'s comment above the commented-out nav link); `README.md`'s `repository-settings` bullet (no longer describes a reference implementation that no longer exists); `docs/architecture/decisions/0012-call-graph.md` got a new dated Consequences bullet recording the diagram-code deletion; `docs/architecture/ux-seo-a11y-remediation-plan.md`'s RL-009 bullet updated (`CallGraphDiagram` renamed/since-removed, `AreaDependencyDiagram`'s "dead/unwired" note caveated as true only at that pass's time, since ADR-0014 later wired it for real).
+
+Verified: `npm run test:unit` (76 suites / 610 tests, down from 77/613 — the removed `call-graph-layout.spec.ts`), `npm run test:e2e` (40/40, unchanged — neither removed file had test coverage), `npx tsc --noEmit`, and `npm run lint` all clean.
+
+**Next smallest task:** unchanged — resume session 17 (deploy). The Python call-graph follow-on ADR remains unscoped.

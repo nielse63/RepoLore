@@ -38,6 +38,7 @@ import {
   detectReactComponents,
   type DetectedReactComponent,
 } from "./react-components";
+import { readJsTsProjectConfig } from "./project-config";
 import { extractTestRelationships } from "./tests";
 
 export interface JsTsExtraction {
@@ -213,8 +214,13 @@ export function extractJsTsProject(
   const absoluteRoot = path.resolve(rootDir);
   const pkg = readPackageJson(absoluteRoot);
   const { sourceFiles } = discoverSourceFiles(absoluteRoot);
+  const projectConfig = readJsTsProjectConfig(absoluteRoot);
 
-  const importResult = extractImportRelationships(sourceFiles, absoluteRoot);
+  const importResult = extractImportRelationships(
+    sourceFiles,
+    absoluteRoot,
+    projectConfig.aliases
+  );
   const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot);
   const publicContracts = extractPublicSurface(
     entryPoints,
@@ -323,6 +329,6 @@ export function extractJsTsProject(
     callEdges: callGraph.callEdges,
     behaviorNodes,
     behaviorEdges,
-    gaps: [...importResult.gaps, ...testResult.gaps],
+    gaps: [...importResult.gaps, ...testResult.gaps, ...projectConfig.gaps],
   };
 }

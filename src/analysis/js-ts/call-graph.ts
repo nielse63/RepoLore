@@ -74,7 +74,7 @@ export function extractCallGraph(
   const callEdges: CallEdge[] = [];
   const dataFlowEdges: BehaviorEdge[] = [];
 
-  const resolver = buildModuleResolutionIndex(sourceFiles);
+  const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
 
   for (const sourceFile of sourceFiles) {
     const filePath = toRelative(rootDir, sourceFile.getFilePath());

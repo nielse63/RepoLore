@@ -3,11 +3,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const MIN_PAGE_SIZE = 5;
-// Pagination controls' own rendered height (one row of h-9 buttons, plus the
-// mt-4 gap above them in GapsList) added to the page's own bottom padding
-// (LorePageFrame's <main> uses py-8) — reserved so the fitted row count
-// leaves that space free rather than exactly filling the viewport edge.
-const RESERVED_BELOW_PX = 52 + 32;
 
 /**
  * `<main>` (LorePageFrame) is styled `overflow-y-auto`, but its ancestor
@@ -55,7 +50,7 @@ export function useFitPageSize(
     const rowHeight = rect.height / rowCount;
     if (!Number.isFinite(rowHeight) || rowHeight <= 0) return;
 
-    const available = window.innerHeight - rect.top - RESERVED_BELOW_PX;
+    const available = window.innerHeight - rect.top;
     const fitCount = Math.floor(available / rowHeight);
     setPageSize(Math.min(Math.max(fitCount, MIN_PAGE_SIZE), maxPageSize));
   }, [containerRef, maxPageSize]);

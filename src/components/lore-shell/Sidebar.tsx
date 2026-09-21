@@ -165,10 +165,8 @@ function SidebarNav({
           </p>
         </div>
 
-        {/* Repository settings is not implemented yet; the real page lives
-            under `_repository-settings/` for future reference but is
-            excluded from routing by the `_` prefix (the same pattern
-            Systems used before ADR-0014 implemented it for real). */}
+        {/* Repository settings is not implemented yet; `/repository-settings`
+            currently 404s (see the route's own stub comment). */}
         {/* <Link
           href={`${base}/repository-settings`}
           aria-current={

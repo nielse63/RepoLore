@@ -70,7 +70,7 @@ export function detectReactEvents(
 ): BehaviorEdge[] {
   let edgeCount = 0;
   const edges: BehaviorEdge[] = [];
-  const resolver = buildModuleResolutionIndex(sourceFiles);
+  const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
 
   for (const sourceFile of sourceFiles) {
     const filePath = toRelative(rootDir, sourceFile.getFilePath());

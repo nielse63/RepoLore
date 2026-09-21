@@ -2,6 +2,8 @@
  * Extracts internal dependency edges (import/re-export relationships between
  * discovered source files) as shared-model `Relationship`s, per ADR-0003
  * (syntactic-only: based on import specifiers, not resolved types).
+ * Non-relative specifiers are resolved against `aliases` (from
+ * `project-config.ts`, ADR-0015) when a configured alias matches.
  */
 
 import path from "node:path";
@@ -12,7 +14,9 @@ import {
   isRelativeSpecifier,
   looksLikeAssetImport,
   looksLikePathAlias,
+  matchAlias,
 } from "./module-resolution";
+import type { PathAlias } from "./project-config";
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
   return path.relative(rootDir, absoluteFilePath).split(path.sep).join("/");
@@ -61,9 +65,10 @@ export interface ImportExtractionResult {
 
 export function extractImportRelationships(
   sourceFiles: SourceFile[],
-  rootDir: string
+  rootDir: string,
+  aliases: PathAlias[] = []
 ): ImportExtractionResult {
-  const resolver = buildModuleResolutionIndex(sourceFiles);
+  const resolver = buildModuleResolutionIndex(sourceFiles, rootDir, aliases);
   const relationships: Relationship[] = [];
   const gaps: Gap[] = [];
   const externalReferences: ExternalReference[] = [];
@@ -119,10 +124,41 @@ export function extractImportRelationships(
         continue;
       }
 
+      const resolvedAlias = resolver.resolve(
+        sourceFile.getFilePath(),
+        specifier
+      );
+      if (resolvedAlias) {
+        relationshipCount += 1;
+        const targetPath = toRelative(rootDir, resolvedAlias.getFilePath());
+        const alias = matchAlias(specifier, aliases);
+        const aliasSourceText = alias
+          ? ` via alias '${alias.pattern}' defined in '${alias.source.filePath}'${
+              alias.source.configKey ? ` (${alias.source.configKey})` : ""
+            }`
+          : "";
+        relationships.push({
+          id: `js-ts-import-${relationshipCount}`,
+          kind: "depends-on",
+          fromId: importerPath,
+          toId: targetPath,
+          certainty: "detected",
+          evidence: [
+            {
+              kind: "import-statement",
+              certainty: "detected",
+              location: importerLocation,
+              description: `'${importerPath}' imports from '${specifier}', resolved${aliasSourceText} to '${targetPath}'.`,
+            },
+          ],
+        });
+        continue;
+      }
+
       if (looksLikePathAlias(specifier)) {
         gaps.push({
           certainty: "unsupported",
-          description: `Import '${specifier}' in '${importerPath}' appears to use a path alias; alias resolution (tsconfig 'paths') is not yet implemented (ADR-0003, deferred to implementation session 6).`,
+          description: `Import '${specifier}' in '${importerPath}' appears to use a path alias, but no matching alias configuration (tsconfig/jsconfig 'paths', package.json 'imports', or a supported bundler/framework config) resolved it to a discovered source file.`,
           location: importerLocation,
         });
         continue;

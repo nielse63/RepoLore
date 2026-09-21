@@ -1,5 +1,6 @@
 import { Project } from "ts-morph";
 import { extractImportRelationships } from "../imports";
+import type { PathAlias } from "../project-config";
 
 function makeProject() {
   return new Project({ useInMemoryFileSystem: true });
@@ -83,7 +84,7 @@ describe("extractImportRelationships", () => {
     expect(gaps).toEqual([]);
   });
 
-  it("produces an unsupported gap for a path-alias import", () => {
+  it("produces an unsupported gap for a path-alias import when no alias config matches", () => {
     const project = makeProject();
     project.createSourceFile(
       "/root/src/index.ts",
@@ -97,6 +98,45 @@ describe("extractImportRelationships", () => {
 
     expect(gaps).toHaveLength(1);
     expect(gaps[0].certainty).toBe("unsupported");
+  });
+
+  it("resolves an alias import when a configured alias matches", () => {
+    const project = makeProject();
+    project.createSourceFile(
+      "/root/src/components/Header.tsx",
+      "export const Header = 1;"
+    );
+    project.createSourceFile(
+      "/root/src/index.ts",
+      "import { Header } from '@/components/Header';"
+    );
+    const aliases: PathAlias[] = [
+      {
+        pattern: "@/",
+        target: "src/",
+        matchType: "prefix",
+        source: {
+          filePath: "tsconfig.json",
+          configKey: "compilerOptions.paths",
+        },
+      },
+    ];
+
+    const { relationships, gaps } = extractImportRelationships(
+      project.getSourceFiles(),
+      "/root",
+      aliases
+    );
+
+    expect(gaps).toEqual([]);
+    expect(relationships).toHaveLength(1);
+    expect(relationships[0]).toMatchObject({
+      kind: "depends-on",
+      fromId: "src/index.ts",
+      toId: "src/components/Header.tsx",
+      certainty: "detected",
+    });
+    expect(relationships[0].evidence[0].description).toContain("tsconfig.json");
   });
 
   it("ignores bare package specifiers as internal relationships/gaps, but records them as external references", () => {

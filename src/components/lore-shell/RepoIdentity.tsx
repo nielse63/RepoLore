@@ -33,7 +33,10 @@ export function RepoIdentity({
         </span>
         <Badge variant="primary">{visibility}</Badge>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted">
+      <div
+        className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted"
+        id="status-row"
+      >
         <span
           className={
             statusTone === "success"

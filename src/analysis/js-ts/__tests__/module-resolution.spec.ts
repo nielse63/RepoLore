@@ -4,10 +4,22 @@ import {
   isRelativeSpecifier,
   looksLikeAssetImport,
   looksLikePathAlias,
+  matchAlias,
 } from "../module-resolution";
+import type { PathAlias } from "../project-config";
 
 function makeProject() {
   return new Project({ useInMemoryFileSystem: true });
+}
+
+function makeAlias(overrides: Partial<PathAlias> = {}): PathAlias {
+  return {
+    pattern: "@/",
+    target: "src/",
+    matchType: "prefix",
+    source: { filePath: "tsconfig.json", configKey: "compilerOptions.paths" },
+    ...overrides,
+  };
 }
 
 describe("buildModuleResolutionIndex", () => {
@@ -15,7 +27,7 @@ describe("buildModuleResolutionIndex", () => {
     const project = makeProject();
     const target = project.createSourceFile("/root/src/math.ts", "");
     project.createSourceFile("/root/src/index.ts", "");
-    const index = buildModuleResolutionIndex(project.getSourceFiles());
+    const index = buildModuleResolutionIndex(project.getSourceFiles(), "/root");
 
     expect(index.resolve("/root/src/index.ts", "./math.ts")).toBe(target);
   });
@@ -24,7 +36,7 @@ describe("buildModuleResolutionIndex", () => {
     const project = makeProject();
     const target = project.createSourceFile("/root/src/math.ts", "");
     project.createSourceFile("/root/src/index.ts", "");
-    const index = buildModuleResolutionIndex(project.getSourceFiles());
+    const index = buildModuleResolutionIndex(project.getSourceFiles(), "/root");
 
     expect(index.resolve("/root/src/index.ts", "./math")).toBe(target);
   });
@@ -33,7 +45,7 @@ describe("buildModuleResolutionIndex", () => {
     const project = makeProject();
     const target = project.createSourceFile("/root/src/utils/index.ts", "");
     project.createSourceFile("/root/src/index.ts", "");
-    const index = buildModuleResolutionIndex(project.getSourceFiles());
+    const index = buildModuleResolutionIndex(project.getSourceFiles(), "/root");
 
     expect(index.resolve("/root/src/index.ts", "./utils")).toBe(target);
   });
@@ -42,7 +54,7 @@ describe("buildModuleResolutionIndex", () => {
     const project = makeProject();
     const target = project.createSourceFile("/root/src/math.ts", "");
     project.createSourceFile("/root/src/nested/file.ts", "");
-    const index = buildModuleResolutionIndex(project.getSourceFiles());
+    const index = buildModuleResolutionIndex(project.getSourceFiles(), "/root");
 
     expect(index.resolve("/root/src/nested/file.ts", "../math")).toBe(target);
   });
@@ -50,9 +62,61 @@ describe("buildModuleResolutionIndex", () => {
   it("returns undefined for a specifier that does not resolve to any discovered file", () => {
     const project = makeProject();
     project.createSourceFile("/root/src/index.ts", "");
-    const index = buildModuleResolutionIndex(project.getSourceFiles());
+    const index = buildModuleResolutionIndex(project.getSourceFiles(), "/root");
 
     expect(index.resolve("/root/src/index.ts", "./missing")).toBeUndefined();
+  });
+
+  it("resolves a prefix-matched alias specifier", () => {
+    const project = makeProject();
+    const target = project.createSourceFile(
+      "/root/src/components/Header.tsx",
+      ""
+    );
+    project.createSourceFile("/root/src/index.ts", "");
+    const index = buildModuleResolutionIndex(
+      project.getSourceFiles(),
+      "/root",
+      [makeAlias()]
+    );
+
+    expect(index.resolve("/root/src/index.ts", "@/components/Header")).toBe(
+      target
+    );
+  });
+
+  it("resolves an exact-matched alias specifier", () => {
+    const project = makeProject();
+    const target = project.createSourceFile("/root/src/legacy.ts", "");
+    project.createSourceFile("/root/src/index.ts", "");
+    const index = buildModuleResolutionIndex(
+      project.getSourceFiles(),
+      "/root",
+      [
+        makeAlias({
+          pattern: "@legacy",
+          target: "src/legacy",
+          matchType: "exact",
+        }),
+      ]
+    );
+
+    expect(index.resolve("/root/src/index.ts", "@legacy")).toBe(target);
+    expect(
+      index.resolve("/root/src/index.ts", "@legacy/nested")
+    ).toBeUndefined();
+  });
+
+  it("returns undefined for a non-relative specifier with no matching alias", () => {
+    const project = makeProject();
+    project.createSourceFile("/root/src/index.ts", "");
+    const index = buildModuleResolutionIndex(
+      project.getSourceFiles(),
+      "/root",
+      [makeAlias()]
+    );
+
+    expect(index.resolve("/root/src/index.ts", "react")).toBeUndefined();
   });
 });
 
@@ -89,5 +153,21 @@ describe("looksLikeAssetImport", () => {
   it("is false for source file extensions", () => {
     expect(looksLikeAssetImport("./math.ts")).toBe(false);
     expect(looksLikeAssetImport("./math")).toBe(false);
+  });
+});
+
+describe("matchAlias", () => {
+  it("picks the longest matching pattern when more than one matches", () => {
+    const broad = makeAlias({ pattern: "@/", target: "src/" });
+    const specific = makeAlias({
+      pattern: "@/components/",
+      target: "src/ui/components/",
+    });
+
+    expect(matchAlias("@/components/Header", [specific, broad])).toBe(specific);
+  });
+
+  it("returns undefined when no alias matches", () => {
+    expect(matchAlias("react", [makeAlias()])).toBeUndefined();
   });
 });
