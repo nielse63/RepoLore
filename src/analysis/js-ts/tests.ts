@@ -100,7 +100,7 @@ export function extractTestRelationships(
   rootDir: string,
   packageEntryPointFilePaths: ReadonlySet<string> = new Set()
 ): TestExtractionResult {
-  const resolver = buildModuleResolutionIndex(sourceFiles);
+  const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
   const testRelationships: TestRelationship[] = [];
   const gaps: Gap[] = [];
 

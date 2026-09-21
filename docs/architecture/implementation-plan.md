@@ -696,3 +696,19 @@ Verified against the real running app (local Postgres + `GITHUB_TOKEN`, dev serv
 Verified: `npm run test:unit` (70 suites / 519 tests, unchanged), `npm run test:e2e` (25/25, up from 16), `npx tsc --noEmit`, `npx eslint e2e/systems.spec.ts e2e/not-found.spec.ts` all clean.
 
 **Next smallest task:** unchanged — resume session 17 (deploy), then `search`'s scope review. The broader, long-disclosed gap (no Playwright coverage yet for Overview/Architecture/Dependencies/Data Flow/History's real-data rendering, only for 404 and Systems) is unchanged by this session and wasn't in scope — each would need its own pass to pick good real-data assertions the way this session did for Systems.
+
+### 2026-09-21 — JS/TS path-alias resolution (GitHub issue #24, ADR-0015)
+
+Resolved the long-disclosed gap ADR-0003 flagged since session 4/6: any alias-shaped import specifier (e.g. `@/components/Header`) was reported as an `unsupported` Gap rather than resolved, since `module-resolution.ts` only ever handled relative (`./`, `../`) specifiers.
+
+New `src/analysis/js-ts/project-config.ts` reads and merges path-alias configuration from up to ten sources, per issue #24 and ADR-0015: `tsconfig.json`/`jsconfig.json` (via `ts-morph`'s re-exported `ts.readConfigFile`/`parseJsonConfigFileContent`, resolving `extends` chains — no new dependency), `package.json`'s `imports` field, and, parsed syntactically via ts-morph AST and never executed (per `docs/product/non-goals.md`'s "no executing analyzed-repository code" exclusion), `vite.config.*`, `webpack.config.*`, `rsbuild.config.*`, `rollup.config.js` (`@rollup/plugin-alias`'s `entries` shape), `nuxt.config.*`, `next.config.*` (only its `webpack(config) {...}` mutation pattern), and `.babelrc`/`babel.config.*` (`babel-plugin-module-resolver`'s `alias` option). A fixed precedence order resolves conflicts across sources; a computed/dynamic alias target (anything beyond a string literal or a `path.resolve`/`path.join` call with literal arguments) is left unresolved and reported as an honest Gap rather than guessed.
+
+`module-resolution.ts`'s `buildModuleResolutionIndex` gained `rootDir`/`aliases` parameters and now resolves non-relative specifiers against the longest-matching configured alias through the same extension/index-file candidate logic already used for relative imports; `imports.ts` attempts this for every non-relative specifier before falling back to the existing alias-shaped-but-unresolved Gap, and cites the winning config file/key in its evidence. `extract-project.ts` wires `readJsTsProjectConfig` in once per run. `JS_TS_ANALYZER_VERSION` bumped `js-ts-v9` → `js-ts-v10` (ADR-0005) since previously-gapped aliased imports now resolve to real Relationships for many repositories.
+
+New `project-config.spec.ts` (16 cases covering all ten sources, precedence, `extends`, malformed-file and computed-value Gaps); `module-resolution.spec.ts` and `imports.spec.ts` extended with alias-resolution cases. Four other call sites of `buildModuleResolutionIndex` (`call-graph.ts`, `react-effects.ts`, `react-events.ts`, `tests.ts`) updated for the new required `rootDir` parameter — they don't need alias awareness themselves, only relative resolution, so `aliases` is left at its default `[]`.
+
+Manually verified against `fixtures/ts-react-app` (whose `tsconfig.json` declares `"@/*": ["src/*"]`): `App.tsx`'s `@/components/Header`/`@/components/Footer` imports, previously two `unsupported` Gaps, now resolve to real `depends-on` Relationships with evidence citing `tsconfig.json`.
+
+Verified: `npm run test` (79 Jest suites / 619 tests, up from 70/519 — some of that growth predates this session; 43/43 Playwright e2e, unchanged), `npx tsc --noEmit`, `npm run lint`, all clean.
+
+**Next smallest task:** unchanged from before this session — resume session 17 (deploy), then `search`'s scope review.

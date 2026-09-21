@@ -1,12 +1,15 @@
 /**
- * Resolves relative import/export specifiers to a discovered ts-morph
- * `SourceFile`, without constructing a type-checked `Program` (ADR-0003).
- * Only relative specifiers ("./", "../") are handled here; path-alias
- * resolution (e.g. tsconfig `paths`) is deferred to implementation session 6.
+ * Resolves relative and alias-configured import/export specifiers to a
+ * discovered ts-morph `SourceFile`, without constructing a type-checked
+ * `Program` (ADR-0003). Relative specifiers ("./", "../") are resolved by
+ * literal path-joining; alias specifiers are resolved against the
+ * `PathAlias`es read by `project-config.ts` (tsconfig/jsconfig `paths`,
+ * package.json `imports`, and common bundler/framework configs — ADR-0015).
  */
 
 import path from "node:path";
 import type { SourceFile } from "ts-morph";
+import type { PathAlias } from "./project-config";
 
 const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 
@@ -17,8 +20,39 @@ export interface ModuleResolutionIndex {
   ): SourceFile | undefined;
 }
 
+/** Tries the bare path, then each resolvable extension, then `index.{ext}` inside it as a directory. */
+function resolveCandidates(
+  byPath: Map<string, SourceFile>,
+  base: string
+): SourceFile | undefined {
+  const candidates = [
+    base,
+    ...RESOLVABLE_EXTENSIONS.map((ext) => base + ext),
+    ...RESOLVABLE_EXTENSIONS.map((ext) => path.join(base, `index${ext}`)),
+  ];
+  for (const candidate of candidates) {
+    const found = byPath.get(candidate);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** The longest-matching alias for `specifier` (aliases are pre-sorted longest-pattern-first), or undefined. */
+export function matchAlias(
+  specifier: string,
+  aliases: PathAlias[]
+): PathAlias | undefined {
+  return aliases.find((alias) =>
+    alias.matchType === "exact"
+      ? specifier === alias.pattern
+      : specifier.startsWith(alias.pattern)
+  );
+}
+
 export function buildModuleResolutionIndex(
-  sourceFiles: SourceFile[]
+  sourceFiles: SourceFile[],
+  rootDir: string,
+  aliases: PathAlias[] = []
 ): ModuleResolutionIndex {
   const byPath = new Map<string, SourceFile>(
     sourceFiles.map((sf) => [sf.getFilePath(), sf])
@@ -28,17 +62,16 @@ export function buildModuleResolutionIndex(
     fromAbsoluteFilePath: string,
     specifier: string
   ): SourceFile | undefined {
-    const base = path.resolve(path.dirname(fromAbsoluteFilePath), specifier);
-    const candidates = [
-      base,
-      ...RESOLVABLE_EXTENSIONS.map((ext) => base + ext),
-      ...RESOLVABLE_EXTENSIONS.map((ext) => path.join(base, `index${ext}`)),
-    ];
-    for (const candidate of candidates) {
-      const found = byPath.get(candidate);
-      if (found) return found;
+    if (isRelativeSpecifier(specifier)) {
+      const base = path.resolve(path.dirname(fromAbsoluteFilePath), specifier);
+      return resolveCandidates(byPath, base);
     }
-    return undefined;
+
+    const alias = matchAlias(specifier, aliases);
+    if (!alias) return undefined;
+    const rest = specifier.slice(alias.pattern.length);
+    const base = path.resolve(rootDir, alias.target, rest);
+    return resolveCandidates(byPath, base);
   }
 
   return { resolve };
