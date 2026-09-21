@@ -9,8 +9,9 @@ import { expect, test } from "./coverage";
  * already-persisted `completed` analysis run for the pinned private fixture
  * `nielse63/repo-lore-ts-react-app-fixture`, see README "Fixtures", rather
  * than exercising the real submit/analyze flow). `/lore/{owner}/{repo}/systems`
- * also renders this page (via the `systems/[[...slug]]` stub, see README
- * "Design system and UI routes"), but isn't covered here.
+ * is a real page since ADR-0014, not a not-found stub — it still renders this
+ * page for an unknown system slug or a too-deep nested path, see
+ * `e2e/systems.spec.ts` for that and its other coverage.
  */
 
 test("renders the not-found page for an unmatched route", async ({ page }) => {
