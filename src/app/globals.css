@@ -14,7 +14,7 @@
   --tile-core-fg: #2f5850;
   --tile-supporting-bg: #f2e9d8;
   --tile-supporting-fg: #7a5b28;
-  --tile-data-bg: #f2e9d8;
+  --tile-data-bg: #f3ddce;
   --tile-data-fg: #8a5a3a;
   --tile-alert-bg: #f6e2df;
   --tile-alert-fg: #a1483c;
@@ -36,7 +36,7 @@
     --tile-core-fg: #7fc2ac;
     --tile-supporting-bg: #2c2620;
     --tile-supporting-fg: #d9b877;
-    --tile-data-bg: #2c2620;
+    --tile-data-bg: #38291f;
     --tile-data-fg: #d99a70;
     --tile-alert-bg: #2f201e;
     --tile-alert-fg: #e08b7d;
