@@ -23,6 +23,7 @@ function area(id: string, name: string, filePath: string): StructuralArea {
     testRelationshipIds: [],
     evidence: [],
     gaps: [],
+    productionFilePaths: [],
   };
 }
 

@@ -142,6 +142,7 @@ describe("evaluateMinimumValueContract", () => {
       testRelationshipIds: [],
       evidence: [],
       gaps: [],
+      productionFilePaths: [],
     });
     lore.entryPoints.push({
       id: "entry-1",
@@ -214,6 +215,7 @@ describe("countEvidence", () => {
       testRelationshipIds: [],
       evidence: [evidence, evidence],
       gaps: [],
+      productionFilePaths: [],
     });
     lore.entryPoints.push({
       id: "entry-1",

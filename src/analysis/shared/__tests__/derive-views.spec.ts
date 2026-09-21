@@ -99,6 +99,19 @@ describe("deriveViews structural areas", () => {
     expect(area?.responsibility).toBe("Tests");
   });
 
+  it("populates productionFilePaths with only non-test files, for a mixed area", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/math.ts", "src/math.test.ts"],
+    });
+    const config: DeriveViewsConfig = {
+      ...noopConfig,
+      isTestFile: (f) => f.endsWith(".test.ts"),
+    };
+    const { structuralAreas } = deriveViews(input, config);
+    const area = structuralAreas.find((a) => a.name === "src");
+    expect(area?.productionFilePaths).toEqual(["src/math.ts"]);
+  });
+
   it("marks an area as test fixtures/support data under a fixtures directory", () => {
     const input = baseInput({ sourceFilePaths: ["fixtures/sample-data.ts"] });
     const { structuralAreas } = deriveViews(input, noopConfig);

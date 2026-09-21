@@ -14,10 +14,9 @@ import {
 } from "@/components/ui/FilterPills";
 import { IconTile, type IconTileVariant } from "@/components/ui/IconTile";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { githubTreeUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
-import { deriveAreaRelationships } from "@/lore/area-relationships";
-import type { Lore, SourceLocation, StructuralArea } from "@/lore/model";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import type { Lore, StructuralArea } from "@/lore/model";
 import {
   classifySystem,
   type SystemClassification,
@@ -81,8 +80,6 @@ export function SystemsContent({
   const [kind, setKind] = useState("all");
 
   const commitSha = lore.snapshot.commitSha;
-  const areaUrl = (location: SourceLocation) =>
-    githubTreeUrl(owner, repo, commitSha, location);
 
   // The root directory ("." — a file with no directory of its own) adds no
   // orientation value as a system, matching Architecture/Overview's existing
@@ -91,9 +88,9 @@ export function SystemsContent({
     () => lore.structuralAreas.filter((area) => area.name !== "."),
     [lore.structuralAreas]
   );
-  const areaRelationships = useMemo(
-    () => deriveAreaRelationships(majorAreas),
-    [majorAreas]
+  const diagramLayout = useMemo(
+    () => deriveProductionAreaDiagramLayout(majorAreas, lore.relationships),
+    [majorAreas, lore.relationships]
   );
   const slugEntries = useMemo(
     () => assignSystemSlugs(majorAreas),
@@ -139,11 +136,11 @@ export function SystemsContent({
           <p className="text-sm text-muted">
             How this repository&apos;s systems relate.
           </p>
-          {majorAreas.length > 1 ? (
+          {diagramLayout ? (
             <div className="mt-4">
               <AreaDependencyDiagram
                 areas={majorAreas}
-                relationships={areaRelationships}
+                relationships={lore.relationships}
                 owner={owner}
                 repo={repo}
                 commitSha={commitSha}

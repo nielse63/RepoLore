@@ -9,7 +9,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
-import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
@@ -43,7 +43,10 @@ export function ArchitectureContent({
   // orientation value as a diagram node, matching the Major Areas exclusion
   // above.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
-  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
+  const diagramLayout = deriveProductionAreaDiagramLayout(
+    majorAreas,
+    lore.relationships
+  );
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -196,7 +199,7 @@ export function ArchitectureContent({
           <Card className="mb-4">
             <AreaDependencyDiagram
               areas={majorAreas}
-              relationships={areaRelationships}
+              relationships={lore.relationships}
               owner={lore.snapshot.repository.owner}
               repo={repo}
               commitSha={lore.snapshot.commitSha}

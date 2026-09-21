@@ -107,6 +107,7 @@ describe("buildLore", () => {
           testRelationshipIds: [],
           evidence: [],
           gaps: [],
+          productionFilePaths: [],
         },
       ],
     });
@@ -179,6 +180,7 @@ describe("buildLore", () => {
           testRelationshipIds: [],
           evidence: [evidence],
           gaps: [],
+          productionFilePaths: [],
         },
       ],
       startHere: Array.from({ length: START_HERE_MIN_ITEMS }, (_, i) => ({

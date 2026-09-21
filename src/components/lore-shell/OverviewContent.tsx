@@ -13,8 +13,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
-import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { deriveAreaRelationships } from "@/lore/area-relationships";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
   ArrowRight,
@@ -58,8 +57,10 @@ export function OverviewContent({
   // The root directory ("." — a file with no directory of its own, e.g. a
   // root-level config file) adds no orientation value as its own Major Area.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
-  const areaRelationships = deriveAreaRelationships(majorAreas);
-  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
+  const diagramLayout = deriveProductionAreaDiagramLayout(
+    majorAreas,
+    lore.relationships
+  );
   const architectureUrl = `/lore/${snapshot.repository.owner}/${snapshot.repository.name}/architecture`;
 
   return (
@@ -192,7 +193,7 @@ export function OverviewContent({
           <Card>
             <AreaDependencyDiagram
               areas={majorAreas}
-              relationships={areaRelationships}
+              relationships={lore.relationships}
               owner={snapshot.repository.owner}
               repo={snapshot.repository.name}
               commitSha={snapshot.commitSha}

@@ -1,6 +1,12 @@
 import dagre from "@dagrejs/dagre";
 import type { AreaRelationship } from "./area-relationships";
-import type { EntityId, SourceLocation, StructuralArea } from "./model";
+import { deriveProductionAreaRelationships } from "./area-relationships";
+import type {
+  EntityId,
+  Relationship,
+  SourceLocation,
+  StructuralArea,
+} from "./model";
 
 /**
  * Above this many nodes, a layered diagram stops being readable at a glance
@@ -106,4 +112,33 @@ export function deriveAreaDiagramLayout(
     nodes,
     edges: diagramEdges,
   };
+}
+
+/**
+ * `deriveAreaDiagramLayout`, restricted to production files: areas with no
+ * production files (all-test directories) are dropped as nodes entirely,
+ * and edges are re-derived from raw file-level `relationships` via
+ * `deriveProductionAreaRelationships` so an edge never appears solely
+ * because of a test file's import. Used by `AreaDependencyDiagram` itself
+ * and by each page that embeds it, so the "should we show a diagram at all"
+ * gating check and what actually renders can never disagree.
+ *
+ * `productionFilePaths` is treated as possibly absent (`?? []`) because a
+ * persisted `analysis_runs` row from before this field existed won't have
+ * it — falling back to "no known production files" degrades that stale
+ * result to no diagram (same as too-few-areas today) rather than crashing
+ * the page; re-analyzing repopulates it.
+ */
+export function deriveProductionAreaDiagramLayout(
+  areas: StructuralArea[],
+  relationships: Relationship[]
+): AreaDiagramLayout | null {
+  const productionAreas = areas.filter(
+    (area) => (area.productionFilePaths ?? []).length > 0
+  );
+  const productionRelationships = deriveProductionAreaRelationships(
+    productionAreas,
+    relationships
+  );
+  return deriveAreaDiagramLayout(productionAreas, productionRelationships);
 }

@@ -12,7 +12,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { relativeTime } from "@/lib/relative-time";
 import { formatPath } from "@/lib/format-path";
-import { deriveAreaRelationships } from "@/lore/area-relationships";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import type { Lore, SourceLocation } from "@/lore/model";
 import {
   classifySystem,
@@ -65,15 +65,15 @@ export function SystemDetailContent({
   const areaUrl = (location: SourceLocation) =>
     githubTreeUrl(owner, repo, commitSha, location);
 
-  const allRelationships = deriveAreaRelationships(majorAreas);
   const neighborIds = new Set([
     area.id,
     ...area.directDependencyIds,
     ...area.directDependentIds,
   ]);
   const neighborAreas = majorAreas.filter((a) => neighborIds.has(a.id));
-  const neighborRelationships = allRelationships.filter(
-    (edge) => neighborIds.has(edge.fromAreaId) && neighborIds.has(edge.toAreaId)
+  const diagramLayout = deriveProductionAreaDiagramLayout(
+    neighborAreas,
+    lore.relationships
   );
 
   const entryPoints = lore.entryPoints.filter((ep) =>
@@ -198,11 +198,11 @@ export function SystemDetailContent({
                 </CardDescription>
               </div>
             </div>
-            {neighborAreas.length > 1 ? (
+            {diagramLayout ? (
               <div className="mt-4">
                 <AreaDependencyDiagram
                   areas={neighborAreas}
-                  relationships={neighborRelationships}
+                  relationships={lore.relationships}
                   owner={owner}
                   repo={repo}
                   commitSha={commitSha}

@@ -321,6 +321,7 @@ function buildStructuralAreas(
         testRelationshipIds: areaTests.map((tr) => tr.id),
         evidence,
         gaps: areaGaps,
+        productionFilePaths: files.filter((f) => !isTestFile(f)),
       };
       return area;
     });
