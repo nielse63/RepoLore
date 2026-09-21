@@ -5,10 +5,11 @@ import type { NextConfig } from "next";
  * deliberately permissive rather than nonce-based (`'unsafe-inline'` for
  * scripts/styles) since the app has no middleware today to thread a
  * per-request nonce through Next's own injected hydration/RSC scripts —
- * everything served is same-origin already (fonts are self-hosted via
- * `next/font`, no third-party scripts or images), so this still closes off
- * cross-origin script/asset injection while leaving room to tighten to a
- * nonce-based policy later. `frame-ancestors 'none'` (plus the legacy
+ * everything served is same-origin (fonts are self-hosted via `next/font`)
+ * except Google Analytics (`gtag.js`), explicitly allowlisted below, so
+ * this still closes off cross-origin script/asset injection to anything
+ * else while leaving room to tighten to a nonce-based policy later.
+ * `frame-ancestors 'none'` (plus the legacy
  * `X-Frame-Options` for older browsers) blocks this app from being framed
  * anywhere, since every mutating action here (analyze, re-analyze, refresh
  * history) is a plain POST form with no confirmation step of its own.
@@ -26,12 +27,12 @@ const SECURITY_HEADERS = [
       // here would fail every e2e run without reflecting anything a real
       // deployment (which always runs `next build`/`next start`) hits.
       process.env.NODE_ENV === "production"
-        ? "script-src 'self' 'unsafe-inline'"
-        : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        ? "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com"
+        : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "font-src 'self'",
-      "connect-src 'self'",
+      "connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

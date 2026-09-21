@@ -59,6 +59,10 @@ docker compose up -d db   # starts local Postgres (see docker-compose.yml)
 npm run migrate           # applies src/db/migrations/
 ```
 
+## Analytics
+
+Google Analytics (`gtag.js`, measurement ID `G-66W4D723ZX`) is loaded on every route via `next/script` in the root layout (`src/app/layout.tsx`), `strategy="afterInteractive"` so it never blocks the initial render. `next.config.ts`'s CSP explicitly allowlists `googletagmanager.com`/`google-analytics.com` for `script-src`/`connect-src` — anything not on that list stays blocked.
+
 ## Fixtures
 
 `fixtures/` holds small, hand-built local repos used to develop and sanity-check each language analyzer before it's run against real repositories (see `docs/architecture/implementation-plan.md`, "Fixture strategy"). Two scripts also give manual, human-readable sanity checks against a fixture (in addition to the automated unit test suite — see "Testing" below):
@@ -112,6 +116,8 @@ Every source file under `src/` has a matching Jest unit test at `<same-directory
 `.github/workflows/verify.yml` runs lint, build, and the Jest unit suite on every pull request opened against `main`, via GitHub Actions. `DATABASE_URL` is passed in from a repo secret of the same name, pointed at the same shared database used locally (see "Database" below). No `GITHUB_TOKEN` is needed — nothing in this workflow calls the GitHub API.
 
 `.github/workflows/claude-review.yml` posts an automated Claude review (via Anthropic's [`claude-code-action`](https://github.com/anthropics/claude-code-action)) as a PR comment whenever a pull request against `main` is opened or updated — advisory only, it doesn't gate merging. It reads `CLAUDE.md` for project context, checks the diff against `docs/product/non-goals.md` for scope creep and this repo's testing conventions for coverage gaps, and leaves inline comments on specific lines where relevant. Runs on the standard `pull_request` trigger (not `pull_request_target`) since all PRs here come from branches in this repo, not forks — the PR head is checked out and reviewed with no elevated access to secrets beyond `ANTHROPIC_API_KEY` itself. Requires that repo secret (an Anthropic API key from [console.anthropic.com](https://console.anthropic.com)); a `concurrency` group cancels a still-running review if the PR gets a new commit before it finishes, to avoid stacking redundant (billed) reviews.
+
+`.github/workflows/coverage.yml` posts two PR comments — one for Jest (unit) coverage, one for Playwright (e2e) coverage — showing the current percentages and their change versus the PR's base commit, via [`Nef10/lcov-reporter-action`](https://github.com/Nef10/lcov-reporter-action) (a maintained fork of the original `romeovs/lcov-reporter-action`). Advisory only, it doesn't gate merging. To get a real diff without depending on a cached artifact from a separate base-branch workflow run, the job checks out both the PR commit and `github.event.pull_request.base.sha` (into sibling `pr/` and `base/` directories) and runs the full unit and e2e suites against each, comparing `coverage/lcov.info` and `coverage/e2e/lcov.info` between them — at the cost of running both suites twice per PR. Needs `pull-requests: write` on `GITHUB_TOKEN` (set via the workflow's `permissions:` block) to post the comments; `DATABASE_URL` is passed the same way as in `verify.yml`.
 
 ## Analyzing a real repository from the command line
 

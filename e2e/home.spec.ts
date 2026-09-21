@@ -234,12 +234,21 @@ test("loads with no failed asset requests or console errors", async ({
   const failedRequests: string[] = [];
   const consoleErrors: string[] = [];
 
+  // The Google Analytics tag is a fire-and-forget third-party script: it
+  // may fail to load in this offline/sandboxed test environment (and in
+  // ad-blocking browsers in production) without indicating a page defect.
+  const isThirdPartyAnalytics = (url: string) =>
+    url.includes("googletagmanager.com") ||
+    url.includes("google-analytics.com");
+
   page.on("requestfailed", (req) => {
+    if (isThirdPartyAnalytics(req.url())) return;
     failedRequests.push(
       `${req.url()} (${req.failure()?.errorText ?? "unknown error"})`
     );
   });
   page.on("response", (res) => {
+    if (isThirdPartyAnalytics(res.url())) return;
     if (res.status() >= 400) {
       failedRequests.push(`${res.url()} (${res.status()})`);
     }

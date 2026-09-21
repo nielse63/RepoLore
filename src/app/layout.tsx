@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
+import Script from "next/script";
 import { DEFAULT_OG_IMAGE, siteMetadataBase } from "@/lib/route-metadata";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-66W4D723ZX";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,7 +59,22 @@ export default function RootLayout({
       <head>
         <meta name="apple-mobile-web-app-title" content="Repo Lore" />
       </head>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
+      </body>
     </html>
   );
 }
