@@ -29,13 +29,19 @@ export default defineConfig({
         outputFile: "./coverage/e2e/report.html",
         coverage: {
           outputDir: "./coverage/e2e",
-          entryFilter: (entry: { url: string }) => {
-            const { url } = entry;
+          entryFilter: (entry: { url: string; source?: string }) => {
+            const { url, source } = entry;
             const returnValue =
               url.includes("/_next/static/") &&
               !url.includes("[turbopack]") &&
               !url.includes("%5Bturbopack%5D") &&
-              !url.includes("node_modules");
+              !url.includes("node_modules") &&
+              // Turbopack dev-mode chunks with no `sourceMappingURL` are
+              // tiny internal loader/registration stubs (a few hundred
+              // bytes) that can never resolve to a `src/` file — collecting
+              // them just adds noise (`localhost-3000/_next/static/chunks/
+              // _<hash>._.js`) to the report instead of a real source path.
+              !!source?.includes("sourceMappingURL");
             return returnValue;
           },
           sourceFilter: (sourcePath: string) => {
