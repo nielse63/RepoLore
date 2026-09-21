@@ -1,0 +1,91 @@
+name: Coverage
+
+# Reports unit (Jest) and e2e (Playwright) coverage on every pull request,
+# comparing it against the PR's base commit so reviewers can see the change
+# in coverage, not just the current totals. The base commit is checked out
+# and tested alongside the PR commit (rather than relying on a cached
+# artifact from a prior base-branch run) so the diff is always against the
+# exact commit the PR is built on, with no dependency on another workflow
+# having run first.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout PR commit
+        uses: actions/checkout@v4
+        with:
+          path: pr
+
+      - name: Checkout base commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: "pr/.nvmrc"
+          cache: "npm"
+          cache-dependency-path: pr/package-lock.json
+
+      - name: Install PR dependencies
+        working-directory: pr
+        run: npm ci
+
+      - name: Install base dependencies
+        working-directory: base
+        run: npm ci
+
+      - name: Install Playwright browsers (PR)
+        working-directory: pr
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright browsers (base)
+        working-directory: base
+        run: npx playwright install --with-deps chromium
+
+      - name: Run PR unit coverage
+        working-directory: pr
+        run: npm run test:unit:coverage
+
+      - name: Run PR e2e coverage
+        working-directory: pr
+        run: npm run test:e2e
+
+      - name: Run base unit coverage
+        working-directory: base
+        run: npm run test:unit:coverage
+
+      - name: Run base e2e coverage
+        working-directory: base
+        run: npm run test:e2e
+
+      - name: Comment unit test coverage
+        uses: Nef10/lcov-reporter-action@v0.6.1
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          lcov-file: pr/coverage/lcov.info
+          lcov-base: base/coverage/lcov.info
+          title: "Unit Test Coverage"
+          delete-old-comments: true
+
+      - name: Comment e2e test coverage
+        uses: Nef10/lcov-reporter-action@v0.6.1
+        with:
+          pr-number: ${{ github.event.pull_request.number }}
+          lcov-file: pr/coverage/e2e/lcov.info
+          lcov-base: base/coverage/e2e/lcov.info
+          title: "E2E Test Coverage"
+          delete-old-comments: true
