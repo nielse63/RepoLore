@@ -27,23 +27,52 @@ interface ModuleSpecifierReference {
   line: number;
 }
 
-/** Every import and re-export specifier referenced from a source file, with its line. */
+/**
+ * Every import and re-export specifier referenced from a source file, with
+ * its line. A declaration whose module specifier isn't a plain string
+ * literal — real syntax errors or non-standard syntax the TypeScript parser
+ * can't fully make sense of are both recovered this way — can't be read by
+ * `ts-morph` at all (it throws); that single declaration is skipped and
+ * recorded as an `unsupported` gap instead of aborting the whole file.
+ */
 function getModuleSpecifierReferences(
-  sourceFile: SourceFile
+  sourceFile: SourceFile,
+  importerPath: string,
+  gaps: Gap[]
 ): ModuleSpecifierReference[] {
   const references: ModuleSpecifierReference[] = [];
 
-  for (const importDecl of sourceFile.getImportDeclarations()) {
-    references.push({
-      specifier: importDecl.getModuleSpecifierValue(),
-      line: importDecl.getStartLineNumber(),
+  const recordUnreadable = (line: number) => {
+    gaps.push({
+      certainty: "unsupported",
+      description: `An import/export declaration in '${importerPath}' at line ${line} has a module specifier that isn't a plain string literal (likely a syntax error or non-standard syntax); it could not be analyzed.`,
+      location: { filePath: importerPath, startLine: line },
     });
+  };
+
+  for (const importDecl of sourceFile.getImportDeclarations()) {
+    const line = importDecl.getStartLineNumber();
+    try {
+      references.push({
+        specifier: importDecl.getModuleSpecifierValue(),
+        line,
+      });
+    } catch {
+      recordUnreadable(line);
+    }
   }
 
   for (const exportDecl of sourceFile.getExportDeclarations()) {
-    const specifier = exportDecl.getModuleSpecifierValue();
+    const line = exportDecl.getStartLineNumber();
+    let specifier: string | undefined;
+    try {
+      specifier = exportDecl.getModuleSpecifierValue();
+    } catch {
+      recordUnreadable(line);
+      continue;
+    }
     if (specifier) {
-      references.push({ specifier, line: exportDecl.getStartLineNumber() });
+      references.push({ specifier, line });
     }
   }
 
@@ -78,7 +107,9 @@ export function extractImportRelationships(
     const importerPath = toRelative(rootDir, sourceFile.getFilePath());
 
     for (const { specifier, line } of getModuleSpecifierReferences(
-      sourceFile
+      sourceFile,
+      importerPath,
+      gaps
     )) {
       const importerLocation: SourceLocation = {
         filePath: importerPath,

@@ -41,6 +41,7 @@ import {
   resolveRepositoryHead,
 } from "@/github/client";
 import { buildLore, type BuildLoreProjectInput } from "@/lore/build-lore";
+import type { Gap } from "@/lore/model";
 import { enrichExternalDependencyDescriptions } from "@/registry/enrich-descriptions";
 
 function errorMessageOf(error: unknown): string {
@@ -81,6 +82,34 @@ function unsupportedLanguageMessage(
     ? `${subject}'s primary language is ${top.language} (${Math.round(top.share * 100)}% of classified source)`
     : `GitHub did not report any classified source for ${subject} — it may be empty`;
   return `Repo Lore currently analyzes JavaScript, TypeScript, and Python only. ${reason}, so no supported analyzer could produce a result.`;
+}
+
+/**
+ * Tarball entries skipped during extraction (ADR-0002: symlinks, hardlinks,
+ * devices, FIFOs — anything that isn't a regular file or directory) aren't
+ * an extraction failure, but they are real, disclosed gaps in what got
+ * analyzed, so they're surfaced the same way any other analyzer gap is.
+ * Collapsed to one gap rather than one per entry so a repository with many
+ * symlinks (e.g. a monorepo's shared config) doesn't flood the Lore with
+ * near-duplicate gaps.
+ */
+function skippedEntryGaps(
+  skippedEntries: { path: string; type: string }[]
+): Gap[] {
+  if (skippedEntries.length === 0) return [];
+  const examples = skippedEntries
+    .slice(0, 5)
+    .map((e) => `'${e.path}' (${e.type})`);
+  const suffix =
+    skippedEntries.length > examples.length
+      ? `, and ${skippedEntries.length - examples.length} more`
+      : "";
+  return [
+    {
+      certainty: "unsupported",
+      description: `${skippedEntries.length} tarball ${skippedEntries.length === 1 ? "entry was" : "entries were"} skipped during extraction because they weren't a regular file or directory (e.g. a symbolic link): ${examples.join(", ")}${suffix}. These paths were not analyzed.`,
+    },
+  ];
 }
 
 export async function analyzeAndPersistRepository(
@@ -157,6 +186,7 @@ export async function analyzeAndPersistRepository(
       analyzerVersion,
       analyzedAt: new Date().toISOString(),
       extractions,
+      acquisitionGaps: skippedEntryGaps(acquired.skippedEntries),
     });
 
     return await saveAnalysisRun({

@@ -156,6 +156,24 @@ describe("extractImportRelationships", () => {
     ]);
   });
 
+  it("records an unsupported gap instead of throwing when an export's module specifier isn't a string literal", () => {
+    const project = makeProject();
+    project.createSourceFile(
+      "/root/src/index.ts",
+      "export * from mod;\nexport const y = 1;"
+    );
+
+    const { relationships, gaps } = extractImportRelationships(
+      project.getSourceFiles(),
+      "/root"
+    );
+
+    expect(relationships).toEqual([]);
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]).toMatchObject({ certainty: "unsupported" });
+    expect(gaps[0].description).toContain("src/index.ts");
+  });
+
   it("assigns sequential, stable relationship ids", () => {
     const project = makeProject();
     project.createSourceFile("/root/src/a.ts", "");

@@ -77,9 +77,28 @@ test.describe("Architecture page", () => {
   }) => {
     await page.goto(architectureUrl);
     const diagram = page.locator("#area-dependency-diagram .react-flow");
+    const viewport = diagram.locator(".react-flow__viewport");
     const node = diagram.locator(".react-flow__node", {
       hasText: /^\/src$/,
     });
+
+    // `fitView` (ADR-0016) applies asynchronously shortly after mount — the
+    // viewport briefly renders at its unfitted `translate(0,0) scale(1)`
+    // default before react-flow measures the real node dimensions and
+    // settles on the fitted transform. Reading `before` during that window
+    // then reading `after` post-drag (the multi-step mouse move takes real
+    // wall-clock time, plenty for the settle to land in between) would
+    // compare a pre-fitView position against a post-fitView one and see a
+    // spurious diff that has nothing to do with dragging. Waiting for the
+    // transform to stop changing first ensures both reads are of the same,
+    // settled diagram.
+    let lastTransform: string | undefined;
+    await expect(async () => {
+      const transform = await viewport.evaluate((el) => el.style.transform);
+      const settled = transform === lastTransform;
+      lastTransform = transform;
+      expect(settled).toBe(true);
+    }).toPass();
 
     const before = await node.boundingBox();
     expect(before).not.toBeNull();

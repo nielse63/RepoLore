@@ -38,6 +38,7 @@ import type { SourceFile } from "ts-morph";
 import type { Gap, TestRelationship } from "@/lore/model";
 import {
   buildModuleResolutionIndex,
+  getModuleSpecifierValueSafe,
   isRelativeSpecifier,
 } from "./module-resolution";
 
@@ -117,7 +118,8 @@ export function extractTestRelationships(
 
     const resolvedImplementationImports = testFile
       .getImportDeclarations()
-      .map((importDecl) => importDecl.getModuleSpecifierValue())
+      .map((importDecl) => getModuleSpecifierValueSafe(importDecl))
+      .filter((specifier): specifier is string => !!specifier)
       .filter(isRelativeSpecifier)
       .map((specifier) => resolver.resolve(testFile.getFilePath(), specifier))
       .filter(

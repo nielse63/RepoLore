@@ -236,6 +236,7 @@ describe("analyzeAndPersistRepository", () => {
       defaultBranch: "main",
       headSha: "sha123",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
     mockExtractJsTsProject.mockImplementation(() => {
@@ -265,6 +266,7 @@ describe("analyzeAndPersistRepository", () => {
       defaultBranch: "main",
       headSha: "sha123",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
     mockExtractJsTsProject.mockReturnValue(minimalJsTsExtraction());
@@ -292,6 +294,39 @@ describe("analyzeAndPersistRepository", () => {
     expect(result).toBe(savedRun);
   });
 
+  it("records tarball entries skipped during extraction as an unsupported gap on the persisted Lore", async () => {
+    const cleanup = jest.fn().mockResolvedValue(undefined);
+    mockAcquireRepositorySource.mockResolvedValue({
+      dir: "/tmp/extracted",
+      owner: "acme",
+      repo: "widgets",
+      defaultBranch: "main",
+      headSha: "sha123",
+      fileCount: 3,
+      skippedEntries: [{ path: "docs", type: "SymbolicLink" }],
+      cleanup,
+    });
+    mockExtractJsTsProject.mockReturnValue(minimalJsTsExtraction());
+    mockDeriveJsTsViews.mockReturnValue({ structuralAreas: [], startHere: [] });
+    const savedRun = { id: 10, status: "partial" } as unknown as AnalysisRunRow;
+    mockSaveAnalysisRun.mockResolvedValue(savedRun);
+
+    await analyzeAndPersistRepository("acme", "widgets");
+
+    expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({
+          gaps: expect.arrayContaining([
+            expect.objectContaining({
+              certainty: "unsupported",
+              description: expect.stringContaining("docs"),
+            }),
+          ]),
+        }),
+      })
+    );
+  });
+
   it("runs only the Python extractor for a Python-only repository (freezegun-shaped)", async () => {
     mockFetchRepositoryLanguages.mockResolvedValue({ Python: 998 });
     const cleanup = jest.fn().mockResolvedValue(undefined);
@@ -302,6 +337,7 @@ describe("analyzeAndPersistRepository", () => {
       defaultBranch: "main",
       headSha: "sha123",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
     mockExtractPythonProject.mockResolvedValue(minimalPythonExtraction());
@@ -345,6 +381,7 @@ describe("analyzeAndPersistRepository", () => {
       defaultBranch: "main",
       headSha: "sha123",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
     mockExtractPythonProject.mockResolvedValue(minimalPythonExtraction());
