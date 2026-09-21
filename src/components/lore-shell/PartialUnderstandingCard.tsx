@@ -21,7 +21,7 @@ export function PartialUnderstandingCard({ gapsCount }: { gapsCount: number }) {
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Dismiss"
-            className="text-muted hover:text-foreground"
+            className="-m-2.5 rounded p-2.5 text-muted hover:bg-border/20 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>

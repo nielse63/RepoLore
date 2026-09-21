@@ -56,10 +56,10 @@ const dayPickerClassNames = {
     "flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-border/30 hover:text-foreground aria-disabled:pointer-events-none aria-disabled:opacity-30",
   chevron: "h-4 w-4 fill-current",
   month_grid: "w-full table-fixed border-collapse",
-  weekday: "h-8 w-8 text-center text-xs font-medium text-muted",
+  weekday: "h-9 w-9 text-center text-xs font-medium text-muted",
   day: "p-0 text-center align-middle",
   day_button:
-    "mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm text-foreground transition-colors hover:bg-border/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-30",
+    "mx-auto flex h-9 w-9 items-center justify-center rounded-full text-sm text-foreground transition-colors hover:bg-border/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-30",
   today: "[&>button]:font-semibold [&>button]:text-primary",
   selected:
     "[&>button]:!bg-primary [&>button]:!text-primary-foreground [&>button]:hover:!bg-primary",
@@ -139,6 +139,7 @@ export function TimeframePicker({
         <Popover.Content
           align="start"
           sideOffset={6}
+          collisionPadding={16}
           className="z-50 w-[19rem] rounded-xl border border-border bg-surface p-4 shadow-lg"
         >
           <div className="flex items-center gap-2">

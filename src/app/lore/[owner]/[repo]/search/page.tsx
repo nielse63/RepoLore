@@ -158,16 +158,19 @@ export default function SearchPage() {
           implemented yet for this repository.
         </PreviewBanner>
 
-        <div className="flex gap-8">
-          <nav className="w-36 shrink-0" aria-label="Search facets">
-            <ul className="space-y-0.5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
+          <nav
+            className="-mx-4 shrink-0 overflow-x-auto px-4 lg:mx-0 lg:w-36 lg:overflow-visible lg:px-0"
+            aria-label="Search facets"
+          >
+            <ul className="flex gap-1.5 lg:block lg:space-y-0.5">
               {FACETS.map((f) => (
-                <li key={f.label}>
+                <li key={f.label} className="shrink-0 lg:shrink">
                   <button
                     type="button"
                     onClick={() => setFacet(f.label)}
                     className={
-                      "flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm font-medium " +
+                      "flex items-center justify-between gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-sm font-medium lg:w-full " +
                       (facet === f.label
                         ? "bg-tile-core-bg text-tile-core-fg"
                         : "text-muted hover:text-foreground")
