@@ -1,6 +1,6 @@
 /**
  * Parses and normalizes user-pasted input into a GitHub `{ owner, repo }`
- * identity (MVP core user journey step 1–2, docs/product/mvp.md). Accepts the
+ * identity — the first step of the core user journey. Accepts the
  * shapes people actually paste — with or without a scheme, `www.`, a
  * trailing slash, a `.git` suffix, or extra path segments like `/tree/main`
  * — and rejects anything that isn't recognizably a github.com repository URL
@@ -8,6 +8,11 @@
  * failure). Ref/branch/path suffixes are intentionally ignored: the MVP
  * always analyzes the resolved default branch's HEAD commit, never a
  * user-specified ref.
+ *
+ * Also accepts bare `owner/repo` shorthand (no host at all, e.g.
+ * `nielse63/RepoLore`) by rewriting it to a `github.com/...` URL up front
+ * and falling through to the same validation as a full URL, rather than
+ * duplicating owner/repo rules for a second input shape.
  */
 
 export interface ParsedRepoUrl {
@@ -21,8 +26,25 @@ export type ParseRepoUrlResult =
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
 const REPO_PATTERN = /^[A-Za-z0-9._-]+$/;
 
+const HAS_SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:\/\//i;
+
 function withScheme(input: string): string {
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `https://${input}`;
+  return HAS_SCHEME_PATTERN.test(input) ? input : `https://${input}`;
+}
+
+/**
+ * True for bare `owner/repo` shorthand: exactly two `/`-separated segments,
+ * no scheme, no `www.` prefix. The owner segment is required to contain no
+ * `.` — real hostnames (`github.com`, `gitlab.com`, ...) always have one and
+ * GitHub owner names never do, so this also keeps host-shaped input like
+ * `github.com/owner` from being misread as shorthand.
+ */
+function isShorthandRepoRef(trimmed: string): boolean {
+  if (HAS_SCHEME_PATTERN.test(trimmed) || /^www\./i.test(trimmed)) {
+    return false;
+  }
+  const [owner, repo, ...rest] = trimmed.replace(/\/+$/, "").split("/");
+  return Boolean(owner && repo && rest.length === 0 && !owner.includes("."));
 }
 
 export function parseGitHubRepoUrl(input: string): ParseRepoUrlResult {
@@ -31,9 +53,13 @@ export function parseGitHubRepoUrl(input: string): ParseRepoUrlResult {
     return { ok: false, reason: "A GitHub URL is required." };
   }
 
+  const candidate = isShorthandRepoRef(trimmed)
+    ? `github.com/${trimmed}`
+    : trimmed;
+
   let url: URL;
   try {
-    url = new URL(withScheme(trimmed));
+    url = new URL(withScheme(candidate));
   } catch {
     return { ok: false, reason: "That doesn’t look like a valid URL." };
   }

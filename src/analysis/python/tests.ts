@@ -8,9 +8,8 @@
  * `isTestFile` recognizes both pytest's (`test_*.py`/`*_test.py`) and a
  * conventional top-level `test`/`tests` directory layout — the same
  * recognition covers `unittest.TestCase`-based suites, since those
- * conventionally live in the same locations (`docs/product/mvp.md` calls
- * out both "conventional pytest layouts" and "conventional unittest
- * layouts" as in-scope).
+ * conventionally live in the same locations (both conventional pytest and
+ * unittest layouts are in scope).
  */
 
 import path from "node:path";

@@ -1,3 +1,4 @@
+import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
@@ -12,8 +13,18 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
+import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
-import { Compass, GapHorizontal, Layers, Milestone } from "lucide-react";
+import {
+  ArrowRight,
+  Compass,
+  GapHorizontal,
+  Layers,
+  Link2,
+  Milestone,
+} from "lucide-react";
+import Link from "next/link";
 
 export interface OverviewContentProps {
   lore: Lore;
@@ -47,6 +58,9 @@ export function OverviewContent({
   // The root directory ("." — a file with no directory of its own, e.g. a
   // root-level config file) adds no orientation value as its own Major Area.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
+  const areaRelationships = deriveAreaRelationships(majorAreas);
+  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
+  const architectureUrl = `/lore/${snapshot.repository.owner}/${snapshot.repository.name}/architecture`;
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -169,6 +183,27 @@ export function OverviewContent({
           ))}
         </div>
       </section>
+
+      {diagramLayout && (
+        <section id="how-areas-connect">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
+            <Link2 className="h-4 w-4" aria-hidden="true" /> How Areas Connect
+          </h2>
+          <Card>
+            <AreaDependencyDiagram
+              areas={majorAreas}
+              relationships={areaRelationships}
+              areaUrl={areaUrl}
+            />
+          </Card>
+          <Link
+            href={architectureUrl}
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            View full architecture <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+      )}
 
       {!!lore.entryPoints.length && (
         <section id="entry-points">

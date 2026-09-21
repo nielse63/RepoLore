@@ -445,8 +445,8 @@ export const START_HERE_MAX_ITEMS = 7;
 
 /**
  * The minimum value contract a Lore must satisfy before being presented as
- * fully supported (docs/product/mvp.md, "Minimum Value Contract"). This type
- * exists to be checked, not merely documented — see `meetsMinimumValueContract`.
+ * fully supported. This type exists to be checked, not merely documented —
+ * see `evaluateMinimumValueContract`.
  */
 export interface MinimumValueContract {
   hasRepositoryOrientation: boolean;
@@ -480,9 +480,8 @@ export function countEvidence(lore: Lore): number {
 /**
  * Evaluates whether a Lore satisfies the minimum value contract. A Lore that
  * can list files and imports but fails this check has not met the product
- * promise (docs/product/mvp.md: "If Repo Lore can extract files and imports
- * but cannot create a useful reading path, it has not satisfied the product
- * promise.").
+ * promise: extracting structure without producing a useful reading path
+ * isn't sufficient (see docs/product/mission.md).
  */
 export function evaluateMinimumValueContract(lore: Lore): MinimumValueContract {
   const hasMeaningfulStartHere =

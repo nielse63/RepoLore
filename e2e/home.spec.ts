@@ -45,6 +45,18 @@ test("shows an honest inline error for a non-GitHub URL", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("shows an honest inline error for an invalid owner/repo shorthand", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("GitHub repository URL").fill("-bad-/repo");
+  await page.getByRole("button", { name: "Analyze repository" }).click();
+
+  await expect(
+    page.getByText("“-bad-” isn’t a valid GitHub owner name.")
+  ).toBeVisible();
+});
+
 test("shows a staged loading view while the Server Action is pending", async ({
   page,
 }) => {
