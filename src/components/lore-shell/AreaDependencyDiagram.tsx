@@ -1,33 +1,23 @@
+"use client";
+
+import { githubTreeUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
-import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import type { AreaRelationship } from "@/lore/area-relationships";
-import type { SourceLocation, StructuralArea } from "@/lore/model";
-import type { HTMLAttributes } from "react";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import type { Relationship, StructuralArea } from "@/lore/model";
+import {
+  Background,
+  Controls,
+  Handle,
+  MarkerType,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { useMemo } from "react";
 
-// SVG's <foreignObject> requires its HTML content to declare the XHTML
-// namespace explicitly; React's HTML element types don't model `xmlns`, so
-// it's cast in rather than typed as a first-class prop.
-const XHTML_NAMESPACE = {
-  xmlns: "http://www.w3.org/1999/xhtml",
-} as HTMLAttributes<HTMLDivElement>;
-
-export interface AreaDependencyDiagramProps {
-  areas: StructuralArea[];
-  relationships: AreaRelationship[];
-  areaUrl?: (location: SourceLocation) => string;
-}
-
-/**
- * Maps `StructuralArea.responsibility` — a closed, known vocabulary set by
- * `derive-views.ts` (`"Tests"`, `"Test fixtures/support data"`,
- * `"Build/tooling configuration"`) and JS/TS's React detector
- * (`"Presentational React components"`) — to one of the design system's
- * existing tile color tokens, reusing `IconTile`'s variant palette rather
- * than inventing new colors. An area with no special `responsibility` (the
- * ordinary case) gets the default "implementation area" color. Unrecognized
- * future responsibility strings fall back to the same default rather than
- * going unstyled.
- */
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
 
 const DEFAULT_RESPONSIBILITY_STYLE = {
@@ -35,6 +25,14 @@ const DEFAULT_RESPONSIBILITY_STYLE = {
   legendLabel: "Implementation area",
 };
 
+/**
+ * Labels reused verbatim from `classifySystem` (`src/lore/system-classification.ts`)
+ * and the Systems page — "Implementation area" / "Tests / test support" /
+ * "Build/tooling configuration" — never a criticality/importance-sounding
+ * label like "Core" or "Primary", per the `product-scope-guardian` guardrail
+ * ADR-0014 recorded against `non-goals.md`'s "no generalized health
+ * findings" line. Keep this vocabulary and `classifySystem`'s in sync.
+ */
 const RESPONSIBILITY_STYLES: Record<
   string,
   { variant: ResponsibilityVariant; legendLabel: string }
@@ -85,32 +83,119 @@ function responsibilityStyle(responsibility?: string) {
   return RESPONSIBILITY_STYLES[responsibility] ?? DEFAULT_RESPONSIBILITY_STYLE;
 }
 
+interface AreaNodeData extends Record<string, unknown> {
+  name: string;
+  responsibility?: string;
+  href?: string;
+}
+
+function AreaNode({ data }: NodeProps<Node<AreaNodeData>>) {
+  const style =
+    VARIANT_CLASSES[responsibilityStyle(data.responsibility).variant];
+  return (
+    <div
+      className={`flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-border px-3 py-2 text-center ${style.bg}`}
+    >
+      <Handle type="target" position={Position.Top} className="!bg-border" />
+      {data.href ? (
+        <a
+          href={data.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`w-full truncate text-xs font-medium hover:underline ${style.fg}`}
+        >
+          {formatPath(data.name)}
+        </a>
+      ) : (
+        <span className={`w-full truncate text-xs font-medium ${style.fg}`}>
+          {formatPath(data.name)}
+        </span>
+      )}
+      <Handle type="source" position={Position.Bottom} className="!bg-border" />
+    </div>
+  );
+}
+
+const NODE_TYPES = { areaNode: AreaNode };
+
+export interface AreaDependencyDiagramProps {
+  areas: StructuralArea[];
+  // Raw file-level relationships (`lore.relationships`), not the already
+  // area-rolled-up `AreaRelationship[]` — this diagram derives its own
+  // production-only area edges from these via
+  // `deriveProductionAreaRelationships`, excluding test files. Other views
+  // of the same area relationships (e.g. the "Component Connections" table)
+  // keep using the full, test-inclusive `deriveAreaRelationships` output.
+  relationships: Relationship[];
+  // A client component can't accept a function prop from a server
+  // component (RSC serialization boundary), so this takes plain data and
+  // builds each node's GitHub URL itself via `githubTreeUrl`, rather than
+  // the callback-style `areaUrl?: (location) => string` other lore-shell
+  // components use.
+  owner: string;
+  repo: string;
+  commitSha: string;
+}
+
 /**
- * A static, non-interactive box-and-arrow diagram of Major-Area-to-Major-
- * Area dependencies — a deliberate, scoped exception to the MVP's
- * plain-lists-and-tables default (see ADR-0009). Node positions/edge
- * routing come from `@dagrejs/dagre`, used for layout only: no pan, zoom,
- * drag, or click-to-filter, and no new relationship data beyond what
- * `deriveAreaRelationships` already produces for the "Component Connections"
- * table. Renders nothing when there isn't a meaningful diagram to draw
- * (too few or too many areas — see `deriveAreaDiagramLayout`). Each node is
- * colored by its `responsibility` (see `responsibilityStyle`) rather than
- * captioned with it as text, with a legend below the diagram explaining the
- * colors actually in use.
+ * Renders the area dependency diagram client-side with `@xyflow/react`
+ * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
+ * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
+ * product owner found larger diagrams didn't fit the fixed viewport. Node
+ * positions still come exclusively from `deriveProductionAreaDiagramLayout`
+ * (dagre) — react-flow is a renderer here, never a second layout engine.
+ *
+ * Deliberately NOT enabled, per ADR-0016's guardrails against the "since
+ * it's already there" interactivity creep ADR-0009 originally warned
+ * about: node dragging, node/edge connecting, element selection, a
+ * minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
+ * `elementsSelectable` below are explicitly set to `false` rather than left
+ * at react-flow's defaults. Any future request to enable one of these
+ * needs its own ADR and `product-scope-guardian` review, same as ADR-0009's
+ * own item 7 already required.
  */
 export function AreaDependencyDiagram({
   areas,
   relationships,
-  areaUrl,
+  owner,
+  repo,
+  commitSha,
 }: AreaDependencyDiagramProps) {
-  const layout = deriveAreaDiagramLayout(areas, relationships);
-  if (!layout) return null;
+  const layout = deriveProductionAreaDiagramLayout(areas, relationships);
 
-  // Tripled uniformly (not just height) so nodes actually render larger
-  // rather than being centered in extra empty space: scaling only the
-  // height while width stays container-fit wouldn't enlarge anything,
-  // since the SVG would still be scaled-to-fit by the unchanged width.
-  const DISPLAY_SCALE = 1.5;
+  const nodes: Node<AreaNodeData>[] = useMemo(
+    () =>
+      (layout?.nodes ?? []).map((node) => ({
+        id: node.id,
+        type: "areaNode",
+        position: { x: node.x, y: node.y },
+        style: { width: node.width, height: node.height },
+        data: {
+          name: node.name,
+          responsibility: node.responsibility,
+          href: githubTreeUrl(owner, repo, commitSha, node.location),
+        },
+      })),
+    [layout, owner, repo, commitSha]
+  );
+
+  const edges: Edge[] = useMemo(
+    () =>
+      (layout?.edges ?? []).map((edge) => ({
+        id: `${edge.fromId}->${edge.toId}`,
+        source: edge.fromId,
+        target: edge.toId,
+        type: "smoothstep",
+        style: {
+          stroke: "var(--border)",
+          strokeWidth: 1.5,
+        },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
+      })),
+    [layout]
+  );
+
+  if (!layout) return null;
 
   const legendEntries = Array.from(
     new Map(
@@ -128,79 +213,33 @@ export function AreaDependencyDiagram({
   );
 
   return (
-    <div>
-      <div className="overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${layout.width} ${layout.height}`}
-          width={layout.width * DISPLAY_SCALE}
-          height={layout.height * DISPLAY_SCALE}
-          role="img"
-          aria-label="Diagram of how major areas depend on each other"
+    <div id="area-dependency-diagram">
+      <div
+        className="w-full overflow-hidden rounded-lg border border-border"
+        style={{ height: Math.min(Math.max(layout.height + 80, 320), 600) }}
+        role="img"
+        aria-label="Diagram of how major areas depend on each other"
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={NODE_TYPES}
+          fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          proOptions={{ hideAttribution: true }}
         >
-          <defs>
-            <marker
-              id="area-diagram-arrowhead"
-              markerWidth="8"
-              markerHeight="8"
-              refX="7"
-              refY="4"
-              orient="auto"
-            >
-              <path d="M0,0 L8,4 L0,8 Z" fill="var(--border)" />
-            </marker>
-          </defs>
-
-          {layout.edges.map((edge) => (
-            <path
-              key={`${edge.fromId}->${edge.toId}`}
-              d={edge.points
-                .map(
-                  (point, i) => `${i === 0 ? "M" : "L"}${point.x},${point.y}`
-                )
-                .join(" ")}
-              stroke="var(--border)"
-              strokeWidth={1.5}
-              fill="none"
-              markerEnd="url(#area-diagram-arrowhead)"
-            />
-          ))}
-
-          {layout.nodes.map((node) => {
-            const style =
-              VARIANT_CLASSES[responsibilityStyle(node.responsibility).variant];
-            return (
-              <foreignObject
-                key={node.id}
-                x={node.x}
-                y={node.y}
-                width={node.width / DISPLAY_SCALE}
-                height={node.height / DISPLAY_SCALE}
-              >
-                <div
-                  {...XHTML_NAMESPACE}
-                  className={`flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-border px-3 py-2 text-center ${style.bg}`}
-                >
-                  {areaUrl ? (
-                    <a
-                      href={areaUrl(node.location)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`w-full truncate text-xs font-medium hover:underline ${style.fg}`}
-                    >
-                      {formatPath(node.name)}
-                    </a>
-                  ) : (
-                    <span
-                      className={`w-full truncate text-xs font-medium ${style.fg}`}
-                    >
-                      {formatPath(node.name)}
-                    </span>
-                  )}
-                </div>
-              </foreignObject>
-            );
-          })}
-        </svg>
+          <Background />
+          {/* `showInteractive={false}` hides react-flow's default "Toggle
+              Interactivity" button, whose only purpose is to re-enable
+              nodesDraggable/nodesConnectable/elementsSelectable — the exact
+              capabilities ADR-0016 disables above. The explicit props above
+              already win even if it were clicked, but a control whose sole
+              function is to undo a deliberate guardrail shouldn't be
+              offered at all. */}
+          <Controls showInteractive={false} />
+        </ReactFlow>
       </div>
       {legendEntries.length > 1 && (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">

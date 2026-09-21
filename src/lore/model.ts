@@ -102,6 +102,15 @@ export interface StructuralArea {
   testRelationshipIds: EntityId[];
   evidence: Evidence[];
   gaps: Gap[];
+  /**
+   * This area's own source files, minus any matching the analyzing
+   * language's `isTestFile` convention — i.e. files that would actually
+   * ship to production. Lets a presentation layer (the area dependency
+   * diagram) exclude test files precisely, including from mixed areas that
+   * hold both production and test files, without re-deriving test-file
+   * detection itself.
+   */
+  productionFilePaths: string[];
 }
 
 export type EntryPointKind =

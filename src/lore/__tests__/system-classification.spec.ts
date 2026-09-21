@@ -15,6 +15,7 @@ function area(overrides: Partial<StructuralArea> = {}): StructuralArea {
     testRelationshipIds: [],
     evidence: [],
     gaps: [],
+    productionFilePaths: [],
     ...overrides,
   };
 }

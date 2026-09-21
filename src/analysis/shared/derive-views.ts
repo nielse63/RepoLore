@@ -89,14 +89,67 @@ const NON_PRIMARY_AREA_RESPONSIBILITIES = new Set([
 ]);
 
 /**
- * Groups a file into an area one directory level under the project root,
- * e.g. "src/components/Header.tsx" -> "src/components", "src/index.ts" ->
- * "src". A file with no directory (at the project root) falls into ".".
+ * Above this many files, the directory-grouping fallback subdivides a
+ * bucket one directory level deeper rather than leaving it as one area —
+ * see `groupFilesIntoAreaNames` below. Found by validating against
+ * `pieces-app/example-typescript`, where the default two-segment grouping
+ * (below) collapsed 18 of ~21 source files nested under `src/app/**` into
+ * one area indistinguishable in size from a two-file `src`, leaving almost
+ * every relationship intra-area and the diagram showing only one real edge.
  */
-function areaNameForFile(filePath: string): string {
+const MAX_FALLBACK_AREA_FILES = 10;
+
+/**
+ * Groups a file into an area at most `depth` directory levels under the
+ * project root, e.g. at depth 2, "src/components/Header.tsx" ->
+ * "src/components", "src/index.ts" -> "src". A file with no directory (at
+ * the project root) always falls into ".", regardless of depth.
+ */
+function areaNameAtDepth(filePath: string, depth: number): string {
   const directorySegments = filePath.split("/").slice(0, -1);
   if (directorySegments.length === 0) return ".";
-  return directorySegments.slice(0, 2).join("/");
+  return directorySegments.slice(0, depth).join("/");
+}
+
+/**
+ * The directory-grouping fallback (last preference in `docs/MODEL_OUTPUT.md`
+ * "Major Areas" boundary detection): starts every file at a two-segment
+ * area name, then recursively subdivides any bucket over
+ * `MAX_FALLBACK_AREA_FILES` one directory level deeper, so a large flat
+ * subtree splits into its real subdirectories instead of collapsing into
+ * one oversized, illegible area. A bucket whose files all still share the
+ * same directory one level deeper (a genuinely flat directory) stops
+ * subdividing there even if it stays over the threshold — there's nothing
+ * left to split by.
+ */
+function groupFilesIntoAreaNames(
+  filePaths: string[],
+  maxFilesPerArea: number
+): Map<string, string> {
+  const areaNameByFile = new Map<string, string>();
+
+  function assign(files: string[], depth: number) {
+    const byName = new Map<string, string[]>();
+    for (const filePath of files) {
+      const name = areaNameAtDepth(filePath, depth);
+      const bucket = byName.get(name) ?? [];
+      bucket.push(filePath);
+      byName.set(name, bucket);
+    }
+    for (const [name, bucketFiles] of byName) {
+      const canSubdivideFurther =
+        bucketFiles.length > maxFilesPerArea &&
+        bucketFiles.some((f) => areaNameAtDepth(f, depth + 1) !== name);
+      if (canSubdivideFurther) {
+        assign(bucketFiles, depth + 1);
+      } else {
+        for (const filePath of bucketFiles) areaNameByFile.set(filePath, name);
+      }
+    }
+  }
+
+  assign(filePaths, 2);
+  return areaNameByFile;
 }
 
 /**
@@ -153,7 +206,8 @@ function describeEntryKind(kind: EntryPoint["kind"]): string {
 
 function buildStructuralAreas(
   input: DeriveViewsInput,
-  config: DeriveViewsConfig
+  config: DeriveViewsConfig,
+  areaNameByFile: Map<string, string>
 ): StructuralArea[] {
   const {
     projectId,
@@ -167,11 +221,9 @@ function buildStructuralAreas(
   const { isTestFile, isToolingConfigFile, detectSpecialAreaResponsibility } =
     config;
 
-  const areaNameByFile = new Map<string, string>();
   const filesByAreaName = new Map<string, string[]>();
   for (const filePath of sourceFilePaths) {
-    const name = areaNameForFile(filePath);
-    areaNameByFile.set(filePath, name);
+    const name = areaNameByFile.get(filePath) ?? areaNameAtDepth(filePath, 2);
     const files = filesByAreaName.get(name) ?? [];
     files.push(filePath);
     filesByAreaName.set(name, files);
@@ -269,6 +321,7 @@ function buildStructuralAreas(
         testRelationshipIds: areaTests.map((tr) => tr.id),
         evidence,
         gaps: areaGaps,
+        productionFilePaths: files.filter((f) => !isTestFile(f)),
       };
       return area;
     });
@@ -291,14 +344,15 @@ function buildStructuralAreas(
 
 function buildStartHere(
   input: DeriveViewsInput,
-  structuralAreas: StructuralArea[]
+  structuralAreas: StructuralArea[],
+  areaNameByFile: Map<string, string>
 ): Recommendation[] {
   const { sourceFilePaths, relationships, entryPoints, testRelationships } =
     input;
 
   const fileCountByAreaName = new Map<string, number>();
   for (const filePath of sourceFilePaths) {
-    const name = areaNameForFile(filePath);
+    const name = areaNameByFile.get(filePath) ?? areaNameAtDepth(filePath, 2);
     fileCountByAreaName.set(name, (fileCountByAreaName.get(name) ?? 0) + 1);
   }
 
@@ -311,7 +365,10 @@ function buildStartHere(
     order += 1;
     items.push({ id: `start-here-${order}`, order, ...item });
     representedFiles.add(item.location.filePath);
-    representedAreas.add(areaNameForFile(item.location.filePath));
+    representedAreas.add(
+      areaNameByFile.get(item.location.filePath) ??
+        areaNameAtDepth(item.location.filePath, 2)
+    );
   }
 
   const maxItemsBeforeTest =
@@ -443,7 +500,11 @@ export function deriveViews(
   input: DeriveViewsInput,
   config: DeriveViewsConfig
 ): DerivedViews {
-  const structuralAreas = buildStructuralAreas(input, config);
-  const startHere = buildStartHere(input, structuralAreas);
+  const areaNameByFile = groupFilesIntoAreaNames(
+    input.sourceFilePaths,
+    MAX_FALLBACK_AREA_FILES
+  );
+  const structuralAreas = buildStructuralAreas(input, config, areaNameByFile);
+  const startHere = buildStartHere(input, structuralAreas, areaNameByFile);
   return { structuralAreas, startHere };
 }

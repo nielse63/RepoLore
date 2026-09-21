@@ -9,7 +9,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
-import { deriveAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
@@ -30,7 +30,8 @@ export interface ArchitectureContentProps {
  * detection, or "architectural boundaries" narrative claims — see the ADR
  * for why each was rejected for this version. The area-to-area relationship
  * diagram is a later, narrowly scoped exception to that ADR's "no diagram"
- * decision — see ADR-0009.
+ * decision — see ADR-0009, amended by ADR-0016 to render client-side with
+ * react-flow for pan/zoom navigation only.
  */
 export function ArchitectureContent({
   lore,
@@ -43,7 +44,10 @@ export function ArchitectureContent({
   // orientation value as a diagram node, matching the Major Areas exclusion
   // above.
   const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
-  const diagramLayout = deriveAreaDiagramLayout(majorAreas, areaRelationships);
+  const diagramLayout = deriveProductionAreaDiagramLayout(
+    majorAreas,
+    lore.relationships
+  );
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -196,8 +200,10 @@ export function ArchitectureContent({
           <Card className="mb-4">
             <AreaDependencyDiagram
               areas={majorAreas}
-              relationships={areaRelationships}
-              areaUrl={areaUrl}
+              relationships={lore.relationships}
+              owner={lore.snapshot.repository.owner}
+              repo={repo}
+              commitSha={lore.snapshot.commitSha}
             />
           </Card>
         )}

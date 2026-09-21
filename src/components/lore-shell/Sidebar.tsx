@@ -128,7 +128,9 @@ function SidebarNav({
       >
         {NAV_ITEMS.map((item) => {
           const href = item.slug ? `${base}/${item.slug}` : base;
-          const active = pathname === href;
+          const active = item.slug
+            ? (pathname?.startsWith(href) ?? false)
+            : pathname === href;
           const Icon = item.icon;
           return (
             <Link

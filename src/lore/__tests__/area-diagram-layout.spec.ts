@@ -1,9 +1,10 @@
 import {
   deriveAreaDiagramLayout,
+  deriveProductionAreaDiagramLayout,
   MAX_DIAGRAM_AREAS,
 } from "../area-diagram-layout";
 import type { AreaRelationship } from "../area-relationships";
-import type { StructuralArea } from "../model";
+import type { Relationship, StructuralArea } from "../model";
 
 function area(overrides: Partial<StructuralArea> = {}): StructuralArea {
   return {
@@ -19,6 +20,7 @@ function area(overrides: Partial<StructuralArea> = {}): StructuralArea {
     testRelationshipIds: [],
     evidence: [],
     gaps: [],
+    productionFilePaths: [],
     ...overrides,
   };
 }
@@ -93,5 +95,56 @@ describe("deriveAreaDiagramLayout", () => {
 
     expect(layout).not.toBeNull();
     expect(layout!.edges).toHaveLength(2);
+  });
+});
+
+function rel(fromId: string, toId: string): Relationship {
+  return {
+    id: `${fromId}->${toId}`,
+    kind: "depends-on",
+    fromId,
+    toId,
+    certainty: "detected",
+    evidence: [],
+  };
+}
+
+describe("deriveProductionAreaDiagramLayout", () => {
+  it("drops an all-test area as a node entirely", () => {
+    const api = area({
+      id: "area:api",
+      name: "api",
+      productionFilePaths: ["src/api/index.ts"],
+    });
+    const tests = area({
+      id: "area:tests",
+      name: "tests",
+      productionFilePaths: [],
+    });
+    const worker = area({
+      id: "area:worker",
+      name: "worker",
+      productionFilePaths: ["src/worker/index.ts"],
+    });
+
+    const layout = deriveProductionAreaDiagramLayout(
+      [api, tests, worker],
+      [rel("src/api/index.ts", "src/worker/index.ts")]
+    );
+
+    expect(layout).not.toBeNull();
+    expect(layout!.nodes.map((n) => n.id).sort()).toEqual([
+      "area:api",
+      "area:worker",
+    ]);
+  });
+
+  it("returns null when fewer than two areas have production files", () => {
+    const api = area({
+      id: "area:api",
+      productionFilePaths: ["src/api/index.ts"],
+    });
+    const tests = area({ id: "area:tests", productionFilePaths: [] });
+    expect(deriveProductionAreaDiagramLayout([api, tests], [])).toBeNull();
   });
 });

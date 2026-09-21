@@ -4,4 +4,4 @@
  * produces new `analysis_runs` rows rather than overwriting or requiring a
  * backfill migration of old ones.
  */
-export const PYTHON_ANALYZER_VERSION = "python-v4";
+export const PYTHON_ANALYZER_VERSION = "python-v6";
