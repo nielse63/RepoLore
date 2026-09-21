@@ -26,6 +26,7 @@ export interface AreaRelationship {
 export function deriveAreaRelationships(
   structuralAreas: StructuralArea[]
 ): AreaRelationship[] {
+  console.log({ structuralAreas });
   const areaById = new Map(structuralAreas.map((area) => [area.id, area]));
   const seen = new Set<string>();
   const edges: AreaRelationship[] = [];

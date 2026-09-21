@@ -193,7 +193,9 @@ export function OverviewContent({
             <AreaDependencyDiagram
               areas={majorAreas}
               relationships={areaRelationships}
-              areaUrl={areaUrl}
+              owner={snapshot.repository.owner}
+              repo={snapshot.repository.name}
+              commitSha={snapshot.commitSha}
             />
           </Card>
           <Link

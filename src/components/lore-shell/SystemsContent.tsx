@@ -144,7 +144,9 @@ export function SystemsContent({
               <AreaDependencyDiagram
                 areas={majorAreas}
                 relationships={areaRelationships}
-                areaUrl={areaUrl}
+                owner={owner}
+                repo={repo}
+                commitSha={commitSha}
               />
             </div>
           ) : (

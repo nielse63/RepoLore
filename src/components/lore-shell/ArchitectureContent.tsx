@@ -197,7 +197,9 @@ export function ArchitectureContent({
             <AreaDependencyDiagram
               areas={majorAreas}
               relationships={areaRelationships}
-              areaUrl={areaUrl}
+              owner={lore.snapshot.repository.owner}
+              repo={repo}
+              commitSha={lore.snapshot.commitSha}
             />
           </Card>
         )}
