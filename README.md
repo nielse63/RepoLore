@@ -59,6 +59,10 @@ docker compose up -d db   # starts local Postgres (see docker-compose.yml)
 npm run migrate           # applies src/db/migrations/
 ```
 
+## Analytics
+
+Google Analytics (`gtag.js`, measurement ID `G-66W4D723ZX`) is loaded on every route via `next/script` in the root layout (`src/app/layout.tsx`), `strategy="afterInteractive"` so it never blocks the initial render. `next.config.ts`'s CSP explicitly allowlists `googletagmanager.com`/`google-analytics.com` for `script-src`/`connect-src` — anything not on that list stays blocked.
+
 ## Fixtures
 
 `fixtures/` holds small, hand-built local repos used to develop and sanity-check each language analyzer before it's run against real repositories (see `docs/architecture/implementation-plan.md`, "Fixture strategy"). Two scripts also give manual, human-readable sanity checks against a fixture (in addition to the automated unit test suite — see "Testing" below):
