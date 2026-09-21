@@ -18,12 +18,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
 
-// SPIKE: this file has been temporarily rewritten to render with
-// @xyflow/react instead of the static server-rendered SVG described in
-// ADR-0009. This is a throwaway exploration for a scope discussion, done on
-// branch `spike/reactflow-area-diagram` — not a real change. See that ADR
-// and non-goals.md for why the real implementation stays static.
-
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
 
 const DEFAULT_RESPONSIBILITY_STYLE = {
@@ -31,6 +25,14 @@ const DEFAULT_RESPONSIBILITY_STYLE = {
   legendLabel: "Implementation area",
 };
 
+/**
+ * Labels reused verbatim from `classifySystem` (`src/lore/system-classification.ts`)
+ * and the Systems page — "Implementation area" / "Tests / test support" /
+ * "Build/tooling configuration" — never a criticality/importance-sounding
+ * label like "Core" or "Primary", per the `product-scope-guardian` guardrail
+ * ADR-0014 recorded against `non-goals.md`'s "no generalized health
+ * findings" line. Keep this vocabulary and `classifySystem`'s in sync.
+ */
 const RESPONSIBILITY_STYLES: Record<
   string,
   { variant: ResponsibilityVariant; legendLabel: string }
@@ -125,15 +127,33 @@ export interface AreaDependencyDiagramProps {
   // of the same area relationships (e.g. the "Component Connections" table)
   // keep using the full, test-inclusive `deriveAreaRelationships` output.
   relationships: Relationship[];
-  // SPIKE NOTE: a client component can't accept a function prop from a
-  // server component (RSC serialization boundary), so this replaces the
-  // real component's `areaUrl?: (location) => string` callback with plain
-  // data the client can build the same URL from itself.
+  // A client component can't accept a function prop from a server
+  // component (RSC serialization boundary), so this takes plain data and
+  // builds each node's GitHub URL itself via `githubTreeUrl`, rather than
+  // the callback-style `areaUrl?: (location) => string` other lore-shell
+  // components use.
   owner: string;
   repo: string;
   commitSha: string;
 }
 
+/**
+ * Renders the area dependency diagram client-side with `@xyflow/react`
+ * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
+ * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
+ * product owner found larger diagrams didn't fit the fixed viewport. Node
+ * positions still come exclusively from `deriveProductionAreaDiagramLayout`
+ * (dagre) — react-flow is a renderer here, never a second layout engine.
+ *
+ * Deliberately NOT enabled, per ADR-0016's guardrails against the "since
+ * it's already there" interactivity creep ADR-0009 originally warned
+ * about: node dragging, node/edge connecting, element selection, a
+ * minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
+ * `elementsSelectable` below are explicitly set to `false` rather than left
+ * at react-flow's defaults. Any future request to enable one of these
+ * needs its own ADR and `product-scope-guardian` review, same as ADR-0009's
+ * own item 7 already required.
+ */
 export function AreaDependencyDiagram({
   areas,
   relationships,
@@ -171,7 +191,6 @@ export function AreaDependencyDiagram({
           strokeWidth: 1.5,
         },
         markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
-        selectable: false,
       })),
     [layout]
   );
@@ -206,10 +225,20 @@ export function AreaDependencyDiagram({
           edges={edges}
           nodeTypes={NODE_TYPES}
           fitView
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
           proOptions={{ hideAttribution: true }}
         >
           <Background />
-          <Controls />
+          {/* `showInteractive={false}` hides react-flow's default "Toggle
+              Interactivity" button, whose only purpose is to re-enable
+              nodesDraggable/nodesConnectable/elementsSelectable — the exact
+              capabilities ADR-0016 disables above. The explicit props above
+              already win even if it were clicked, but a control whose sole
+              function is to undo a deliberate guardrail shouldn't be
+              offered at all. */}
+          <Controls showInteractive={false} />
         </ReactFlow>
       </div>
       {legendEntries.length > 1 && (

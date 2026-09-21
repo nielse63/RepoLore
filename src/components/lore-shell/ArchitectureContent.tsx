@@ -30,7 +30,8 @@ export interface ArchitectureContentProps {
  * detection, or "architectural boundaries" narrative claims — see the ADR
  * for why each was rejected for this version. The area-to-area relationship
  * diagram is a later, narrowly scoped exception to that ADR's "no diagram"
- * decision — see ADR-0009.
+ * decision — see ADR-0009, amended by ADR-0016 to render client-side with
+ * react-flow for pan/zoom navigation only.
  */
 export function ArchitectureContent({
   lore,

@@ -20,3 +20,9 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run test:unit
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: nielse63/RepoLore
