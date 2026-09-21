@@ -1,6 +1,8 @@
 "use client";
 
+import { useMobileNav } from "@/components/lore-shell/MobileNavContext";
 import { Badge } from "@/components/ui/Badge";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/Drawer";
 import { cn } from "@/lib/cn";
 import {
   Clock,
@@ -14,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 
 const NAV_ITEMS = [
   { slug: "", label: "Overview", icon: Home },
@@ -34,13 +37,60 @@ export function Sidebar({
   visibility?: string;
 }) {
   const pathname = usePathname();
+  const { open, setOpen } = useMobileNav();
   const base = `/lore/${owner}/${repo}`;
 
+  // Auto-close the mobile drawer whenever navigation completes.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
+
+  const content = (
+    <SidebarNav
+      owner={owner}
+      repo={repo}
+      visibility={visibility}
+      pathname={pathname}
+      base={base}
+    />
+  );
+
   return (
-    <aside
-      aria-label="Repository navigation and status"
-      className="flex w-60 shrink-0 flex-col border-r border-border bg-sidebar"
-    >
+    <>
+      <aside
+        aria-label="Repository navigation and status"
+        className="hidden w-60 shrink-0 flex-col border-r border-border bg-sidebar lg:flex"
+      >
+        {content}
+      </aside>
+
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerContent side="left">
+          <DrawerTitle className="sr-only">
+            Repository navigation and status
+          </DrawerTitle>
+          {content}
+        </DrawerContent>
+      </Drawer>
+    </>
+  );
+}
+
+function SidebarNav({
+  owner,
+  repo,
+  visibility,
+  pathname,
+  base,
+}: {
+  owner: string;
+  repo: string;
+  visibility: string;
+  pathname: string | null;
+  base: string;
+}) {
+  return (
+    <>
       <div className="px-5 py-5">
         <Link
           href="/"
@@ -135,6 +185,6 @@ export function Sidebar({
           Repository settings
         </Link> */}
       </div>
-    </aside>
+    </>
   );
 }

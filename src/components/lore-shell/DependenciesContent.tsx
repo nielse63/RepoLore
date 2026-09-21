@@ -86,7 +86,7 @@ function SortableTh({
       <button
         type="button"
         onClick={() => onSort(column)}
-        className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground"
+        className="-mx-2 -my-1.5 inline-flex items-center gap-1 rounded px-2 py-1.5 text-sm font-medium text-muted hover:bg-border/20 hover:text-foreground"
       >
         {label}
         <Icon

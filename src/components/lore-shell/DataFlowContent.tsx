@@ -84,6 +84,7 @@ const SORTS = [
 
 const LIST_CAP = 200;
 const SEARCH_MATCH_CAP = 20;
+const MAX_CHAIN_INDENT_DEPTH = 4;
 
 export interface DataFlowContentProps {
   owner: string;
@@ -450,7 +451,7 @@ export function DataFlowContent({
             </p>
           </div>
           <div className="flex flex-col gap-1.5 w-full">
-            <div className="flex items-center gap-2 w-full justify-between">
+            <div className="flex flex-wrap items-center gap-2 w-full justify-between">
               <FilterPills
                 aria-label="View mode"
                 options={VIEWS}
@@ -667,7 +668,9 @@ function ChainTreeRow({
           "flex w-full items-center gap-3 py-4 pr-6 text-left transition-colors " +
           (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
         }
-        style={{ paddingLeft: `${1.5 + depth * 1.5}rem` }}
+        style={{
+          paddingLeft: `${1.5 + Math.min(depth, MAX_CHAIN_INDENT_DEPTH) * 1.5}rem`,
+        }}
       >
         <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted">
           {hasChildren &&
@@ -703,7 +706,9 @@ function ChainTreeRow({
                     type="button"
                     onClick={() => onSelect(childId)}
                     className="flex w-full items-center gap-3 py-3 pr-6 text-left text-sm text-muted italic hover:bg-border/10"
-                    style={{ paddingLeft: `${1.5 + (depth + 1) * 1.5}rem` }}
+                    style={{
+                      paddingLeft: `${1.5 + Math.min(depth + 1, MAX_CHAIN_INDENT_DEPTH) * 1.5}rem`,
+                    }}
                   >
                     <span className="h-4 w-4 shrink-0" />
                     {childSignature.name} — already shown above

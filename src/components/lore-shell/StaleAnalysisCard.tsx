@@ -29,7 +29,7 @@ export function StaleAnalysisCard({ analyzedAt }: { analyzedAt: string }) {
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Dismiss"
-            className="text-tile-supporting-fg hover:text-foreground"
+            className="-m-2.5 rounded p-2.5 text-tile-supporting-fg hover:bg-border/20 hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>

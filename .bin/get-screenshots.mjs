@@ -9,7 +9,10 @@ const pages = [
   "",
   repoPath,
   `${repoPath}/architecture`,
-  `${repoPath}/history`
+  `${repoPath}/history`,
+  `${repoPath}/systems`,
+  `${repoPath}/data-flow`,
+  `${repoPath}/dependencies`,
 ];
 
 const screenshotsDir = path.join(__dirname, "screenshots");
@@ -25,7 +28,7 @@ const gotoPage = async (pageName = "") => {
   const filename = `${fileBasename}.png`;
   // console.log({ url, filename });
   const page = await browser.newPage({
-    viewport: { width: 1440, height: 900 },
+    viewport: { width: 1512, height: 770 },
   });
 
   await page.goto(url, { waitUntil: "networkidle" });

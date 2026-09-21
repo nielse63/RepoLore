@@ -26,7 +26,7 @@ export function PaginationItem(props: React.ComponentProps<"li">) {
 }
 
 const controlClasses =
-  "inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-lg px-3 text-sm font-medium text-foreground transition-colors hover:bg-border/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg px-3 text-sm font-medium text-foreground transition-colors hover:bg-border/30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
 
 export function PaginationLink({
   isActive,
@@ -89,7 +89,7 @@ export function PaginationEllipsis({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex h-9 w-9 items-center justify-center text-muted",
+        "inline-flex h-10 w-10 items-center justify-center text-muted",
         className
       )}
       {...props}
