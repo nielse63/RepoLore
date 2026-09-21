@@ -16,7 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 // SPIKE: this file has been temporarily rewritten to render with
 // @xyflow/react instead of the static server-rendered SVG described in
@@ -85,8 +85,6 @@ interface AreaNodeData extends Record<string, unknown> {
   name: string;
   responsibility?: string;
   href?: string;
-  isActive?: boolean;
-  isDimmed?: boolean;
 }
 
 function AreaNode({ data }: NodeProps<Node<AreaNodeData>>) {
@@ -94,11 +92,7 @@ function AreaNode({ data }: NodeProps<Node<AreaNodeData>>) {
     VARIANT_CLASSES[responsibilityStyle(data.responsibility).variant];
   return (
     <div
-      className={`flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-border px-3 py-2 text-center transition-[filter,opacity] duration-150 ${style.bg}`}
-      style={{
-        filter: data.isActive ? "brightness(0.9)" : undefined,
-        opacity: data.isDimmed ? 0.4 : 1,
-      }}
+      className={`flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-border px-3 py-2 text-center ${style.bg}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-border" />
       {data.href ? (
@@ -148,56 +142,6 @@ export function AreaDependencyDiagram({
   commitSha,
 }: AreaDependencyDiagramProps) {
   const layout = deriveProductionAreaDiagramLayout(areas, relationships);
-  const rawEdges = useMemo(() => layout?.edges ?? [], [layout]);
-
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
-
-  const handleNodeMouseEnter = useCallback(
-    (_event: unknown, node: Node) => setHoveredNodeId(node.id),
-    []
-  );
-  const handleNodeMouseLeave = useCallback(() => setHoveredNodeId(null), []);
-  const handleEdgeMouseEnter = useCallback(
-    (_event: unknown, edge: Edge) => setHoveredEdgeId(edge.id),
-    []
-  );
-  const handleEdgeMouseLeave = useCallback(() => setHoveredEdgeId(null), []);
-
-  // Neighborhood highlighted on hover: hovering a node highlights it, its
-  // directly connected edges, and the nodes at the other end of those edges;
-  // hovering an edge highlights just that edge and its two endpoint nodes.
-  const { activeNodeIds, activeEdgeIds, isHighlightActive } = useMemo(() => {
-    const activeNodeIds = new Set<string>();
-    const activeEdgeIds = new Set<string>();
-
-    if (hoveredNodeId) {
-      activeNodeIds.add(hoveredNodeId);
-      for (const edge of rawEdges) {
-        if (edge.fromId === hoveredNodeId || edge.toId === hoveredNodeId) {
-          activeEdgeIds.add(`${edge.fromId}->${edge.toId}`);
-          activeNodeIds.add(edge.fromId);
-          activeNodeIds.add(edge.toId);
-        }
-      }
-    } else if (hoveredEdgeId) {
-      const edge = rawEdges.find(
-        (candidate) =>
-          `${candidate.fromId}->${candidate.toId}` === hoveredEdgeId
-      );
-      if (edge) {
-        activeEdgeIds.add(hoveredEdgeId);
-        activeNodeIds.add(edge.fromId);
-        activeNodeIds.add(edge.toId);
-      }
-    }
-
-    return {
-      activeNodeIds,
-      activeEdgeIds,
-      isHighlightActive: hoveredNodeId !== null || hoveredEdgeId !== null,
-    };
-  }, [rawEdges, hoveredNodeId, hoveredEdgeId]);
 
   const nodes: Node<AreaNodeData>[] = useMemo(
     () =>
@@ -210,37 +154,26 @@ export function AreaDependencyDiagram({
           name: node.name,
           responsibility: node.responsibility,
           href: githubTreeUrl(owner, repo, commitSha, node.location),
-          isActive: activeNodeIds.has(node.id),
-          isDimmed: isHighlightActive && !activeNodeIds.has(node.id),
         },
       })),
-    [layout, owner, repo, commitSha, activeNodeIds, isHighlightActive]
+    [layout, owner, repo, commitSha]
   );
 
   const edges: Edge[] = useMemo(
     () =>
-      rawEdges.map((edge) => {
-        const id = `${edge.fromId}->${edge.toId}`;
-        const isActive = activeEdgeIds.has(id);
-        const isDimmed = isHighlightActive && !isActive;
-        const stroke = isActive ? "var(--foreground)" : "var(--border)";
-        return {
-          id,
-          source: edge.fromId,
-          target: edge.toId,
-          type: "smoothstep",
-          style: {
-            stroke,
-            strokeWidth: isActive ? 2.5 : 1.5,
-            opacity: isDimmed ? 0.35 : 1,
-            transition:
-              "stroke 150ms ease, stroke-width 150ms ease, opacity 150ms ease",
-          },
-          markerEnd: { type: MarkerType.ArrowClosed, color: stroke },
-          selectable: false,
-        };
-      }),
-    [rawEdges, activeEdgeIds, isHighlightActive]
+      (layout?.edges ?? []).map((edge) => ({
+        id: `${edge.fromId}->${edge.toId}`,
+        source: edge.fromId,
+        target: edge.toId,
+        type: "smoothstep",
+        style: {
+          stroke: "var(--border)",
+          strokeWidth: 1.5,
+        },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
+        selectable: false,
+      })),
+    [layout]
   );
 
   if (!layout) return null;
@@ -272,10 +205,6 @@ export function AreaDependencyDiagram({
           nodes={nodes}
           edges={edges}
           nodeTypes={NODE_TYPES}
-          onNodeMouseEnter={handleNodeMouseEnter}
-          onNodeMouseLeave={handleNodeMouseLeave}
-          onEdgeMouseEnter={handleEdgeMouseEnter}
-          onEdgeMouseLeave={handleEdgeMouseLeave}
           fitView
           proOptions={{ hideAttribution: true }}
         >
