@@ -7,9 +7,20 @@ import {
   SubmissionRateLimitedError,
   claimSubmissionAttempt,
 } from "@/analysis/submission-rate-limit";
+import { saveHistoryEntries } from "@/db/history-entries";
+import { upsertRepo } from "@/db/repos";
 import { GitHubApiError } from "@/github/client";
+import { computeHistory } from "@/history/compute-history";
+import {
+  HistoryRateLimitedError,
+  claimHistoryRefresh,
+} from "@/history/history-rate-limit";
 import { requestIdentifier } from "@/lib/request-identifier";
-import { resolveRepository, reanalyzeRepository } from "../actions";
+import {
+  resolveRepository,
+  reanalyzeRepository,
+  refreshHistory,
+} from "../actions";
 
 jest.mock("next/navigation");
 jest.mock("next/cache");
@@ -23,6 +34,16 @@ jest.mock("@/analysis/reanalyze-and-refresh-history");
 jest.mock("@/analysis/submission-rate-limit", () => ({
   ...jest.requireActual("@/analysis/submission-rate-limit"),
   claimSubmissionAttempt: jest.fn(),
+}));
+jest.mock("@/db/history-entries");
+jest.mock("@/db/repos");
+jest.mock("@/history/compute-history");
+// Same reasoning as submission-rate-limit above: keep the real
+// HistoryRateLimitedError class so `error instanceof HistoryRateLimitedError`
+// still works, and only mock the function that throws it.
+jest.mock("@/history/history-rate-limit", () => ({
+  ...jest.requireActual("@/history/history-rate-limit"),
+  claimHistoryRefresh: jest.fn(),
 }));
 jest.mock("@/lib/request-identifier");
 
@@ -43,6 +64,16 @@ const mockClaimSubmissionAttempt =
 const mockRequestIdentifier = requestIdentifier as jest.MockedFunction<
   typeof requestIdentifier
 >;
+const mockSaveHistoryEntries = saveHistoryEntries as jest.MockedFunction<
+  typeof saveHistoryEntries
+>;
+const mockUpsertRepo = upsertRepo as jest.MockedFunction<typeof upsertRepo>;
+const mockComputeHistory = computeHistory as jest.MockedFunction<
+  typeof computeHistory
+>;
+const mockClaimHistoryRefresh = claimHistoryRefresh as jest.MockedFunction<
+  typeof claimHistoryRefresh
+>;
 
 function formDataWithUrl(url: string): FormData {
   const formData = new FormData();
@@ -61,6 +92,13 @@ describe("resolveRepository", () => {
       { status: "idle" },
       formDataWithUrl("not a url")
     );
+
+    expect(result.status).toBe("error");
+    expect(mockAnalyzeAndPersistRepository).not.toHaveBeenCalled();
+  });
+
+  it("returns an error without analyzing when the url field is missing", async () => {
+    const result = await resolveRepository({ status: "idle" }, new FormData());
 
     expect(result.status).toBe("error");
     expect(mockAnalyzeAndPersistRepository).not.toHaveBeenCalled();
@@ -251,6 +289,100 @@ describe("reanalyzeRepository", () => {
     expect(result).toEqual({
       status: "error",
       message: "Something went wrong re-analyzing that repository.",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("acme/widgets"),
+      error
+    );
+    consoleError.mockRestore();
+  });
+});
+
+describe("refreshHistory", () => {
+  beforeEach(() => {
+    mockUpsertRepo.mockResolvedValue({ id: 42 } as never);
+    mockClaimHistoryRefresh.mockResolvedValue(undefined);
+  });
+
+  it("computes, saves, and revalidates History on success", async () => {
+    mockComputeHistory.mockResolvedValue({
+      entries: [{ id: "e1" }, { id: "e2" }] as never,
+      computedThroughSha: "sha1",
+      truncated: false,
+    });
+    mockSaveHistoryEntries.mockResolvedValue({} as never);
+
+    const result = await refreshHistory(
+      "acme",
+      "widgets",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(result).toEqual({ status: "done", entryCount: 2 });
+    expect(mockUpsertRepo).toHaveBeenCalledWith("acme", "widgets");
+    expect(mockClaimHistoryRefresh).toHaveBeenCalledWith(42);
+    expect(mockComputeHistory).toHaveBeenCalledWith("acme", "widgets");
+    expect(mockSaveHistoryEntries).toHaveBeenCalledWith({
+      repoId: 42,
+      computedThroughSha: "sha1",
+      entries: [{ id: "e1" }, { id: "e2" }],
+    });
+    expect(mockRevalidatePath).toHaveBeenCalledWith(
+      "/lore/acme/widgets/history"
+    );
+  });
+
+  it("returns the GitHubApiError message inline instead of saving", async () => {
+    mockComputeHistory.mockRejectedValue(
+      new GitHubApiError("rate-limited", "Rate limit exceeded")
+    );
+
+    const result = await refreshHistory(
+      "acme",
+      "widgets",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(result).toEqual({ status: "error", message: "Rate limit exceeded" });
+    expect(mockSaveHistoryEntries).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("returns the HistoryRateLimitedError message inline without ever computing", async () => {
+    mockClaimHistoryRefresh.mockRejectedValue(new HistoryRateLimitedError(45));
+
+    const result = await refreshHistory(
+      "acme",
+      "widgets",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Please wait 45s before refreshing history again.",
+    });
+    expect(mockComputeHistory).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic error message for unexpected failures", async () => {
+    const error = new Error("boom");
+    mockComputeHistory.mockRejectedValue(error);
+    const consoleError = jest.spyOn(console, "error").mockImplementation();
+
+    const result = await refreshHistory(
+      "acme",
+      "widgets",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Something went wrong refreshing history.",
     });
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining("acme/widgets"),
