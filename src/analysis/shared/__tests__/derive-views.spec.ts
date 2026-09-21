@@ -57,6 +57,37 @@ describe("deriveViews structural areas", () => {
     expect(structuralAreas.map((a) => a.name)).toEqual(["."]);
   });
 
+  it("subdivides a two-segment area exceeding the file-count threshold into its real subdirectories", () => {
+    // 12 files nested three-plus levels under "src/app" — over the
+    // threshold for the default "src/app" bucket, and genuinely splittable
+    // by subdirectory, unlike the flat-directory case below.
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/app/App.tsx",
+        ...Array.from(
+          { length: 11 },
+          (_, i) => `src/app/components/Widget${i}.tsx`
+        ),
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const names = structuralAreas.map((a) => a.name).sort();
+    expect(names).toEqual(["src/app", "src/app/components"]);
+  });
+
+  it("does not subdivide a flat directory exceeding the threshold when its files share no deeper structure", () => {
+    const input = baseInput({
+      sourceFilePaths: Array.from(
+        { length: 12 },
+        (_, i) => `src/components/Widget${i}.tsx`
+      ),
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    expect(structuralAreas.map((a) => a.name)).toEqual(["src/components"]);
+  });
+
   it('marks an area as "Tests" when every file is a test file per the config', () => {
     const input = baseInput({ sourceFilePaths: ["src/math.test.ts"] });
     const config: DeriveViewsConfig = {
