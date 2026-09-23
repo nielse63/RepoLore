@@ -1,5 +1,5 @@
-import type { SourceLocation } from "@/lore/model";
 import { formatPath } from "@/lib/format-path";
+import type { SourceLocation } from "@/lore/model";
 import { ExternalLink } from "lucide-react";
 
 export function SourceLink({
@@ -29,9 +29,13 @@ export function SourceLink({
       href={sourceUrl(location)}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 rounded bg-border/40 px-1.5 py-0.5 font-mono text-sm text-primary hover:underline"
+      className="flex items-center gap-1 rounded bg-border/40 px-1.5 py-0.5 font-mono text-sm text-primary hover:underline justify-between"
     >
-      {label}
+      {/* display: inline-block;
+    max-width: calc(100% - 12px);
+    text-overflow: ellipsis;
+    overflow: hidden; */}
+      <span className="inline-block truncate max-w-full">{label}</span>
       {lines}
       <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
       <span className="sr-only"> (opens in a new tab)</span>
