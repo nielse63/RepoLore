@@ -36,6 +36,7 @@ describe("acquireRepositorySource", () => {
     mockAcquireTarballSource.mockResolvedValue({
       dir: "/tmp/extracted",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
 
@@ -60,6 +61,7 @@ describe("acquireRepositorySource", () => {
       defaultBranch: "main",
       headSha: "sha123",
       fileCount: 3,
+      skippedEntries: [],
       cleanup,
     });
   });

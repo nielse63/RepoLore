@@ -78,6 +78,8 @@ export interface BuildLoreInput {
   analyzedAt: string;
   /** One entry per analyzer selected for this repository (ADR-0007) — almost always one, sometimes more for a mixed-language repository. */
   extractions: BuildLoreProjectInput[];
+  /** Gaps from source acquisition itself (e.g. tarball entries skipped during extraction), not tied to any one language extraction. */
+  acquisitionGaps?: Gap[];
 }
 
 /**
@@ -122,6 +124,7 @@ export function buildLore(input: BuildLoreInput): Lore {
     analyzerVersion,
     analyzedAt,
     extractions,
+    acquisitionGaps = [],
   } = input;
 
   const repository: Repository = {
@@ -181,7 +184,10 @@ export function buildLore(input: BuildLoreInput): Lore {
     ),
     startHere: mergeStartHere(extractions.map((e) => e.views.startHere)),
     findings: [],
-    gaps: extractions.flatMap((e) => e.extraction.gaps),
+    gaps: [
+      ...extractions.flatMap((e) => e.extraction.gaps),
+      ...acquisitionGaps,
+    ],
   };
 
   const contract = evaluateMinimumValueContract(lore);

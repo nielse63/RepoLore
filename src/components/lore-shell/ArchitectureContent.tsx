@@ -1,6 +1,9 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
-import { PaginatedList } from "@/components/lore-shell/PaginatedList";
+import {
+  MAJOR_AREAS_PAGE_SIZE,
+  PaginatedList,
+} from "@/components/lore-shell/PaginatedList";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
@@ -129,59 +132,56 @@ export function ArchitectureContent({
               <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
                 <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
               </h3>
-              <Card className="p-0">
-                <ul className="divide-y divide-border">
-                  {projectAreas.map((area) => (
-                    <li
-                      key={area.id}
-                      className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <SourceLink
-                          location={area.location}
-                          sourceUrl={areaUrl}
-                        >
-                          {formatPath(area.name)}
-                        </SourceLink>
-                        <p className="mt-1 text-sm text-muted">
-                          {area.responsibility ?? area.rationale}
-                        </p>
+              <PaginatedList
+                items={projectAreas.map((area) => (
+                  <li
+                    key={area.id}
+                    className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <SourceLink location={area.location} sourceUrl={areaUrl}>
+                        {formatPath(area.name)}
+                      </SourceLink>
+                      <p className="mt-1 text-sm text-muted">
+                        {area.responsibility ?? area.rationale}
+                      </p>
+                    </div>
+                    <dl className="flex shrink-0 flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
+                      <div>
+                        <dt>Entry points</dt>
+                        <dd className="mt-0.5 text-sm font-medium text-foreground">
+                          {area.entryPointIds.length}
+                        </dd>
                       </div>
-                      <dl className="flex shrink-0 flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
-                        <div>
-                          <dt>Entry points</dt>
-                          <dd className="mt-0.5 text-sm font-medium text-foreground">
-                            {area.entryPointIds.length}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Depends on</dt>
-                          <dd className="mt-0.5 text-sm font-medium text-foreground">
-                            {area.directDependencyIds.length}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Imported By</dt>
-                          <dd className="mt-0.5 text-sm font-medium text-foreground">
-                            {area.directDependentIds.length}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Evidence</dt>
-                          <dd className="mt-0.5 text-sm font-medium text-foreground">
-                            {area.evidence.length}
-                          </dd>
-                        </div>
-                      </dl>
-                    </li>
-                  ))}
-                  {projectAreas.length === 0 && (
-                    <li className="px-6 py-4 text-sm text-muted">
-                      No structural areas detected for this project.
-                    </li>
-                  )}
-                </ul>
-              </Card>
+                      <div>
+                        <dt>Depends on</dt>
+                        <dd className="mt-0.5 text-sm font-medium text-foreground">
+                          {area.directDependencyIds.length}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Imported By</dt>
+                        <dd className="mt-0.5 text-sm font-medium text-foreground">
+                          {area.directDependentIds.length}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Evidence</dt>
+                        <dd className="mt-0.5 text-sm font-medium text-foreground">
+                          {area.evidence.length}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+                pageSize={MAJOR_AREAS_PAGE_SIZE}
+                storageKey={`major-areas-page:${lore.snapshot.repository.owner}/${repo}:architecture:${project.id}`}
+                emptyState={
+                  <li className="px-6 py-4 text-sm text-muted">
+                    No structural areas detected for this project.
+                  </li>
+                }
+              />
             </div>
           </section>
         );

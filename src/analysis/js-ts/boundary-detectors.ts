@@ -19,6 +19,7 @@ import type {
   BoundaryType,
   SourceLocation,
 } from "@/lore/model";
+import { getModuleSpecifierValueSafe } from "./module-resolution";
 import {
   enclosingNamedCallable,
   toRelative,
@@ -82,8 +83,10 @@ export function detectBoundaries(
 
     const localBoundaryNames = new Map<string, BoundaryType>();
     for (const importDecl of sourceFile.getImportDeclarations()) {
-      const boundaryType =
-        PACKAGE_BOUNDARIES[importDecl.getModuleSpecifierValue()];
+      const specifier = getModuleSpecifierValueSafe(importDecl);
+      const boundaryType = specifier
+        ? PACKAGE_BOUNDARIES[specifier]
+        : undefined;
       if (!boundaryType) continue;
 
       const defaultImport = importDecl.getDefaultImport();

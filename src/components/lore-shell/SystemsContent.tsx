@@ -3,6 +3,8 @@
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
+import { PaginationNav } from "@/components/lore-shell/PaginationNav";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { TopBar } from "@/components/lore-shell/TopBar";
@@ -15,6 +17,7 @@ import {
 import { IconTile, type IconTileVariant } from "@/components/ui/IconTile";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { formatPath } from "@/lib/format-path";
+import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import type { Lore, StructuralArea } from "@/lore/model";
 import {
@@ -24,7 +27,7 @@ import {
 import { assignSystemSlugs } from "@/lore/system-slug";
 import { ChevronRight, Layers } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const FILTERS: FilterPillOption[] = [
   { value: "all", label: "All" },
@@ -110,6 +113,28 @@ export function SystemsContent({
     });
   }, [slugEntries, query, kind]);
 
+  const pageCount = Math.max(
+    Math.ceil(filtered.length / MAJOR_AREAS_PAGE_SIZE),
+    1
+  );
+  const [page, setPage] = usePersistedPage(
+    `major-areas-page:${owner}/${repo}:systems`,
+    pageCount
+  );
+  // Reset to page 1 whenever the search or filter actually changes — but not
+  // on the initial mount, which would stomp the page restored from
+  // sessionStorage before the user has touched either control.
+  const skipNextReset = useRef(true);
+  useEffect(() => {
+    if (skipNextReset.current) {
+      skipNextReset.current = false;
+      return;
+    }
+    setPage(1);
+  }, [query, kind, setPage]);
+  const start = (page - 1) * MAJOR_AREAS_PAGE_SIZE;
+  const pageFiltered = filtered.slice(start, start + MAJOR_AREAS_PAGE_SIZE);
+
   return (
     <LorePageFrame
       topBar={
@@ -192,7 +217,7 @@ export function SystemsContent({
 
         <Card className="mt-4 p-0">
           <ul className="divide-y divide-border">
-            {filtered.map(({ area, slug }) => (
+            {pageFiltered.map(({ area, slug }) => (
               <SystemRow
                 key={area.id}
                 owner={owner}
@@ -211,8 +236,19 @@ export function SystemsContent({
           </ul>
         </Card>
         <p className="mt-3 text-sm text-muted">
-          Showing 1–{filtered.length} of {majorAreas.length} systems
+          Showing {filtered.length === 0 ? 0 : start + 1}–
+          {Math.min(start + MAJOR_AREAS_PAGE_SIZE, filtered.length)} of{" "}
+          {majorAreas.length} systems
         </p>
+
+        {filtered.length > MAJOR_AREAS_PAGE_SIZE && (
+          <PaginationNav
+            page={page}
+            pageCount={pageCount}
+            onPageChange={setPage}
+            className="mt-4"
+          />
+        )}
       </div>
     </LorePageFrame>
   );

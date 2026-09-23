@@ -99,7 +99,7 @@ describe("acquireTarballSource", () => {
     ).rejects.toMatchObject({ code: "extracted-too-large" });
   });
 
-  it("throws unsafe-entry for a symlink entry (unsupported type)", async () => {
+  it("skips a symlink entry (unsupported type) rather than failing the whole extraction", async () => {
     const srcDir = await fsp.mkdtemp(
       path.join(os.tmpdir(), "repolore-fixture-")
     );
@@ -121,9 +121,17 @@ describe("acquireTarballSource", () => {
       Readable.from(Buffer.concat(chunks))
     ) as ReadableStream<Uint8Array>;
 
-    await expect(acquireTarballSource(stream)).rejects.toMatchObject({
-      code: "unsafe-entry",
-    });
+    const result = await acquireTarballSource(stream);
+    try {
+      expect(result.fileCount).toBe(1);
+      expect(result.skippedEntries).toEqual([
+        { path: "owner-repo-abc123/link.txt", type: "SymbolicLink" },
+      ]);
+      expect(fs.existsSync(path.join(result.dir, "real.txt"))).toBe(true);
+      expect(fs.existsSync(path.join(result.dir, "link.txt"))).toBe(false);
+    } finally {
+      await result.cleanup();
+    }
   });
 
   it("throws unsafe-entry when an entry resolves outside the extraction directory", async () => {

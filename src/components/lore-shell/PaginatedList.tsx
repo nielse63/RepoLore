@@ -1,21 +1,20 @@
 "use client";
 
+import { PaginationNav } from "@/components/lore-shell/PaginationNav";
 import { Card } from "@/components/ui/Card";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/Pagination";
-import { getPageItems } from "@/lib/pagination-range";
 import { useFitPageSize } from "@/lib/use-fit-page-size";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import { useRef } from "react";
 
 export const MAX_PAGE_SIZE = 15;
+/**
+ * Fixed page size for Major Areas (Overview, Architecture, Systems) — unlike
+ * the other paginated lists, Major Areas paginates at a fixed threshold
+ * rather than however many rows fit the screen, since Overview renders it as
+ * a 2-column grid of variable-height cards that fit-to-screen measurement
+ * (see `useFitPageSize`) can't size correctly.
+ */
+export const MAJOR_AREAS_PAGE_SIZE = 6;
 
 export interface PaginatedListProps {
   /**
@@ -33,22 +32,31 @@ export interface PaginatedListProps {
   storageKey: string;
   /** Rendered as the sole row when `items` is empty. */
   emptyState: React.ReactNode;
+  /**
+   * Overrides the default fit-to-screen sizing (see `useFitPageSize`) with a
+   * fixed page size — for lists like Major Areas that should paginate at a
+   * fixed threshold regardless of viewport.
+   */
+  pageSize?: number;
 }
 
 /**
  * Shared pagination chrome for the simple Card > ul > li lists across the
- * Lore pages (Gaps, Entry Points, Test Relationships): a page size that
- * fits the screen at load (capped at 15 — see `useFitPageSize`), a page
- * number persisted per `storageKey` (see `usePersistedPage`), and controls
- * that only appear once there's more than one page.
+ * Lore pages (Gaps, Entry Points, Test Relationships, Major Areas): a page
+ * size that by default fits the screen at load (capped at 15 — see
+ * `useFitPageSize`), or a fixed size when `pageSize` is given; a page number
+ * persisted per `storageKey` (see `usePersistedPage`); and controls that
+ * only appear once there's more than one page.
  */
 export function PaginatedList({
   items,
   storageKey,
   emptyState,
+  pageSize: fixedPageSize,
 }: PaginatedListProps) {
   const listRef = useRef<HTMLUListElement>(null);
-  const pageSize = useFitPageSize(listRef, MAX_PAGE_SIZE);
+  const fitPageSize = useFitPageSize(listRef, MAX_PAGE_SIZE);
+  const pageSize = fixedPageSize ?? fitPageSize;
   const pageCount = Math.max(Math.ceil(items.length / pageSize), 1);
   const [page, setPage] = usePersistedPage(storageKey, pageCount);
 
@@ -64,38 +72,11 @@ export function PaginatedList({
       </Card>
 
       {items.length > pageSize && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              />
-            </PaginationItem>
-            {getPageItems(page, pageCount).map((item, i) =>
-              item === "ellipsis-start" || item === "ellipsis-end" ? (
-                <PaginationItem key={`${item}-${i}`}>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              ) : (
-                <PaginationItem key={item}>
-                  <PaginationLink
-                    isActive={item === page}
-                    onClick={() => setPage(item)}
-                  >
-                    {item}
-                  </PaginationLink>
-                </PaginationItem>
-              )
-            )}
-            <PaginationItem>
-              <PaginationNext
-                disabled={page === pageCount}
-                onClick={() => setPage(page + 1)}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <PaginationNav
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );
