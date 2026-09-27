@@ -21,6 +21,7 @@ import {
 import type { CallableParameter, CallableSignature } from "@/lore/model";
 import {
   buildModuleResolutionIndex,
+  getModuleSpecifierValueSafe,
   isRelativeSpecifier,
 } from "./module-resolution";
 
@@ -192,8 +193,8 @@ export function namedRelativeImportsForFile(
     { targetFile: string; importedName: string }
   >();
   for (const importDecl of sourceFile.getImportDeclarations()) {
-    const specifier = importDecl.getModuleSpecifierValue();
-    if (!isRelativeSpecifier(specifier)) continue;
+    const specifier = getModuleSpecifierValueSafe(importDecl);
+    if (!specifier || !isRelativeSpecifier(specifier)) continue;
     const resolved = resolver.resolve(sourceFile.getFilePath(), specifier);
     if (!resolved) continue;
     const targetFile = toRelative(rootDir, resolved.getFilePath());

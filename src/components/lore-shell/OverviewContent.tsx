@@ -1,6 +1,10 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
-import { PaginatedList } from "@/components/lore-shell/PaginatedList";
+import { PaginatedCardGrid } from "@/components/lore-shell/PaginatedCardGrid";
+import {
+  MAJOR_AREAS_PAGE_SIZE,
+  PaginatedList,
+} from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StaleAnalysisCard } from "@/components/lore-shell/StaleAnalysisCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
@@ -138,8 +142,8 @@ export function OverviewContent({
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
           <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {majorAreas.map((area) => (
+        <PaginatedCardGrid
+          items={majorAreas.map((area) => (
             <Card key={area.id}>
               <div className="flex items-start gap-3">
                 <IconTile icon={Layers} variant="core" size="sm" />
@@ -182,7 +186,9 @@ export function OverviewContent({
               </dl>
             </Card>
           ))}
-        </div>
+          pageSize={MAJOR_AREAS_PAGE_SIZE}
+          storageKey={`major-areas-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
+        />
       </section>
 
       {diagramLayout && (

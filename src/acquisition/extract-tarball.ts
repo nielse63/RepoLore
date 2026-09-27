@@ -43,6 +43,12 @@ export const DEFAULT_EXTRACTION_LIMITS: ExtractionLimits = {
 
 const ALLOWED_ENTRY_TYPES = new Set(["File", "Directory"]);
 
+/** A tarball entry whose type isn't a regular file or directory (a symlink, hardlink, device, FIFO, ...), skipped rather than extracted. */
+export interface SkippedEntry {
+  path: string;
+  type: string;
+}
+
 function byteLimiter(maxBytes: number, buildError: () => Error): Transform {
   let total = 0;
   return new Transform({
@@ -99,6 +105,7 @@ async function downloadTarball(
 
 interface ExtractionOutcome {
   fileCount: number;
+  skippedEntries: SkippedEntry[];
 }
 
 /**
@@ -109,6 +116,16 @@ interface ExtractionOutcome {
  * once extraction finishes and fails the whole acquisition. `strip: 1`
  * drops the single top-level `{owner}-{repo}-{sha}/` directory GitHub
  * wraps every tarball entry in.
+ *
+ * An entry whose type isn't a regular file or directory (most commonly a
+ * symlink — real repositories legitimately contain these, e.g. a symlinked
+ * config or docs directory) is skipped rather than extracted: it's simply
+ * not created on disk, so it can't do anything unsafe (a dangling or
+ * out-of-tree symlink target is never followed). That's a routine, expected
+ * shape for real-world source trees, not the kind of crafted-archive attack
+ * ADR-0002's limits exist to catch, so it doesn't fail the whole
+ * acquisition — it's recorded and surfaced as a gap instead. Path
+ * traversal and the size/count limits below remain fatal.
  */
 async function extractSafely(
   tarballPath: string,
@@ -118,6 +135,7 @@ async function extractSafely(
   let fileCount = 0;
   let extractedBytes = 0;
   let violation: AcquisitionError | undefined;
+  const skippedEntries: SkippedEntry[] = [];
 
   await tar.x({
     file: tarballPath,
@@ -130,10 +148,7 @@ async function extractSafely(
       const entry = rawEntry as unknown as { type?: string; size?: number };
 
       if (!ALLOWED_ENTRY_TYPES.has(entry.type ?? "")) {
-        violation = new AcquisitionError(
-          "unsafe-entry",
-          `Tarball entry "${entryPath}" has an unsupported type (${entry.type}); only regular files and directories are allowed.`
-        );
+        skippedEntries.push({ path: entryPath, type: entry.type ?? "Unknown" });
         return false;
       }
 
@@ -170,13 +185,15 @@ async function extractSafely(
   });
 
   if (violation) throw violation;
-  return { fileCount };
+  return { fileCount, skippedEntries };
 }
 
 export interface AcquiredSource {
   /** The extracted source directory (repo root, `strip: 1` already applied). */
   dir: string;
   fileCount: number;
+  /** Tarball entries skipped because they weren't a regular file or directory (e.g. symlinks). */
+  skippedEntries: SkippedEntry[];
   /** Removes the entire temp work directory, including any partial state. */
   cleanup: () => Promise<void>;
 }
@@ -205,9 +222,13 @@ export async function acquireTarballSource(
       limits.maxCompressedBytes,
       signal
     );
-    const { fileCount } = await extractSafely(tarballPath, destDir, limits);
+    const { fileCount, skippedEntries } = await extractSafely(
+      tarballPath,
+      destDir,
+      limits
+    );
     await fsp.rm(tarballPath, { force: true });
-    return { dir: destDir, fileCount, cleanup };
+    return { dir: destDir, fileCount, skippedEntries, cleanup };
   } catch (error) {
     await cleanup();
     throw error;

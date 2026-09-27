@@ -8,7 +8,11 @@
  */
 
 import path from "node:path";
-import type { SourceFile } from "ts-morph";
+import type {
+  ExportDeclaration,
+  ImportDeclaration,
+  SourceFile,
+} from "ts-morph";
 import type { PathAlias } from "./project-config";
 
 const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
@@ -79,6 +83,27 @@ export function buildModuleResolutionIndex(
 
 export function isRelativeSpecifier(specifier: string): boolean {
   return specifier.startsWith("./") || specifier.startsWith("../");
+}
+
+/**
+ * `ts-morph` throws when asked for a module specifier's value if the
+ * underlying node isn't a string literal — which happens for real on
+ * malformed or non-standard source the TypeScript parser can't fully make
+ * sense of (e.g. a syntax error inside an `import`/`export ... from` clause
+ * recovered as an identifier or template literal instead of a quoted
+ * string). That's unusual input, not grounds to abort the whole file's
+ * analysis, so callers that don't need to distinguish "no specifier" from
+ * "unreadable specifier" (unlike `imports.ts`, which records the latter as a
+ * gap) can use this instead of calling `getModuleSpecifierValue()` directly.
+ */
+export function getModuleSpecifierValueSafe(
+  decl: ImportDeclaration | ExportDeclaration
+): string | undefined {
+  try {
+    return decl.getModuleSpecifierValue();
+  } catch {
+    return undefined;
+  }
 }
 
 /** Heuristic for an unresolved path-alias-style specifier, e.g. "@/components/Header". */

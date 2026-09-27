@@ -14,6 +14,7 @@ import {
   acquireTarballSource,
   DEFAULT_EXTRACTION_LIMITS,
   type ExtractionLimits,
+  type SkippedEntry,
 } from "./extract-tarball";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -26,6 +27,8 @@ export interface AcquiredRepository {
   defaultBranch: string;
   headSha: string;
   fileCount: number;
+  /** Tarball entries skipped because they weren't a regular file or directory (e.g. symlinks). */
+  skippedEntries: SkippedEntry[];
   /** Removes the temp work directory. Callers must always invoke this. */
   cleanup: () => Promise<void>;
 }
@@ -79,13 +82,19 @@ export async function acquireRepositorySource(
       );
     }
 
-    const { dir, fileCount, cleanup } = await acquireTarballSource(
-      tarballRes.body,
-      limits,
-      controller.signal
-    );
+    const { dir, fileCount, skippedEntries, cleanup } =
+      await acquireTarballSource(tarballRes.body, limits, controller.signal);
 
-    return { dir, owner, repo, defaultBranch, headSha, fileCount, cleanup };
+    return {
+      dir,
+      owner,
+      repo,
+      defaultBranch,
+      headSha,
+      fileCount,
+      skippedEntries,
+      cleanup,
+    };
   } catch (error) {
     if (
       controller.signal.aborted &&
