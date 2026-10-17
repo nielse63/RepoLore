@@ -5,13 +5,14 @@
 #
 # Kept deliberately short: the six most-starred TypeScript/JavaScript
 # repositories from the earlier, longer list (GitHub stars, October 2026),
-# minus n8n-io/n8n and supabase/supabase (tarballs too large to download),
-# replaced by the next most-starred: axios/axios and tailwindlabs/tailwindcss.
+# minus n8n-io/n8n, supabase/supabase, and vercel/next.js (tarballs too large
+# to download), replaced by the next most-starred: axios/axios,
+# tailwindlabs/tailwindcss, and sveltejs/svelte.
 # Keep in sync with FEATURED_REPOS (src/lib/featured-lores.ts).
 
 facebook/react
 axios/axios
-vercel/next.js
+sveltejs/svelte
 excalidraw/excalidraw
 shadcn-ui/ui
 tailwindlabs/tailwindcss

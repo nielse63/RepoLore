@@ -45,10 +45,10 @@ describe("selectFeaturedLores", () => {
       row("acme/old", { createdAt: new Date("2026-01-01T00:00:00Z") }),
       row("shadcn-ui/ui"),
       row("acme/new", { createdAt: new Date("2026-10-10T00:00:00Z") }),
-      row("Vercel/Next.js"),
+      row("SvelteJS/Svelte"),
     ];
     expect(slugs(selectFeaturedLores(rows))).toEqual([
-      "Vercel/Next.js",
+      "SvelteJS/Svelte",
       "shadcn-ui/ui",
       "acme/new",
       "acme/old",
@@ -57,7 +57,7 @@ describe("selectFeaturedLores", () => {
 
   it("skips featured repositories whose Lore isn't indexable", () => {
     const rows = [
-      row("vercel/next.js", { runStatus: "partial" }),
+      row("sveltejs/svelte", { runStatus: "partial" }),
       row("facebook/react"),
     ];
     expect(slugs(selectFeaturedLores(rows))).toEqual(["facebook/react"]);

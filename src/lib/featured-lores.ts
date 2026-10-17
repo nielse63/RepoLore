@@ -8,7 +8,7 @@ import { isIndexableLore } from "@/lib/lore-indexability";
  */
 export const FEATURED_REPOS = [
   "facebook/react",
-  "vercel/next.js",
+  "sveltejs/svelte",
   "shadcn-ui/ui",
   "excalidraw/excalidraw",
   "axios/axios",
