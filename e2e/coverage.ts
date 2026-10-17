@@ -6,20 +6,24 @@ import { addCoverageReport } from "monocart-reporter";
  * JS coverage for every test and feeds it into monocart-reporter's global
  * coverage report (`coverage/e2e/`, see `playwright.config.ts`). Import
  * `test`/`expect` from here instead of `@playwright/test` in e2e specs so
- * their coverage is included.
+ * their coverage is included. A no-op unless `E2E_COVERAGE=true` (set by
+ * `npm run test:e2e:coverage`), matching when that reporter is registered.
  */
+const collectCoverage = process.env.E2E_COVERAGE === "true";
+
 export const test = base.extend<{ autoTestFixture: string }>({
   autoTestFixture: [
     async ({ page }, use) => {
-      const isChromium = test.info().project.name === "chromium";
+      const shouldCollect =
+        collectCoverage && test.info().project.name === "chromium";
 
-      if (isChromium) {
+      if (shouldCollect) {
         await page.coverage.startJSCoverage({ resetOnNavigation: false });
       }
 
       await use("autoTestFixture");
 
-      if (isChromium) {
+      if (shouldCollect) {
         const jsCoverage = await page.coverage.stopJSCoverage();
         await addCoverageReport(jsCoverage, test.info());
       }
