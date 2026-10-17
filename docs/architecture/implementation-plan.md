@@ -751,3 +751,20 @@ New `e2e/area-dependency-diagram.spec.ts` (7 cases, following `systems.spec.ts`'
 Verified: `npm run test:unit` (76 suites / 620 tests, up from 610 — this branch's own test additions plus the two removed-in-a-prior-session specs already reflected), `npm run test:e2e` (47/47, up from 40 — the new spec), `npx tsc --noEmit`, and `npm run lint` all clean. Manually verified against the real running app (local Postgres, `nielse63/repo-lore-ts-react-app-fixture`'s already-persisted run): zoom actually changes `.react-flow__viewport`'s transform scale, a simulated pointer-drag-then-drop on a node leaves its bounding box unchanged even after clicking "Toggle Interactivity" first (before it was hidden), and the diagram's node/edge counts match the fixture's known 3-area, 2-edge chain on Architecture/Overview/Systems and its 2-area, 1-edge neighborhood on the `/systems/src-utils` subview.
 
 **Next smallest task:** unchanged — resume session 17 (deploy). The Python call-graph follow-on ADR remains unscoped. Also unscoped: lazy-loading `AreaDependencyDiagram`'s client bundle (ADR-0016's disclosed, deferred follow-up) once this fork's `next/dynamic` behavior can be verified against its own docs.
+
+### 2026-10-17 — Indexable Lore Overviews, sitemap/robots/Open Graph, README badge, seeding, analytics events (ADR-0017), on `feat/marketing-updates`
+
+**Out-of-sequence work, at the product owner's direction**, implementing the in-repo items of `docs/MARKETING.md`. Making Lore pages search-indexable was reviewed by `product-scope-guardian`, which recommended it, and is recorded in **ADR-0017**: only a repository's Overview can be indexed, and only when `isIndexableLore` holds for its latest run (completed, public, with at least one entry point and one structural area). Subviews and failed, partial, or empty runs stay `noindex, follow`. The same rule drives `src/app/sitemap.ts` and the per-repository Open Graph card (`opengraph-image.tsx`). `src/app/robots.ts` allows everything except `/api/`. Because indexed pages invite crawler fetches, `layout.tsx` now skips ADR-0013's pull-triggered background re-analysis for crawler user agents (`isCrawlerUserAgent`), so a crawl can't become an unattended refresh. ADR-0013, `docs/product/non-goals.md`, `CLAUDE.md`, and the `product-scope-guardian` agent definition are amended to match.
+
+Also added:
+
+- a README badge (`public/badge.svg` plus a copyable snippet card on the Overview's Analysis rail, `ReadmeBadgeCard`);
+- `npm run seed` (`scripts/seed-repos.ts`, run by hand only, pre-analyzing `scripts/seed-repos.txt`);
+- GA4 custom events `submit_repo` and `submit_repo_error` via `trackEvent` (`src/lib/analytics.ts`); per-Lore page views and outbound clicks come from GA4 enhanced measurement;
+- `render.yaml` moved to the Pro plan, with `NEXT_PUBLIC_SITE_URL=https://repolore.app` set directly.
+
+New tests: unit specs for `lore-indexability`, `is-crawler-user-agent`, `readme-badge`, and `analytics`, plus the updated `route-metadata` spec. New `e2e/marketing.spec.ts` (6 cases, DB-backed against the pinned fixture, whose latest run is indexable) and an analytics-events case in `e2e/home.spec.ts`. Writing the e2e cases showed that `nielse63/repo-lore-ts-react-app-fixture`, described as private in older specs and the README, is publicly readable on GitHub. That wording is stale but was left unchanged.
+
+Verified: `npm run test:unit` (80 suites / 649 tests), `npm run test:e2e` (54/54), `npx tsc --noEmit`, and `npm run lint` all clean.
+
+**Next smallest task:** operational only. Run `npm run seed` against production, confirm GA4 enhanced measurement is on, and submit the sitemap in Google Search Console. Unscoped: tracking a submission's run outcome (completed, partial, or failed) in analytics.
