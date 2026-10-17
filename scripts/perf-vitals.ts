@@ -1,10 +1,13 @@
 /**
- * Performance regression check for the static pages: runs Lighthouse
+ * Performance regression check for key pages: runs Lighthouse
  * (performance category only, mobile and desktop presets) against a target
  * instance and against production, alternating target/production on each
  * run so drift in the machine's load hits both equally, then compares the
- * medians via `src/perf/compare-vitals.ts`. Exits non-zero if any gated
- * metric regressed past its tolerance, or if any Lighthouse run errored.
+ * medians via `src/perf/compare-vitals.ts`. Every page is a cold, direct
+ * load: a fresh Chrome profile per run, Lighthouse's storage reset, and no
+ * redirect — any run that wasn't fails the check, as does any Lighthouse or
+ * setup error. Metrics over tolerance do NOT fail it: they're reported (and,
+ * in CI, commented on the PR) as advisory breaches.
  *
  * Usage: npm run test:perf
  *   PERF_TARGET_URL      instance under test (default http://localhost:3000,
@@ -13,27 +16,54 @@
  *   PERF_RUNS            runs per page/profile/instance (default 3)
  *   CHROME_PATH          Chrome binary, if Lighthouse can't find one
  *
- * Writes perf-report/report.json and perf-report/report.md.
+ * Writes perf-report/report.json, report.md (the full tables), and
+ * pr-comment.md (the PR comment body). In GitHub Actions, PERF_PR_NUMBER and
+ * PERF_COMMIT_SHA (the PR head, not the merge commit) feed the comment.
  */
 
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { userAgents } from "lighthouse/core/config/constants.js";
 import {
+  breachesOf,
+  coldLoadViolations,
   compareSamples,
   formatMarkdownReport,
+  formatPrComment,
+  isNotAnalyzedLoreHtml,
   METRIC_IDS,
+  perfUserAgent,
+  TOLERANCES,
+  type LighthouseResult,
   type MetricSample,
   type PageComparison,
 } from "../src/perf/compare-vitals";
 
-const PAGES = ["/", "/explore", "/manifesto"];
+/**
+ * The static pages plus one real Lore Overview. That Lore must already be
+ * analyzed on both production and the target's database, or the comparison
+ * measures the "not analyzed" panel instead.
+ */
+const PAGES = ["/", "/explore", "/manifesto", "/lore/sindresorhus/globby"];
 
-/** No preset is Lighthouse's default: mobile with simulated throttling. */
+/**
+ * No preset is Lighthouse's default: mobile with simulated throttling. Each
+ * keeps its preset's own device user agent, plus the perf-bot token.
+ */
 const PROFILES: { name: string; flags: string[] }[] = [
-  { name: "mobile", flags: [] },
-  { name: "desktop", flags: ["--preset=desktop"] },
+  {
+    name: "mobile",
+    flags: [`--emulatedUserAgent=${perfUserAgent(userAgents.mobile)}`],
+  },
+  {
+    name: "desktop",
+    flags: [
+      "--preset=desktop",
+      `--emulatedUserAgent=${perfUserAgent(userAgents.desktop)}`,
+    ],
+  },
 ];
 
 const targetUrl = process.env.PERF_TARGET_URL ?? "http://localhost:3000";
@@ -47,16 +77,12 @@ const chromeFlags = [
   ...(process.env.CI ? ["--no-sandbox"] : []),
 ].join(" ");
 
-interface LighthouseResult {
-  runtimeError?: { code: string; message: string };
-  audits: Record<string, { numericValue?: number } | undefined>;
-}
-
 /**
  * Runs the Lighthouse CLI rather than its Node API: under `tsx`, esbuild's
  * `__name` helpers leak into the functions Lighthouse serializes into the
- * page, which then fail in the browser. Each run launches a fresh Chrome,
- * so no cache or connection state carries over.
+ * page, which then fail in the browser. Each run launches a fresh Chrome
+ * (a new temporary profile), so no cache or connection state carries over;
+ * `coldLoadViolations` then confirms the run really was cold and direct.
  */
 async function measure(url: string, profileFlags: string[]) {
   const { stdout } = await promisify(execFile)(
@@ -78,6 +104,12 @@ async function measure(url: string, profileFlags: string[]) {
       `Lighthouse failed on ${url}: ${lhr.runtimeError.code} ${lhr.runtimeError.message}`
     );
   }
+  const violations = coldLoadViolations(lhr);
+  if (violations.length > 0) {
+    throw new Error(
+      `${url} was not a cold, direct load: ${violations.join("; ")}`
+    );
+  }
   const sample = {} as MetricSample;
   for (const id of METRIC_IDS) {
     const value = lhr.audits[id]?.numericValue;
@@ -89,13 +121,34 @@ async function measure(url: string, profileFlags: string[]) {
   return sample;
 }
 
-/** One untimed request per URL so a just-started server isn't measured cold. */
+/**
+ * One untimed request per URL so a just-started server's first-request cost
+ * isn't measured — production is always warm, so skipping this would bias
+ * against the target. "Cold" here means the browser, not the server. It also
+ * checks every URL responds directly (no redirect) and every Lore route is
+ * really analyzed on both sides.
+ */
 async function warmUp(url: string) {
-  const response = await fetch(url);
+  // Same perf-bot token as Lighthouse: Node's default user agent reads as a
+  // person, so this request alone would pull-trigger a stale Lore's refresh.
+  const response = await fetch(url, {
+    headers: { "user-agent": perfUserAgent(userAgents.desktop) },
+    redirect: "manual",
+  });
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error(
+      `${url} redirects (${response.status}) to ${response.headers.get("location")}; measure the final URL directly.`
+    );
+  }
   if (!response.ok) {
     throw new Error(`${url} responded ${response.status}; is it running?`);
   }
-  await response.arrayBuffer();
+  const html = await response.text();
+  if (isNotAnalyzedLoreHtml(html)) {
+    throw new Error(
+      `${url} rendered the "not analyzed" panel; analyze that repository on this instance's database first.`
+    );
+  }
 }
 
 async function main() {
@@ -141,25 +194,51 @@ async function main() {
   }
 
   const markdown = formatMarkdownReport(targetUrl, productionUrl, pages);
+  const breaches = breachesOf(pages);
+  const { GITHUB_SERVER_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID } = process.env;
+  const prComment = formatPrComment(
+    pages,
+    {
+      productionUrl,
+      runs,
+      serverUrl: GITHUB_SERVER_URL,
+      repository: GITHUB_REPOSITORY,
+      runUrl:
+        GITHUB_SERVER_URL && GITHUB_REPOSITORY && GITHUB_RUN_ID
+          ? `${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}`
+          : undefined,
+      prNumber: process.env.PERF_PR_NUMBER,
+      commitSha: process.env.PERF_COMMIT_SHA,
+    },
+    markdown
+  );
   await fs.mkdir(outDir, { recursive: true });
   await fs.writeFile(
     path.join(outDir, "report.json"),
-    JSON.stringify({ targetUrl, productionUrl, runs, pages, samples }, null, 2)
+    JSON.stringify(
+      { targetUrl, productionUrl, runs, breaches, pages, samples },
+      null,
+      2
+    )
   );
   await fs.writeFile(path.join(outDir, "report.md"), markdown);
+  await fs.writeFile(path.join(outDir, "pr-comment.md"), prComment);
   console.log(`\n${markdown}`);
 
-  const regressions = pages.flatMap((page) =>
-    page.metrics
-      .filter((m) => m.regressed)
-      .map((m) => `${page.path} (${page.profile}): ${m.id}`)
-  );
-  if (regressions.length > 0) {
-    console.error(`✗ ${regressions.length} regression(s):`);
-    for (const regression of regressions) console.error(`  ${regression}`);
-    process.exit(1);
+  if (breaches.length === 0) {
+    console.log("✓ No metrics over tolerance against production.");
+    return;
   }
-  console.log("✓ No performance regressions against production.");
+  // Advisory only: reported, never a non-zero exit.
+  console.warn(`⚠ ${breaches.length} metric(s) over tolerance (non-blocking):`);
+  for (const b of breaches) {
+    const line = `${b.path} (${b.profile}): ${TOLERANCES[b.id].label}`;
+    console.warn(`  ${line}`);
+    // Surfaces each breach as an annotation on the workflow run.
+    if (process.env.GITHUB_ACTIONS) {
+      console.log(`::warning title=Performance over tolerance::${line}`);
+    }
+  }
 }
 
 main().catch((error) => {

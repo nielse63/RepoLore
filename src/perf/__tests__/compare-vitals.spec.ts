@@ -1,10 +1,20 @@
+import { isCrawlerUserAgent } from "@/lib/is-crawler-user-agent";
 import {
+  breachesOf,
+  coldLoadViolations,
   compareMetric,
   compareSamples,
   formatMarkdownReport,
+  formatPrComment,
+  isNotAnalyzedLoreHtml,
   median,
   METRIC_IDS,
+  newIssueUrl,
+  perfUserAgent,
+  PR_COMMENT_MARKER,
+  type LighthouseResult,
   type MetricSample,
+  type PageComparison,
 } from "../compare-vitals";
 
 function sample(overrides: Partial<MetricSample> = {}): MetricSample {
@@ -110,9 +120,175 @@ describe("formatMarkdownReport", () => {
     );
     expect(report).toContain("### `/` (mobile)");
     expect(report).toContain(
-      "| LCP | 4000 ms | 2000 ms | +2000 ms | ❌ regressed |"
+      "| LCP | 4000 ms | 2000 ms | +2000 ms | ⚠️ over tolerance |"
     );
     expect(report).toContain("| CLS | 0.000 | 0.000 | 0.000 | ✅ |");
     expect(report).toContain("| TTFB | 100 ms | 100 ms | 0 ms | info |");
+  });
+});
+
+describe("perfUserAgent", () => {
+  // Lighthouse 13's own emulated user agents (lighthouse/core/config/constants.js).
+  const lighthouseUserAgents = [
+    "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  ];
+
+  it.each(lighthouseUserAgents)(
+    "makes a person-looking Lighthouse user agent read as a crawler: %s",
+    (userAgent) => {
+      expect(isCrawlerUserAgent(userAgent)).toBe(false);
+      expect(isCrawlerUserAgent(perfUserAgent(userAgent))).toBe(true);
+    }
+  );
+});
+
+describe("isNotAnalyzedLoreHtml", () => {
+  it("detects NotAnalyzedPanel's rendered heading", () => {
+    expect(
+      isNotAnalyzedLoreHtml(
+        "<h1><span>sindresorhus/globby</span> hasn&#x27;t been analyzed yet</h1>"
+      )
+    ).toBe(true);
+  });
+
+  it("does not flag a real Lore page", () => {
+    expect(isNotAnalyzedLoreHtml("<h1>sindresorhus/globby</h1>")).toBe(false);
+  });
+});
+
+describe("coldLoadViolations", () => {
+  const url = "https://repolore.app/explore";
+
+  function lhr(overrides: Partial<LighthouseResult> = {}): LighthouseResult {
+    return {
+      requestedUrl: url,
+      mainDocumentUrl: url,
+      finalDisplayedUrl: url,
+      configSettings: { disableStorageReset: false },
+      audits: {
+        "network-requests": {
+          details: {
+            items: [
+              { url, statusCode: 200 },
+              {
+                url: "https://repolore.app/_next/static/chunks/main.js",
+                statusCode: 200,
+              },
+            ],
+          },
+        },
+      },
+      ...overrides,
+    };
+  }
+
+  it("accepts a cold, direct load", () => {
+    expect(coldLoadViolations(lhr())).toEqual([]);
+  });
+
+  it("flags a redirect folded into the navigation", () => {
+    expect(
+      coldLoadViolations(lhr({ requestedUrl: "http://repolore.app/explore" }))
+    ).toContain(`redirected to ${url}`);
+  });
+
+  it("flags a client-side navigation away from the measured page", () => {
+    expect(
+      coldLoadViolations(lhr({ finalDisplayedUrl: "https://repolore.app/" }))
+    ).toContain("navigated client-side to https://repolore.app/");
+  });
+
+  it("flags a disabled storage reset", () => {
+    expect(
+      coldLoadViolations(lhr({ configSettings: { disableStorageReset: true } }))
+    ).toContain("Lighthouse's storage reset was not enabled");
+  });
+
+  it("flags a non-200 main document", () => {
+    const result = lhr();
+    result.audits["network-requests"]!.details!.items![0].statusCode = 304;
+    expect(coldLoadViolations(result)).toContain("main document responded 304");
+  });
+});
+
+describe("PR comment", () => {
+  const breaching: PageComparison = {
+    path: "/explore",
+    profile: "mobile",
+    metrics: compareSamples(
+      [sample({ "largest-contentful-paint": 4000 })],
+      [sample()]
+    ),
+  };
+  const clean: PageComparison = {
+    path: "/",
+    profile: "desktop",
+    metrics: compareSamples([sample()], [sample()]),
+  };
+  const context = {
+    productionUrl: "https://repolore.app",
+    runs: 3,
+    serverUrl: "https://github.com",
+    repository: "nielse63/RepoLore",
+    runUrl: "https://github.com/nielse63/RepoLore/actions/runs/42",
+    prNumber: "36",
+    commitSha: "abcdef1234567890",
+  };
+
+  it("lists only metrics over tolerance as breaches", () => {
+    expect(breachesOf([breaching, clean])).toEqual([
+      {
+        path: "/explore",
+        profile: "mobile",
+        id: "largest-contentful-paint",
+        target: 4000,
+        production: 2000,
+        delta: 2000,
+      },
+    ]);
+  });
+
+  it("reports breaches as non-blocking with a link to open a ticket", () => {
+    const body = formatPrComment([breaching, clean], context, "FULL REPORT");
+    expect(body.startsWith(PR_COMMENT_MARKER)).toBe(true);
+    expect(body).toContain("1 metric(s) over tolerance");
+    expect(body).toContain("This doesn't block merging.");
+    expect(body).toContain(
+      "| `/explore` | mobile | LCP | 4000 ms | 2000 ms | +2000 ms |"
+    );
+    expect(body).toContain(
+      "[creating a ticket](https://github.com/nielse63/RepoLore/issues/new?"
+    );
+    expect(body).toContain("as of abcdef1");
+    expect(body).toContain("FULL REPORT");
+  });
+
+  it("renders an all-clear without breaches", () => {
+    const body = formatPrComment([clean], context, "FULL REPORT");
+    expect(body.startsWith(PR_COMMENT_MARKER)).toBe(true);
+    expect(body).toContain("No metrics over tolerance");
+    expect(body).not.toContain("FULL REPORT");
+  });
+
+  it("pre-fills the new issue with the breaches and the run", () => {
+    const url = new URL(newIssueUrl(breachesOf([breaching]), context)!);
+    expect(url.pathname).toBe("/nielse63/RepoLore/issues/new");
+    expect(url.searchParams.get("title")).toBe(
+      "Performance: 1 metric(s) over tolerance vs. production (PR #36)"
+    );
+    const body = url.searchParams.get("body");
+    expect(body).toContain("| `/explore` | mobile | LCP |");
+    expect(body).toContain(
+      "Workflow run: https://github.com/nielse63/RepoLore/actions/runs/42"
+    );
+  });
+
+  it("has no ticket link outside GitHub Actions", () => {
+    const local = { productionUrl: "https://repolore.app", runs: 3 };
+    expect(newIssueUrl(breachesOf([breaching]), local)).toBeUndefined();
+    expect(formatPrComment([breaching], local, "")).toContain(
+      "consider creating a ticket"
+    );
   });
 });
