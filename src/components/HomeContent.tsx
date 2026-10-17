@@ -6,6 +6,7 @@ import {
   getDelayAfterStage,
   getStageLabel,
 } from "@/lib/analysis-loading-stages";
+import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { FolderGit2, RotateCw } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
@@ -52,6 +53,12 @@ export function HomeContent() {
     return () => clearTimeout(timeoutId);
   }, [isPending, stageIndex]);
 
+  // A submission rejected before any run exists (docs/MARKETING.md item 9).
+  // Each action result is a new object, so a repeated error fires again.
+  useEffect(() => {
+    if (state.status === "error") trackEvent("submit_repo_error");
+  }, [state]);
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="border-b border-border px-8 py-5">
@@ -91,6 +98,7 @@ export function HomeContent() {
 
             <form
               action={formAction}
+              onSubmit={() => trackEvent("submit_repo")}
               className="mt-10 flex w-full max-w-2xl flex-col gap-3 sm:flex-row"
             >
               <div className="relative flex-1">

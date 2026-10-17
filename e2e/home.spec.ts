@@ -57,6 +57,31 @@ test("shows an honest inline error for an invalid owner/repo shorthand", async (
   ).toBeVisible();
 });
 
+test("sends analytics events for a submission and its inline error", async ({
+  page,
+}) => {
+  // GA only loads in production (src/app/layout.tsx), so stub `gtag` to
+  // record what `trackEvent` sends.
+  await page.addInitScript(() => {
+    const events: string[] = [];
+    Object.assign(window, {
+      __events: events,
+      gtag: (_command: string, name: string) => events.push(name),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Analyze repository" }).click();
+  await expect(page.getByText("A GitHub URL is required.")).toBeVisible();
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as unknown as { __events: string[] }).__events
+      )
+    )
+    .toEqual(["submit_repo", "submit_repo_error"]);
+});
+
 test("shows a staged loading view while the Server Action is pending", async ({
   page,
 }) => {
