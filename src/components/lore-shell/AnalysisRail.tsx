@@ -1,3 +1,4 @@
+import { ReadmeBadgeCard } from "@/components/lore-shell/ReadmeBadgeCard";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { Badge } from "@/components/ui/Badge";
 import { listItemKey } from "@/lib/list-item-key";
@@ -10,11 +11,14 @@ export function AnalysisRail({
   snapshot,
   projects,
   gaps,
+  badgeSnippet,
 }: {
   snapshot: AnalysisSnapshot;
   /** One entry per detected project (ADR-0007 — a mixed-language repository can have more than one). */
   projects: Project[];
   gaps: Gap[];
+  /** README badge Markdown for this repository (`readmeBadgeMarkdown`). */
+  badgeSnippet: string;
 }) {
   return (
     <RightRailShell title="Analysis">
@@ -112,6 +116,8 @@ export function AnalysisRail({
           </Link>
         )}
       </div>
+
+      <ReadmeBadgeCard snippet={badgeSnippet} />
     </RightRailShell>
   );
 }

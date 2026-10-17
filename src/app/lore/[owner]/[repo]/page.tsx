@@ -13,7 +13,12 @@ import {
   isIndexableLore,
 } from "@/lib/lore-indexability";
 import { relativeTime } from "@/lib/relative-time";
-import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
+import { readmeBadgeMarkdown } from "@/lib/readme-badge";
+import {
+  buildLoreMetadata,
+  loreRouteTitle,
+  siteMetadataBase,
+} from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -93,6 +98,7 @@ export default async function LorePage({
           snapshot={lore.snapshot}
           projects={lore.projects}
           gaps={lore.gaps}
+          badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
         />
       }
     >
