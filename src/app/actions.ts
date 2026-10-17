@@ -61,7 +61,10 @@ export async function resolveRepository(
     };
   }
 
-  redirect(`/lore/${owner}/${repo}`);
+  // `?submitted=1` lets the Overview report the run's outcome to analytics
+  // (`SubmissionOutcomeEvent`); it's stripped client-side and the canonical
+  // URL omits it.
+  redirect(`/lore/${owner}/${repo}?submitted=1`);
 }
 
 export type ReanalyzeState =

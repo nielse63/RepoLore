@@ -116,7 +116,7 @@ describe("resolveRepository", () => {
       "acme",
       "widgets"
     );
-    expect(mockRedirect).toHaveBeenCalledWith("/lore/acme/widgets");
+    expect(mockRedirect).toHaveBeenCalledWith("/lore/acme/widgets?submitted=1");
   });
 
   it("returns the GitHubApiError message inline instead of redirecting", async () => {

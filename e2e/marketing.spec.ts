@@ -90,3 +90,35 @@ test("serves the static badge SVG", async ({ request }) => {
   expect(response.ok()).toBe(true);
   expect(response.headers()["content-type"]).toContain("image/svg+xml");
 });
+
+test("a submission redirect reports the run's outcome once and strips the marker", async ({
+  page,
+}) => {
+  // gtag is only injected in production builds; stand in for it.
+  await page.addInitScript(() => {
+    const events: string[] = [];
+    (window as unknown as { __events: string[] }).__events = events;
+    (window as unknown as { gtag: unknown }).gtag = (
+      _command: string,
+      eventName: string
+    ) => events.push(eventName);
+  });
+
+  await page.goto(`${repoUrl}?submitted=1`);
+  await expect(page).toHaveURL(new RegExp(`${repoUrl}$`));
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __events: string[] }).__events
+    )
+  ).toEqual(["analysis_completed"]);
+
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Add a README badge" })
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __events: string[] }).__events
+    )
+  ).toEqual([]);
+});

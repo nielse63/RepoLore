@@ -1,4 +1,5 @@
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
+import { SubmissionOutcomeEvent } from "@/components/SubmissionOutcomeEvent";
 import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
@@ -47,15 +48,27 @@ export async function generateMetadata({
  */
 export default async function LorePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ owner: string; repo: string }>;
+  searchParams: Promise<{ submitted?: string | string[] }>;
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
   if (!run) notFound();
 
+  // Set by the home page's Server Action redirect, whose run is this latest one.
+  const outcomeEvent = (await searchParams).submitted ? (
+    <SubmissionOutcomeEvent status={run.status} />
+  ) : null;
+
   if (run.status === "failed" || !run.result) {
-    return <FailedRunPanel owner={owner} repo={repo} run={run} />;
+    return (
+      <>
+        {outcomeEvent}
+        <FailedRunPanel owner={owner} repo={repo} run={run} />
+      </>
+    );
   }
 
   const lore = run.result;
@@ -71,38 +84,41 @@ export default async function LorePage({
     githubTreeUrl(owner, repo, lore.snapshot.commitSha, location);
 
   return (
-    <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-              statusLabel={getAnalysisStatus(lore)}
-              statusTone={
-                lore.snapshot.status === "completed" ? "success" : "alert"
-              }
-              updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
-              branch={lore.snapshot.repository.defaultBranch}
-              language={languages}
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        <AnalysisRail
-          snapshot={lore.snapshot}
-          projects={lore.projects}
-          gaps={lore.gaps}
-          badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
-        />
-      }
-    >
-      <OverviewContent lore={lore} sourceUrl={sourceUrl} areaUrl={areaUrl} />
-    </LorePageFrame>
+    <>
+      {outcomeEvent}
+      <LorePageFrame
+        topBar={
+          <TopBar
+            left={
+              <RepoIdentity
+                owner={owner}
+                repo={repo}
+                visibility={
+                  lore.snapshot.repository.isPrivate ? "Private" : "Public"
+                }
+                statusLabel={getAnalysisStatus(lore)}
+                statusTone={
+                  lore.snapshot.status === "completed" ? "success" : "alert"
+                }
+                updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
+                branch={lore.snapshot.repository.defaultBranch}
+                language={languages}
+              />
+            }
+            actions={<ReanalyzeButton owner={owner} repo={repo} />}
+          />
+        }
+        rightRail={
+          <AnalysisRail
+            snapshot={lore.snapshot}
+            projects={lore.projects}
+            gaps={lore.gaps}
+            badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
+          />
+        }
+      >
+        <OverviewContent lore={lore} sourceUrl={sourceUrl} areaUrl={areaUrl} />
+      </LorePageFrame>
+    </>
   );
 }
