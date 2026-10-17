@@ -43,13 +43,13 @@ describe("selectFeaturedLores", () => {
   it("puts featured repositories first, in featured order, then the most recent others", () => {
     const rows = [
       row("acme/old", { createdAt: new Date("2026-01-01T00:00:00Z") }),
-      row("fastapi/fastapi"),
+      row("shadcn-ui/ui"),
       row("acme/new", { createdAt: new Date("2026-10-10T00:00:00Z") }),
       row("Vercel/Next.js"),
     ];
     expect(slugs(selectFeaturedLores(rows))).toEqual([
       "Vercel/Next.js",
-      "fastapi/fastapi",
+      "shadcn-ui/ui",
       "acme/new",
       "acme/old",
     ]);
