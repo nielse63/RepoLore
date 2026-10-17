@@ -131,13 +131,16 @@ export async function getAnalysisRunByKey(
 export interface LatestRunIndexabilityRow extends LoreIndexabilityFacts {
   owner: string;
   repo: string;
+  /** GitHub's repository description at analysis time, if it had one. */
+  description: string | null;
   /** `pg` parses `TIMESTAMPTZ` into a `Date`. */
   createdAt: Date;
 }
 
 /**
  * Every repository's latest run (the one its page renders), projected to
- * just the facts `isIndexableLore` needs, so `sitemap.ts` doesn't load each
+ * just the facts `isIndexableLore` needs (plus the description `/explore`
+ * and the home page's example Lores show), so `sitemap.ts` doesn't load each
  * run's full `result` JSONB. A `'failed'` run has a null `result`, so its
  * counts come back 0 rather than null.
  */
@@ -152,13 +155,15 @@ export async function listLatestRunIndexabilityFacts(): Promise<
     entry_point_count: number;
     structural_area_count: number;
     is_private: boolean;
+    description: string | null;
     created_at: Date;
   }>(
     `SELECT DISTINCT ON (ar.repo_id)
        r.owner, r.name, ar.status, ar.created_at,
        COALESCE(jsonb_array_length(ar.result->'entryPoints'), 0)::int AS entry_point_count,
        COALESCE(jsonb_array_length(ar.result->'structuralAreas'), 0)::int AS structural_area_count,
-       COALESCE((ar.result->'snapshot'->'repository'->>'isPrivate')::boolean, false) AS is_private
+       COALESCE((ar.result->'snapshot'->'repository'->>'isPrivate')::boolean, false) AS is_private,
+       NULLIF(ar.result->'snapshot'->'repository'->>'description', '') AS description
      FROM analysis_runs ar
      JOIN repos r ON r.id = ar.repo_id
      ORDER BY ar.repo_id, ar.created_at DESC`
@@ -170,6 +175,7 @@ export async function listLatestRunIndexabilityFacts(): Promise<
     entryPointCount: row.entry_point_count,
     structuralAreaCount: row.structural_area_count,
     isPrivate: row.is_private,
+    description: row.description,
     createdAt: row.created_at,
   }));
 }

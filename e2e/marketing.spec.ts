@@ -25,7 +25,7 @@ test("robots.txt allows crawling except the API and points at the sitemap", asyn
   expect(body).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
 });
 
-test("sitemap.xml lists the home page and an indexable repository", async ({
+test("sitemap.xml lists the home page, /explore, and an indexable repository", async ({
   request,
 }) => {
   const response = await request.get("/sitemap.xml");
@@ -33,6 +33,7 @@ test("sitemap.xml lists the home page and an indexable repository", async ({
   const body = await response.text();
   expect(body).toContain("<urlset");
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/<\/loc>/);
+  expect(body).toMatch(/<loc>https?:\/\/[^<]+\/explore<\/loc>/);
   expect(body).toMatch(new RegExp(`<loc>https?://[^<]+${repoUrl}</loc>`));
 });
 
@@ -121,4 +122,34 @@ test("a submission redirect reports the run's outcome once and strips the marker
       () => (window as unknown as { __events: string[] }).__events
     )
   ).toEqual([]);
+});
+
+test("/explore is indexable and links to each indexable Lore", async ({
+  page,
+}) => {
+  await page.goto("/explore");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Explore Lores" })
+  ).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    "href",
+    /\/explore$/
+  );
+
+  await page
+    .getByRole("link", { name: new RegExp(`${owner}/${repo}`) })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`${repoUrl}$`));
+});
+
+test("the home page shows example Lores and links to /explore", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const examples = page.getByRole("region", { name: "See an example Lore" });
+  await expect(examples.getByRole("listitem").first()).toBeVisible();
+
+  await examples.getByRole("link", { name: "Browse all Lores" }).click();
+  await expect(page).toHaveURL(/\/explore$/);
 });

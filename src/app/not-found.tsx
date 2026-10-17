@@ -1,5 +1,6 @@
 "use client";
 
+import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/Button";
 import { resolveBackDestination } from "@/lib/back-destination";
 import { Compass } from "lucide-react";
@@ -10,11 +11,7 @@ export default function NotFound() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border px-8 py-5">
-        <span className="font-serif text-xl font-semibold text-foreground">
-          Repo Lore
-        </span>
-      </header>
+      <SiteHeader />
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface">

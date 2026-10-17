@@ -1,7 +1,10 @@
 "use client";
 
 import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
+import { LoreCard } from "@/components/LoreCard";
+import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/Button";
+import type { LatestRunIndexabilityRow } from "@/db/analysis-runs";
 import {
   getDelayAfterStage,
   getStageLabel,
@@ -9,6 +12,7 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { FolderGit2, RotateCw } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 
 const initialState: ResolveRepositoryState = { status: "idle" };
@@ -19,13 +23,20 @@ const initialState: ResolveRepositoryState = { status: "idle" };
  * user journey — see docs/product/mission.md). On success the Server
  * Action redirects there directly, so this page only ever needs to show
  * an error for failures that happen before a run exists to redirect to.
- * Hero only; marketing imagery below the fold is deferred.
+ * Below the form, `featuredLores` (chosen server-side by
+ * `selectFeaturedLores`) link to example Lores and `/explore`, so visitors
+ * can see a real Lore before submitting and crawlers reach indexable Lores
+ * from the home page; the section is omitted when there are none.
  *
  * A separate client component from `src/app/page.tsx` so the route file can
  * stay a Server Component and export its own route-specific metadata
  * (canonical, Open Graph, Twitter) rather than inheriting the root layout's.
  */
-export function HomeContent() {
+export function HomeContent({
+  featuredLores,
+}: {
+  featuredLores: LatestRunIndexabilityRow[];
+}) {
   const [state, formAction, isPending] = useActionState(
     resolveRepository,
     initialState
@@ -60,11 +71,7 @@ export function HomeContent() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border px-8 py-5">
-        <span className="font-serif text-xl font-semibold text-foreground">
-          Repo Lore
-        </span>
-      </header>
+      <SiteHeader />
 
       <main
         className={cn(
@@ -126,6 +133,31 @@ export function HomeContent() {
               <p role="alert" className="mt-4 text-sm text-tile-alert-fg">
                 <strong>Error:</strong> {state.message}
               </p>
+            )}
+
+            {featuredLores.length > 0 && (
+              <section
+                aria-labelledby="example-lores-heading"
+                className="mt-20 w-full max-w-5xl"
+              >
+                <h2
+                  id="example-lores-heading"
+                  className="font-serif text-2xl font-semibold text-foreground"
+                >
+                  See an example Lore
+                </h2>
+                <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {featuredLores.map((lore) => (
+                    <LoreCard key={`${lore.owner}/${lore.repo}`} lore={lore} />
+                  ))}
+                </ul>
+                <Link
+                  href="/explore"
+                  className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  Browse all Lores →
+                </Link>
+              </section>
             )}
           </>
         )}
