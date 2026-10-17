@@ -63,7 +63,7 @@ Building that DB-seeded Playwright fixture (the audit's own "Suggested regressio
 
 - Tabs: SSR HTML shows `role="tablist"` with `tabindex="-1"` and the active `role="tab"` with `tabindex="0"`, inactive with `-1"` (RL-002, fixed).
 - Dependency row: a real `<button aria-label="View {name} dependency details">` wrapping the icon + name in the first cell (RL-003, fixed).
-- `<title>`, `<link rel="canonical">`, `og:title`, `robots: noindex,follow` unique per route (RL-004/RL-005, fixed).
+- `<title>`, `<link rel="canonical">`, `og:title`, `robots: noindex,follow` unique per route (RL-004/RL-005, fixed). Superseded for the Overview by ADR-0017 (2026-10-17): an Overview whose latest run passes `isIndexableLore` is now `index, follow`; subviews stay `noindex, follow`.
 - `<label>` before each search input (RL-006, fixed).
 - Heading sequence H1→H2→H3 with no skipped level on Overview and Architecture (RL-007, fixed).
 - "Skip to main content" link present as the first link in the lore shell (RL-008, fixed).

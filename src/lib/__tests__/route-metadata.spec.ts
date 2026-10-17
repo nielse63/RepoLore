@@ -1,4 +1,5 @@
 import {
+  DEFAULT_OG_IMAGE,
   buildLoreMetadata,
   loreRouteTitle,
   siteMetadataBase,
@@ -23,8 +24,31 @@ describe("buildLoreMetadata", () => {
     path: "/lore/acme/widgets/architecture",
   });
 
-  it("marks repository routes noindex, follow", () => {
+  it("marks repository routes noindex, follow by default", () => {
     expect(metadata.robots).toEqual({ index: false, follow: true });
+  });
+
+  it("uses the generic Open Graph/Twitter image by default", () => {
+    expect(metadata.openGraph?.images).toEqual([DEFAULT_OG_IMAGE]);
+    expect(metadata.twitter?.images).toEqual([DEFAULT_OG_IMAGE]);
+  });
+
+  describe("when indexable", () => {
+    const indexable = buildLoreMetadata({
+      title: "acme/widgets — Repo Lore",
+      description: "Orientation for acme/widgets.",
+      path: "/lore/acme/widgets",
+      indexable: true,
+    });
+
+    it("marks the route index, follow", () => {
+      expect(indexable.robots).toEqual({ index: true, follow: true });
+    });
+
+    it("leaves images unset so the route's opengraph-image file is used", () => {
+      expect(indexable.openGraph).not.toHaveProperty("images");
+      expect(indexable.twitter).not.toHaveProperty("images");
+    });
   });
 
   it("sets a self-referencing canonical", () => {

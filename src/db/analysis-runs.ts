@@ -1,3 +1,4 @@
+import type { LoreIndexabilityFacts } from "@/lib/lore-indexability";
 import type { Lore } from "@/lore/model";
 import { getDbPool } from "./client";
 
@@ -125,6 +126,52 @@ export async function getAnalysisRunByKey(
     [repoId, commitSha, analyzerVersion]
   );
   return rows[0] ? mapRow(rows[0]) : null;
+}
+
+export interface LatestRunIndexabilityRow extends LoreIndexabilityFacts {
+  owner: string;
+  repo: string;
+  /** `pg` parses `TIMESTAMPTZ` into a `Date`. */
+  createdAt: Date;
+}
+
+/**
+ * Every repository's latest run (the one its page renders), projected to
+ * just the facts `isIndexableLore` needs, so `sitemap.ts` doesn't load each
+ * run's full `result` JSONB. A `'failed'` run has a null `result`, so its
+ * counts come back 0 rather than null.
+ */
+export async function listLatestRunIndexabilityFacts(): Promise<
+  LatestRunIndexabilityRow[]
+> {
+  const pool = getDbPool();
+  const { rows } = await pool.query<{
+    owner: string;
+    name: string;
+    status: AnalysisRunStatus;
+    entry_point_count: number;
+    structural_area_count: number;
+    is_private: boolean;
+    created_at: Date;
+  }>(
+    `SELECT DISTINCT ON (ar.repo_id)
+       r.owner, r.name, ar.status, ar.created_at,
+       COALESCE(jsonb_array_length(ar.result->'entryPoints'), 0)::int AS entry_point_count,
+       COALESCE(jsonb_array_length(ar.result->'structuralAreas'), 0)::int AS structural_area_count,
+       COALESCE((ar.result->'snapshot'->'repository'->>'isPrivate')::boolean, false) AS is_private
+     FROM analysis_runs ar
+     JOIN repos r ON r.id = ar.repo_id
+     ORDER BY ar.repo_id, ar.created_at DESC`
+  );
+  return rows.map((row) => ({
+    owner: row.owner,
+    repo: row.name,
+    runStatus: row.status,
+    entryPointCount: row.entry_point_count,
+    structuralAreaCount: row.structural_area_count,
+    isPrivate: row.is_private,
+    createdAt: row.created_at,
+  }));
 }
 
 /**
