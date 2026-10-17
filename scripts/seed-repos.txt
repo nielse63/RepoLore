@@ -1,4 +1,4 @@
-# Repositories `npm run seed` pre-analyzes (docs/MARKETING.md item 5), one
+# Repositories `npm run seed` pre-analyzes, one
 # owner/repo per line; blank lines and `#` comments are ignored. Very large
 # repositories may hit extraction limits or fail — that's expected; a failed
 # run simply stays noindex and out of the sitemap.

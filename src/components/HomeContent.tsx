@@ -19,8 +19,7 @@ const initialState: ResolveRepositoryState = { status: "idle" };
  * user journey — see docs/product/mission.md). On success the Server
  * Action redirects there directly, so this page only ever needs to show
  * an error for failures that happen before a run exists to redirect to.
- * Reflects the hero from docs/designs/home.png; the marketing imagery
- * below the fold is deferred.
+ * Hero only; marketing imagery below the fold is deferred.
  *
  * A separate client component from `src/app/page.tsx` so the route file can
  * stay a Server Component and export its own route-specific metadata
@@ -53,7 +52,7 @@ export function HomeContent() {
     return () => clearTimeout(timeoutId);
   }, [isPending, stageIndex]);
 
-  // A submission rejected before any run exists (docs/MARKETING.md item 9).
+  // A submission rejected before any run exists.
   // Each action result is a new object, so a repeated error fires again.
   useEffect(() => {
     if (state.status === "error") trackEvent("submit_repo_error");

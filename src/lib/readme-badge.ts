@@ -1,6 +1,6 @@
 /**
- * The Markdown a maintainer pastes into their README (docs/MARKETING.md
- * item 6): the static `/badge.svg` linking to the repository's stable Lore
+ * The Markdown a maintainer pastes into their README:
+ * the static `/badge.svg` linking to the repository's stable Lore
  * URL. Absolute URLs, since a README renders on github.com, not here.
  */
 export function readmeBadgeMarkdown(

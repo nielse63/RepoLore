@@ -1,17 +1,16 @@
 /**
  * Manual sanity check for the Start Here / major-area derived views against
- * a fixture directory (no automated test suite yet — see
- * implementation-plan.md session 15).
+ * a fixture directory.
  *
  * Usage: npm run derive -- fixtures/ts-react-app
  */
 
-import { deriveJsTsViews } from '../src/analysis/js-ts/derive-views';
-import { extractJsTsProject } from '../src/analysis/js-ts/extract-project';
+import { deriveJsTsViews } from "../src/analysis/js-ts/derive-views";
+import { extractJsTsProject } from "../src/analysis/js-ts/extract-project";
 
 const target = process.argv[2];
 if (!target) {
-  console.error('Usage: npm run derive -- <path-to-fixture>');
+  console.error("Usage: npm run derive -- <path-to-fixture>");
   process.exit(1);
 }
 
@@ -31,7 +30,7 @@ for (const item of startHere) {
 console.log(`\nMajor areas (${structuralAreas.length}):`);
 for (const area of structuralAreas) {
   console.log(
-    `  ${area.name}${area.responsibility ? ` — ${area.responsibility}` : ''}`
+    `  ${area.name}${area.responsibility ? ` — ${area.responsibility}` : ""}`
   );
   console.log(`     ${area.rationale}`);
   console.log(

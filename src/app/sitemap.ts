@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The home page plus every repository Overview that `isIndexableLore`
- * accepts (docs/MARKETING.md item 2) — the same rule its page's `robots`
+ * accepts — the same rule its page's `robots`
  * metadata uses, so the sitemap never lists a page that says `noindex`.
  * A database error degrades to just the home page rather than a 500,
  * since crawlers would otherwise back off the whole sitemap.

@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const baseURL = "http://localhost:3000";
 
 /**
- * Functional/UI test suite (implementation-plan.md session 15), scoped to
+ * Functional/UI test suite, scoped to
  * pages that need no external services: the home page's client-side URL
  * validation. `reuseExistingServer` (local only) reuses a `next dev` a
  * developer already has running rather than failing to start a second one —

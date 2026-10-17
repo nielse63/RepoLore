@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 const COPIED_RESET_MS = 2000;
 
 /**
- * "Add a README badge" section of the Overview's Analysis rail
- * (docs/MARKETING.md item 6). No mockup covers it, so it follows the rail's
+ * "Add a README badge" section of the Overview's Analysis rail.
+ * No mockup covers it, so it follows the rail's
  * existing bordered-section pattern. The snippet stays visible and
  * selectable, so copying still works by hand if the Clipboard API is
  * unavailable or denied.

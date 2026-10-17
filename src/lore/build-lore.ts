@@ -1,6 +1,6 @@
 /**
- * Assembles a full `Lore` (the durable, persisted unit — see
- * `docs/architecture/decisions/0005-analysis-result-keying.md`) from one or
+ * Assembles a full `Lore` (the durable, persisted unit — ADR-0005) from
+ * one or
  * more language extractions' output plus their derived views
  * (`@/analysis/shared/derive-views`), plus the repository/commit identity
  * that only exists once a real GitHub repository has been resolved and

@@ -1,8 +1,7 @@
 import { expect, test } from "./coverage";
 
 /**
- * Search/sharing surface functional coverage (docs/MARKETING.md items 1–3,
- * 6): `robots.txt`, `sitemap.xml`, the per-repository Open Graph image, and
+ * Search/sharing surface functional coverage: `robots.txt`, `sitemap.xml`, the per-repository Open Graph image, and
  * the Overview's README badge card. Like `systems.spec.ts`, needs
  * `DATABASE_URL` for the already-persisted run of the pinned fixture
  * `nielse63/repo-lore-ts-react-app-fixture` but not `GITHUB_TOKEN`. That

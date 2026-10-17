@@ -23,7 +23,7 @@ function isSameDay(a: Date, b: Date): boolean {
   return a.toDateString() === b.toDateString();
 }
 
-/** "Last N days" while unchanged from `defaultRange`, otherwise a formatted date range (matches `docs/designs/history.png`). */
+/** "Last N days" while unchanged from `defaultRange`, otherwise a formatted date range. */
 export function formatTimeframeLabel(
   range: DateRange,
   defaultRange: DateRange

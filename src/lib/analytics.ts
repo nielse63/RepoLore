@@ -5,7 +5,7 @@ declare global {
 }
 
 /**
- * Sends a parameterless GA4 custom event (docs/MARKETING.md item 9). A
+ * Sends a parameterless GA4 custom event. A
  * no-op wherever `gtag` isn't loaded — it's only injected in production
  * (`src/app/layout.tsx`), or a blocker may have removed it — so analytics
  * can never break the flow it's measuring.

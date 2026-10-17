@@ -1,6 +1,6 @@
 /**
  * Commit-list and commit-diff GitHub REST API calls, added for the History
- * page (docs/architecture/decisions/0010-history-page-real-data-scope.md).
+ * page (ADR-0010).
  * This is new API surface beyond `client.ts`'s original scope (default
  * branch/HEAD resolution and tarball fetch) — bounded deliberately: a fixed
  * lookback window and a hard cap on commits processed per compute, so a

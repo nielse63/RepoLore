@@ -1,7 +1,7 @@
 import { expect, test } from "./coverage";
 
 /**
- * Home page functional coverage (implementation-plan.md session 15). Only
+ * Home page functional coverage. Only
  * exercises the client-side/pre-analysis validation path in
  * `parseGitHubRepoUrl` (`src/github/parse-repo-url.ts`) — inputs that fail
  * before the Server Action ever calls the GitHub API — so this suite needs

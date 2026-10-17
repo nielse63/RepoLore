@@ -1,6 +1,5 @@
 /**
- * Manual sanity check for JS/TS source discovery against a fixture directory
- * (no automated test suite yet — see implementation-plan.md session 15).
+ * Manual sanity check for JS/TS source discovery against a fixture directory.
  *
  * Usage: npm run discover -- fixtures/ts-react-app
  */
@@ -17,7 +16,9 @@ if (!target) {
 const rootDir = path.resolve(target);
 const { sourceFiles } = discoverSourceFiles(rootDir);
 
-console.log(`Discovered ${sourceFiles.length} source file(s) under ${rootDir}:`);
+console.log(
+  `Discovered ${sourceFiles.length} source file(s) under ${rootDir}:`
+);
 for (const sourceFile of sourceFiles) {
   console.log(`  ${path.relative(rootDir, sourceFile.getFilePath())}`);
 }

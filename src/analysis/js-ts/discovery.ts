@@ -1,7 +1,7 @@
 /**
  * JS/TS source file discovery: reads a project directly from local disk into
- * a ts-morph `Project`, applying exclusion rules (docs/architecture/decisions,
- * ADR-0003). This stays syntactic-only per ADR-0003 — no tsconfig-driven,
+ * a ts-morph `Project`, applying exclusion rules (ADR-0003).
+ * This stays syntactic-only per ADR-0003 — no tsconfig-driven,
  * type-checked `Program` is constructed here; only enough compiler options
  * to parse `.ts`/`.tsx`/`.js`/`.jsx` ASTs.
  */

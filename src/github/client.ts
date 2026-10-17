@@ -121,7 +121,7 @@ export async function resolveRepositoryHead(
   }
   if (repoData.private) {
     // GITHUB_TOKEN is a single credential shared across every visitor's
-    // request (see docs/architecture/decisions/0002-tarball-source-acquisition.md).
+    // request (ADR-0002).
     // Without this check, anyone could type in a repository the token
     // happens to have private access to (the operator's own, or one they
     // collaborate on) and have Repo Lore fetch, analyze, and publish it at a

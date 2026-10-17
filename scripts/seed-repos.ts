@@ -1,5 +1,5 @@
 /**
- * Pre-analyzes a list of popular repositories (docs/MARKETING.md item 5) so
+ * Pre-analyzes a list of popular repositories so
  * there are Lore pages to index and share. Operator-run by hand only — never
  * scheduled (docs/product/non-goals.md); pull-triggered refresh (ADR-0013)
  * keeps them current from there. Runs one repository at a time through the

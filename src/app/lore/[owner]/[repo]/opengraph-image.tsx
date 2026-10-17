@@ -25,8 +25,8 @@ function plural(count: number, noun: string): string {
 }
 
 /**
- * Social preview card for a repository's Overview (docs/MARKETING.md item
- * 3): the repository name plus its entry point and structural area counts.
+ * Social preview card for a repository's Overview:
+ * the repository name plus its entry point and structural area counts.
  * Counts are shown only when `isIndexableLore` holds — the same bar the
  * page needs to be listed in search — so a failed, partial, or empty run
  * never advertises numbers it can't back. Otherwise, or if the database

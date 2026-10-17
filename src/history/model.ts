@@ -6,7 +6,7 @@
  * manifest-diff parsing, path-convention matching). Keeping the two apart
  * preserves the certainty distinction the app makes everywhere else —
  * nothing here should be presented with the same rigor as the core `Lore`
- * model. See docs/architecture/decisions/0010-history-page-real-data-scope.md.
+ * model. See ADR-0010.
  */
 
 import type { CertaintyCategory } from "@/lore/model";

@@ -1,6 +1,6 @@
 /**
  * Manual sanity check for the Start Here / major-area derived views against
- * a Python fixture directory (implementation-plan.md session 13).
+ * a Python fixture directory.
  *
  * Usage: npm run derive-python -- fixtures/python-app
  */
