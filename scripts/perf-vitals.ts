@@ -106,6 +106,13 @@ async function main() {
   await Promise.all(urls.map(warmUp));
 
   const pages: PageComparison[] = [];
+  // Every run's raw values, so noise in a median can be inspected afterwards.
+  const samples: {
+    path: string;
+    profile: string;
+    target: MetricSample[];
+    production: MetricSample[];
+  }[] = [];
   for (const page of PAGES) {
     for (const profile of PROFILES) {
       const targetRuns: MetricSample[] = [];
@@ -119,6 +126,12 @@ async function main() {
           await measure(new URL(page, productionUrl).href, profile.flags)
         );
       }
+      samples.push({
+        path: page,
+        profile: profile.name,
+        target: targetRuns,
+        production: productionRuns,
+      });
       pages.push({
         path: page,
         profile: profile.name,
@@ -131,7 +144,7 @@ async function main() {
   await fs.mkdir(outDir, { recursive: true });
   await fs.writeFile(
     path.join(outDir, "report.json"),
-    JSON.stringify({ targetUrl, productionUrl, runs, pages }, null, 2)
+    JSON.stringify({ targetUrl, productionUrl, runs, pages, samples }, null, 2)
   );
   await fs.writeFile(path.join(outDir, "report.md"), markdown);
   console.log(`\n${markdown}`);
