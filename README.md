@@ -151,7 +151,7 @@ There's no _headless_ scheduled refresh (cron, webhooks, polling with no visitor
 
 ## Deployment
 
-Hosted on [Render](https://render.com) (free web service — a real long-running Node process per ADR-0001, not a serverless function) with [Neon](https://neon.tech) (free Postgres) — see `docs/architecture/implementation-plan.md`, session 17's 2026-08-25 log entry, for why these over Fly.io/Railway (both dropped their free tiers) and Render's own Postgres (free databases there expire after 30 days).
+Live at [https://repolore.app](https://repolore.app). Hosted on [Render](https://render.com) (Pro plan web service — a real long-running Node process per ADR-0001, not a serverless function) with [Neon](https://neon.tech) (free Postgres) — see `docs/architecture/implementation-plan.md`, session 17's 2026-08-25 log entry, for why these over Fly.io/Railway (both dropped their free tiers) and Render's own Postgres (free databases there expire after 30 days).
 
 `render.yaml` at the repo root is a Render [Blueprint](https://render.com/docs/blueprint-spec): `npm install && npm run build` to build, `npm run start` to run, `/api/health` as the health check path. `GITHUB_TOKEN` and `DATABASE_URL` are marked `sync: false`, so Render prompts for their real values in its dashboard at blueprint-creation time rather than reading them from this file — they are never committed.
 
@@ -161,4 +161,4 @@ First deploy, one-time setup:
 2. Apply the schema to it: `DATABASE_URL=<neon-connection-string> npm run migrate`.
 3. Create a free [Render](https://render.com) account, connect it to this GitHub repo, and deploy `render.yaml` as a Blueprint. When prompted, paste the real `GITHUB_TOKEN` (see `.env.example`) and the Neon connection string as `DATABASE_URL`.
 
-Render's free tier spins the service down after 15 minutes idle (30–60s cold start on the next request) — an accepted trade-off while there's no live traffic or custom domain yet. Subsequent deploys happen automatically on push to `main`; re-run `npm run migrate` against the Neon `DATABASE_URL` after any change to `src/db/migrations/`.
+The service runs on Render's Pro plan, so it stays up instead of spinning down after 15 minutes idle the way the free tier did (no 30–60s cold start for the first visitor). The custom domain `repolore.app` is attached in the Render dashboard; set `NEXT_PUBLIC_SITE_URL=https://repolore.app` there too, so canonical/Open Graph/Twitter URLs use it rather than Render's own `RENDER_EXTERNAL_URL` (see `.env.example`). Subsequent deploys happen automatically on push to `main`; re-run `npm run migrate` against the Neon `DATABASE_URL` after any change to `src/db/migrations/`.
