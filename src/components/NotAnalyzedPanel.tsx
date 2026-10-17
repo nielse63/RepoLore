@@ -1,7 +1,7 @@
 "use client";
 
 import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
-import { SiteHeader } from "@/components/SiteHeader";
+import { SiteShell } from "@/components/SiteShell";
 import { Button } from "@/components/ui/Button";
 import { trackEvent } from "@/lib/analytics";
 import { useAnalysisStageLabel } from "@/lib/use-analysis-stage-label";
@@ -38,8 +38,7 @@ export function NotAnalyzedPanel({
   }, [state]);
 
   return (
-    <div className="flex min-h-dvh w-full flex-col bg-background">
-      <SiteHeader />
+    <SiteShell>
       <main
         id="lore-main-content"
         className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center"
@@ -95,6 +94,6 @@ export function NotAnalyzedPanel({
           </>
         )}
       </main>
-    </div>
+    </SiteShell>
   );
 }

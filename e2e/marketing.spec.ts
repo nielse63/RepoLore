@@ -25,7 +25,7 @@ test("robots.txt allows crawling except the API and points at the sitemap", asyn
   expect(body).toMatch(/Sitemap: https?:\/\/\S+\/sitemap\.xml/);
 });
 
-test("sitemap.xml lists the home page, /explore, and an indexable repository", async ({
+test("sitemap.xml lists the static pages and an indexable repository", async ({
   request,
 }) => {
   const response = await request.get("/sitemap.xml");
@@ -34,6 +34,7 @@ test("sitemap.xml lists the home page, /explore, and an indexable repository", a
   expect(body).toContain("<urlset");
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/<\/loc>/);
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/explore<\/loc>/);
+  expect(body).toMatch(/<loc>https?:\/\/[^<]+\/manifesto<\/loc>/);
   expect(body).toMatch(new RegExp(`<loc>https?://[^<]+${repoUrl}</loc>`));
 });
 

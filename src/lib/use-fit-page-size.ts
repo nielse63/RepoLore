@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 const MIN_PAGE_SIZE = 5;
 
 /**
- * `<main>` (LorePageFrame) is styled `overflow-y-auto`, but its ancestor
+ * `<main>`'s column (LorePageFrame) is styled `overflow-y-auto`, but its ancestor
  * chain doesn't actually bound its height in practice, so it never clips —
  * the whole document scrolls instead (confirmed: `main.clientHeight ===
  * main.scrollHeight` while `document.scrollingElement.scrollHeight` exceeds
@@ -22,8 +22,8 @@ const useIsomorphicLayoutEffect =
 
 /**
  * How many rows of a fixed-row-height list fit in the space remaining below
- * `containerRef`, inside its nearest scrollable ancestor (the page's
- * `<main>`, which is the actual scroll container — see `LorePageFrame`).
+ * `containerRef`, within the window's viewport (the actual scroll container
+ * — see the note above and `LorePageFrame`).
  * Measured once, synchronously after the first paint, and never
  * re-measured afterward: resizing the window won't change it, matching the
  * product decision not to track resize.

@@ -1,5 +1,5 @@
 import { LoreCard } from "@/components/LoreCard";
-import { SiteHeader } from "@/components/SiteHeader";
+import { SiteShell } from "@/components/SiteShell";
 import {
   listLatestRunIndexabilityFacts,
   type LatestRunIndexabilityRow,
@@ -47,8 +47,7 @@ export default async function ExplorePage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader />
+    <SiteShell>
       <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-16">
         <h1 className="font-serif text-4xl font-semibold text-foreground">
           Explore Lores
@@ -74,6 +73,6 @@ export default async function ExplorePage() {
           </p>
         )}
       </main>
-    </div>
+    </SiteShell>
   );
 }

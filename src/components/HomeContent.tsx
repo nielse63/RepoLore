@@ -2,7 +2,7 @@
 
 import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
 import { LoreCard } from "@/components/LoreCard";
-import { SiteHeader } from "@/components/SiteHeader";
+import { SiteShell } from "@/components/SiteShell";
 import { Button } from "@/components/ui/Button";
 import type { LatestRunIndexabilityRow } from "@/db/analysis-runs";
 import { trackEvent } from "@/lib/analytics";
@@ -47,9 +47,7 @@ export function HomeContent({
   }, [state]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader />
-
+    <SiteShell>
       <main
         className={cn(
           "flex flex-1 flex-col items-center px-6 text-center",
@@ -139,6 +137,6 @@ export function HomeContent({
           </>
         )}
       </main>
-    </div>
+    </SiteShell>
   );
 }
