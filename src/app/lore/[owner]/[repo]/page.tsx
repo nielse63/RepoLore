@@ -1,3 +1,4 @@
+import { NotAnalyzedPanel } from "@/components/NotAnalyzedPanel";
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { SubmissionOutcomeEvent } from "@/components/SubmissionOutcomeEvent";
 import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
@@ -22,7 +23,6 @@ import {
 } from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
 export async function generateMetadata({
   params,
@@ -44,7 +44,10 @@ export async function generateMetadata({
  * criterion 10). Not a static/cached page — always reads the current
  * latest run, so a re-analysis (session 11) is visible on next load without
  * a redeploy. A `'failed'` run is rendered honestly, with its error, rather
- * than presented as "not found."
+ * than presented as "not found." A repository with no run at all gets an
+ * explicit "Analyze" button (`NotAnalyzedPanel`, `noindex` like any
+ * non-indexable Lore) instead of a 404, so a swapped `github.com` URL
+ * (`src/app/[...path]/page.tsx`) never dead-ends.
  */
 export default async function LorePage({
   params,
@@ -55,7 +58,7 @@ export default async function LorePage({
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) notFound();
+  if (!run) return <NotAnalyzedPanel owner={owner} repo={repo} />;
 
   // Set by the home page's Server Action redirect, whose run is this latest one.
   const outcomeEvent = (await searchParams).submitted ? (

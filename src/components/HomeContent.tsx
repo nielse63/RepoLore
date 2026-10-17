@@ -5,15 +5,12 @@ import { LoreCard } from "@/components/LoreCard";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Button } from "@/components/ui/Button";
 import type { LatestRunIndexabilityRow } from "@/db/analysis-runs";
-import {
-  getDelayAfterStage,
-  getStageLabel,
-} from "@/lib/analysis-loading-stages";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
+import { useAnalysisStageLabel } from "@/lib/use-analysis-stage-label";
 import { FolderGit2, RotateCw } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 
 const initialState: ResolveRepositoryState = { status: "idle" };
 
@@ -41,27 +38,7 @@ export function HomeContent({
     resolveRepository,
     initialState
   );
-  const [stageIndex, setStageIndex] = useState(0);
-  // Resets the stage index whenever a submission starts or finishes, so the
-  // next submission narrates from the beginning again. Set during render
-  // (React's documented pattern for state that tracks a prop/derived value)
-  // rather than in the effect below, which only owns the interval subscription.
-  const [prevIsPending, setPrevIsPending] = useState(isPending);
-  if (isPending !== prevIsPending) {
-    setPrevIsPending(isPending);
-    setStageIndex(0);
-  }
-
-  // Re-schedules on every stageIndex change (rather than a single interval)
-  // because the delay isn't constant: it's STAGE_INTERVAL_MS while narrating
-  // real phases, then a randomized 30-45s once into REASSURANCE_STAGES.
-  useEffect(() => {
-    if (!isPending) return;
-    const timeoutId = setTimeout(() => {
-      setStageIndex((i) => i + 1);
-    }, getDelayAfterStage(stageIndex));
-    return () => clearTimeout(timeoutId);
-  }, [isPending, stageIndex]);
+  const stageLabel = useAnalysisStageLabel(isPending);
 
   // A submission rejected before any run exists.
   // Each action result is a new object, so a repeated error fires again.
@@ -89,7 +66,7 @@ export function HomeContent({
               className="text-lg font-medium text-foreground"
               aria-live="polite"
             >
-              {getStageLabel(stageIndex)}
+              {stageLabel}
             </p>
           </div>
         ) : (

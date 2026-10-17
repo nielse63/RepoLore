@@ -36,6 +36,10 @@ export default async function LoreLayout({
     );
   }
 
+  // No run yet: the Overview renders a full-page "Analyze" prompt and every
+  // subview 404s, so there's no Lore for the sidebar to navigate.
+  if (!run) return children;
+
   return (
     <MobileNavProvider>
       <div className="flex min-h-dvh bg-background">
