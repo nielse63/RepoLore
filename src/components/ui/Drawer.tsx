@@ -4,8 +4,6 @@ import { cn } from "@/lib/cn";
 import * as RadixDialog from "@radix-ui/react-dialog";
 
 export const Drawer = RadixDialog.Root;
-export const DrawerTrigger = RadixDialog.Trigger;
-export const DrawerClose = RadixDialog.Close;
 export const DrawerTitle = RadixDialog.Title;
 
 const SIDE_CLASSES = {

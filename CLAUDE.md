@@ -54,6 +54,8 @@ Two project-specific subagents are defined in `.claude/agents/` and should be in
 
 Do not commit, or offer to commit, any changes. Those will be performed manually by the user.
 
+All pull requests are opened against the `dev` branch, not `main`.
+
 ## Workflow
 
 With each new update, make sure to update the `README.md` file to include information regarding features, development lifecycle, deployment, and any other pertinent changes.
