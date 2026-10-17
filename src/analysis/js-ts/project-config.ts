@@ -523,7 +523,13 @@ function readBabelConfig(rootDir: string): SourceResult | undefined {
   if (found.fileName.endsWith(".json") || found.fileName === ".babelrc") {
     let parsed: unknown;
     try {
-      parsed = JSON.parse(fs.readFileSync(found.filePath, "utf-8"));
+      // `turbopackIgnore` (here and in `readTsOrJsConfig`): these paths point
+      // into the extracted repository being analyzed at runtime, so Turbopack
+      // can't statically scope them and would otherwise trace the whole
+      // project into the server output.
+      parsed = JSON.parse(
+        fs.readFileSync(/* turbopackIgnore: true */ found.filePath, "utf-8")
+      );
     } catch {
       gaps.push(unparseableGap(found.fileName, " as JSON"));
       return { aliases: [], gaps };
@@ -640,7 +646,8 @@ function readTsconfigLike(rootDir: string, fileName: string): SourceResult {
 /** `tsconfig.json` is preferred over `jsconfig.json` when both exist (real-world convention: jsconfig is a JS-only fallback). */
 function readTsOrJsConfig(rootDir: string): SourceResult | undefined {
   for (const fileName of ["tsconfig.json", "jsconfig.json"]) {
-    if (fs.existsSync(path.join(rootDir, fileName))) {
+    const filePath = path.join(/* turbopackIgnore: true */ rootDir, fileName);
+    if (fs.existsSync(/* turbopackIgnore: true */ filePath)) {
       return readTsconfigLike(rootDir, fileName);
     }
   }
