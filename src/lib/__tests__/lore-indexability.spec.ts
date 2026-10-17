@@ -8,7 +8,7 @@ import {
 const indexable: LoreIndexabilityFacts = {
   runStatus: "completed",
   entryPointCount: 2,
-  structuralAreaCount: 3,
+  majorAreaCount: 3,
   isPrivate: false,
 };
 
@@ -29,10 +29,8 @@ describe("isIndexableLore", () => {
     expect(isIndexableLore({ ...indexable, entryPointCount: 0 })).toBe(false);
   });
 
-  it("rejects a run with no structural areas", () => {
-    expect(isIndexableLore({ ...indexable, structuralAreaCount: 0 })).toBe(
-      false
-    );
+  it("rejects a run with no Major Areas", () => {
+    expect(isIndexableLore({ ...indexable, majorAreaCount: 0 })).toBe(false);
   });
 
   it("rejects a private repository", () => {
@@ -51,12 +49,17 @@ describe("indexabilityFactsFromRun", () => {
     ).toBeNull();
   });
 
-  it("projects a run's status, counts, and visibility", () => {
+  it("projects a run's status, counts (excluding the root area), and visibility", () => {
     const run = {
       status: "completed",
       result: {
         entryPoints: [{}, {}],
-        structuralAreas: [{}, {}, {}],
+        structuralAreas: [
+          { name: "src" },
+          { name: "lib" },
+          { name: "." },
+          { name: "test" },
+        ],
         snapshot: { repository: { isPrivate: false } },
       },
     } as unknown as AnalysisRunRow;

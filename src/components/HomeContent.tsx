@@ -1,15 +1,16 @@
 "use client";
 
 import { resolveRepository, type ResolveRepositoryState } from "@/app/actions";
+import { LoreCard } from "@/components/LoreCard";
+import { SiteShell } from "@/components/SiteShell";
 import { Button } from "@/components/ui/Button";
-import {
-  getDelayAfterStage,
-  getStageLabel,
-} from "@/lib/analysis-loading-stages";
+import type { LatestRunIndexabilityRow } from "@/db/analysis-runs";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
+import { useAnalysisStageLabel } from "@/lib/use-analysis-stage-label";
 import { FolderGit2, RotateCw } from "lucide-react";
-import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
+import { useActionState, useEffect } from "react";
 
 const initialState: ResolveRepositoryState = { status: "idle" };
 
@@ -19,38 +20,25 @@ const initialState: ResolveRepositoryState = { status: "idle" };
  * user journey — see docs/product/mission.md). On success the Server
  * Action redirects there directly, so this page only ever needs to show
  * an error for failures that happen before a run exists to redirect to.
- * Hero only; marketing imagery below the fold is deferred.
+ * Below the form, `featuredLores` (chosen server-side by
+ * `selectFeaturedLores`) link to example Lores and `/explore`, so visitors
+ * can see a real Lore before submitting and crawlers reach indexable Lores
+ * from the home page; the section is omitted when there are none.
  *
  * A separate client component from `src/app/page.tsx` so the route file can
  * stay a Server Component and export its own route-specific metadata
  * (canonical, Open Graph, Twitter) rather than inheriting the root layout's.
  */
-export function HomeContent() {
+export function HomeContent({
+  featuredLores,
+}: {
+  featuredLores: LatestRunIndexabilityRow[];
+}) {
   const [state, formAction, isPending] = useActionState(
     resolveRepository,
     initialState
   );
-  const [stageIndex, setStageIndex] = useState(0);
-  // Resets the stage index whenever a submission starts or finishes, so the
-  // next submission narrates from the beginning again. Set during render
-  // (React's documented pattern for state that tracks a prop/derived value)
-  // rather than in the effect below, which only owns the interval subscription.
-  const [prevIsPending, setPrevIsPending] = useState(isPending);
-  if (isPending !== prevIsPending) {
-    setPrevIsPending(isPending);
-    setStageIndex(0);
-  }
-
-  // Re-schedules on every stageIndex change (rather than a single interval)
-  // because the delay isn't constant: it's STAGE_INTERVAL_MS while narrating
-  // real phases, then a randomized 30-45s once into REASSURANCE_STAGES.
-  useEffect(() => {
-    if (!isPending) return;
-    const timeoutId = setTimeout(() => {
-      setStageIndex((i) => i + 1);
-    }, getDelayAfterStage(stageIndex));
-    return () => clearTimeout(timeoutId);
-  }, [isPending, stageIndex]);
+  const stageLabel = useAnalysisStageLabel(isPending);
 
   // A submission rejected before any run exists.
   // Each action result is a new object, so a repeated error fires again.
@@ -59,13 +47,7 @@ export function HomeContent() {
   }, [state]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <header className="border-b border-border px-8 py-5">
-        <span className="font-serif text-xl font-semibold text-foreground">
-          Repo Lore
-        </span>
-      </header>
-
+    <SiteShell>
       <main
         className={cn(
           "flex flex-1 flex-col items-center px-6 text-center",
@@ -82,7 +64,7 @@ export function HomeContent() {
               className="text-lg font-medium text-foreground"
               aria-live="polite"
             >
-              {getStageLabel(stageIndex)}
+              {stageLabel}
             </p>
           </div>
         ) : (
@@ -127,9 +109,34 @@ export function HomeContent() {
                 <strong>Error:</strong> {state.message}
               </p>
             )}
+
+            {featuredLores.length > 0 && (
+              <section
+                aria-labelledby="example-lores-heading"
+                className="mt-20 w-full max-w-5xl"
+              >
+                <h2
+                  id="example-lores-heading"
+                  className="font-serif text-2xl font-semibold text-foreground"
+                >
+                  See an example Lore
+                </h2>
+                <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {featuredLores.map((lore) => (
+                    <LoreCard key={`${lore.owner}/${lore.repo}`} lore={lore} />
+                  ))}
+                </ul>
+                <Link
+                  href="/explore"
+                  className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  Browse all Lores →
+                </Link>
+              </section>
+            )}
           </>
         )}
       </main>
-    </div>
+    </SiteShell>
   );
 }

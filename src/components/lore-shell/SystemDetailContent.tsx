@@ -13,6 +13,7 @@ import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { relativeTime } from "@/lib/relative-time";
 import { formatPath } from "@/lib/format-path";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore, SourceLocation } from "@/lore/model";
 import {
   classifySystem,
@@ -55,7 +56,7 @@ export function SystemDetailContent({
   lore,
   areaSlug,
 }: SystemDetailContentProps) {
-  const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
+  const majorAreas = majorAreasOf(lore.structuralAreas);
   const area = findAreaBySlug(majorAreas, areaSlug);
   if (!area) notFound();
 

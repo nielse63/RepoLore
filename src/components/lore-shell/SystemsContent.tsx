@@ -19,6 +19,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { formatPath } from "@/lib/format-path";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore, StructuralArea } from "@/lore/model";
 import {
   classifySystem,
@@ -84,11 +85,8 @@ export function SystemsContent({
 
   const commitSha = lore.snapshot.commitSha;
 
-  // The root directory ("." — a file with no directory of its own) adds no
-  // orientation value as a system, matching Architecture/Overview's existing
-  // Major Areas exclusion.
   const majorAreas = useMemo(
-    () => lore.structuralAreas.filter((area) => area.name !== "."),
+    () => majorAreasOf(lore.structuralAreas),
     [lore.structuralAreas]
   );
   const diagramLayout = useMemo(

@@ -18,6 +18,7 @@ import { StepList } from "@/components/ui/StepList";
 import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import { majorAreasOf } from "@/lore/major-areas";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
   ArrowRight,
@@ -58,9 +59,7 @@ export function OverviewContent({
   );
   const startHereUrl = (location: SourceLocation) =>
     areaFilePaths.has(location.filePath) ? areaUrl : sourceUrl;
-  // The root directory ("." — a file with no directory of its own, e.g. a
-  // root-level config file) adds no orientation value as its own Major Area.
-  const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
+  const majorAreas = majorAreasOf(lore.structuralAreas);
   const diagramLayout = deriveProductionAreaDiagramLayout(
     majorAreas,
     lore.relationships

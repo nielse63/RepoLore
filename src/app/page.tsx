@@ -1,5 +1,14 @@
 import { HomeContent } from "@/components/HomeContent";
+import { listLatestRunIndexabilityFacts } from "@/db/analysis-runs";
+import { selectFeaturedLores } from "@/lib/featured-lores";
 import type { Metadata } from "next";
+
+/**
+ * Read from the database per request, like `sitemap.ts`, so `npm run build`
+ * needs no `DATABASE_URL` and newly indexable Lores appear without a
+ * redeploy.
+ */
+export const dynamic = "force-dynamic";
 
 /**
  * Only the home page's canonical lives here rather than on the root layout:
@@ -14,6 +23,16 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function Home() {
-  return <HomeContent />;
+/**
+ * A database error hides the example Lores rather than failing the page —
+ * the submission form is the page's job and needs no database to render.
+ */
+export default async function Home() {
+  let featuredLores: Awaited<ReturnType<typeof selectFeaturedLores>> = [];
+  try {
+    featuredLores = selectFeaturedLores(await listLatestRunIndexabilityFacts());
+  } catch (error) {
+    console.error("home: failed to list example Lores:", error);
+  }
+  return <HomeContent featuredLores={featuredLores} />;
 }

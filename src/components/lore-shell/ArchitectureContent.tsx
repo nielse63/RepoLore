@@ -14,6 +14,7 @@ import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
+import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
 import { Compass, GapHorizontal, Layers, Link2, TestTube2 } from "lucide-react";
@@ -43,10 +44,7 @@ export function ArchitectureContent({
   areaUrl = sourceUrl,
 }: ArchitectureContentProps) {
   const areaRelationships = deriveAreaRelationships(lore.structuralAreas);
-  // The root directory ("." — a file with no directory of its own) adds no
-  // orientation value as a diagram node, matching the Major Areas exclusion
-  // above.
-  const majorAreas = lore.structuralAreas.filter((area) => area.name !== ".");
+  const majorAreas = majorAreasOf(lore.structuralAreas);
   const diagramLayout = deriveProductionAreaDiagramLayout(
     majorAreas,
     lore.relationships
@@ -64,11 +62,8 @@ export function ArchitectureContent({
       </div>
 
       {lore.projects.map((project) => {
-        // The root directory ("." — a file with no directory of its own, e.g.
-        // a root-level config file) adds no orientation value as its own
-        // Major Area.
-        const projectAreas = lore.structuralAreas.filter(
-          (area) => area.projectId === project.id && area.name !== "."
+        const projectAreas = majorAreas.filter(
+          (area) => area.projectId === project.id
         );
         // A single-project repo's `project.name` falls back to the
         // extraction directory's basename when `package.json` has no

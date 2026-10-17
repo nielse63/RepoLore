@@ -1,9 +1,12 @@
 import {
   DEFAULT_OG_IMAGE,
   buildLoreMetadata,
+  loreOverviewDescription,
+  loreOverviewTitle,
   loreRouteTitle,
   siteMetadataBase,
 } from "../route-metadata";
+import type { Lore } from "@/lore/model";
 
 describe("loreRouteTitle", () => {
   it("builds the Overview title with no view", () => {
@@ -13,6 +16,103 @@ describe("loreRouteTitle", () => {
   it("builds a per-view title", () => {
     expect(loreRouteTitle("acme", "widgets", "Architecture")).toBe(
       "acme/widgets Architecture — Repo Lore"
+    );
+  });
+});
+
+function stubLore({
+  entryPoints = 2,
+  areaNames = ["src", "lib", "."],
+  startHere = 1,
+  description,
+  status = "completed",
+}: {
+  entryPoints?: number;
+  areaNames?: string[];
+  startHere?: number;
+  description?: string;
+  status?: Lore["snapshot"]["status"];
+} = {}): Lore {
+  return {
+    snapshot: { status, repository: { description } },
+    entryPoints: Array.from({ length: entryPoints }, () => ({})),
+    structuralAreas: areaNames.map((name) => ({ name })),
+    startHere: Array.from({ length: startHere }, () => ({})),
+  } as unknown as Lore;
+}
+
+describe("loreOverviewTitle", () => {
+  it("uses search-shaped wording once there's an analysis", () => {
+    expect(loreOverviewTitle("acme", "widgets", stubLore())).toBe(
+      "acme/widgets: codebase architecture & entry points — Repo Lore"
+    );
+  });
+
+  it("falls back to the plain route title without one", () => {
+    expect(loreOverviewTitle("acme", "widgets", null)).toBe(
+      "acme/widgets — Repo Lore"
+    );
+  });
+
+  it("falls back when there are no entry points or Major Areas to show", () => {
+    expect(
+      loreOverviewTitle("acme", "widgets", stubLore({ entryPoints: 0 }))
+    ).toBe("acme/widgets — Repo Lore");
+    expect(
+      loreOverviewTitle("acme", "widgets", stubLore({ areaNames: ["."] }))
+    ).toBe("acme/widgets — Repo Lore");
+  });
+});
+
+describe("loreOverviewDescription", () => {
+  it("leads with the GitHub description, then the page's own counts", () => {
+    expect(
+      loreOverviewDescription(
+        "acme",
+        "widgets",
+        stubLore({ description: "Widgets for everyone." })
+      )
+    ).toBe(
+      "Widgets for everyone. How acme/widgets is structured: 2 probable entry points, 2 major areas, and a Start Here reading path, with source links and certainty labels."
+    );
+  });
+
+  it("excludes the root area, singularizes, and omits an empty Start Here", () => {
+    expect(
+      loreOverviewDescription(
+        "acme",
+        "widgets",
+        stubLore({ entryPoints: 1, areaNames: ["src", "."], startHere: 0 })
+      )
+    ).toBe(
+      "How acme/widgets is structured: 1 probable entry point and 1 major area, with source links and certainty labels."
+    );
+  });
+
+  it("says so for a partial run, and 'no' rather than 0", () => {
+    expect(
+      loreOverviewDescription(
+        "acme",
+        "widgets",
+        stubLore({ status: "partial", entryPoints: 0, startHere: 0 })
+      )
+    ).toBe(
+      "Partial analysis of how acme/widgets is structured: no probable entry points and 2 major areas, with source links and certainty labels."
+    );
+  });
+
+  it("truncates a long GitHub description", () => {
+    const description = loreOverviewDescription(
+      "acme",
+      "widgets",
+      stubLore({ description: "word ".repeat(40) })
+    );
+    expect(description).toMatch(/^(word ){17}word… How acme\/widgets/);
+  });
+
+  it("is generic without an analysis", () => {
+    expect(loreOverviewDescription("acme", "widgets", null)).toBe(
+      "Orientation for acme/widgets: a Start Here reading path, major structural areas, and entry points, each backed by evidence from the analyzed source."
     );
   });
 });

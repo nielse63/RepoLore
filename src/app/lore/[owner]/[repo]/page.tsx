@@ -1,4 +1,6 @@
+import { NotAnalyzedPanel } from "@/components/NotAnalyzedPanel";
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
+import { SubmissionOutcomeEvent } from "@/components/SubmissionOutcomeEvent";
 import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
@@ -16,12 +18,12 @@ import { relativeTime } from "@/lib/relative-time";
 import { readmeBadgeMarkdown } from "@/lib/readme-badge";
 import {
   buildLoreMetadata,
-  loreRouteTitle,
+  loreOverviewDescription,
+  loreOverviewTitle,
   siteMetadataBase,
 } from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
 export async function generateMetadata({
   params,
@@ -30,9 +32,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
+  // A failed run can still carry a result, but the page renders the failure
+  // (`FailedRunPanel`), so its metadata mustn't describe that content.
+  const lore = run && run.status !== "failed" ? run.result : null;
   return buildLoreMetadata({
-    title: loreRouteTitle(owner, repo),
-    description: `Orientation for ${owner}/${repo}: a Start Here reading path, major structural areas, and entry points, each backed by evidence from the analyzed source.`,
+    title: loreOverviewTitle(owner, repo, lore),
+    description: loreOverviewDescription(owner, repo, lore),
     path: `/lore/${owner}/${repo}`,
     indexable: isIndexableLore(indexabilityFactsFromRun(run)),
   });
@@ -43,19 +48,34 @@ export async function generateMetadata({
  * criterion 10). Not a static/cached page — always reads the current
  * latest run, so a re-analysis (session 11) is visible on next load without
  * a redeploy. A `'failed'` run is rendered honestly, with its error, rather
- * than presented as "not found."
+ * than presented as "not found." A repository with no run at all gets an
+ * explicit "Analyze" button (`NotAnalyzedPanel`, `noindex` like any
+ * non-indexable Lore) instead of a 404, so a swapped `github.com` URL
+ * (`src/app/[...path]/page.tsx`) never dead-ends.
  */
 export default async function LorePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ owner: string; repo: string }>;
+  searchParams: Promise<{ submitted?: string | string[] }>;
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) notFound();
+  if (!run) return <NotAnalyzedPanel owner={owner} repo={repo} />;
+
+  // Set by the home page's Server Action redirect, whose run is this latest one.
+  const outcomeEvent = (await searchParams).submitted ? (
+    <SubmissionOutcomeEvent status={run.status} />
+  ) : null;
 
   if (run.status === "failed" || !run.result) {
-    return <FailedRunPanel owner={owner} repo={repo} run={run} />;
+    return (
+      <>
+        {outcomeEvent}
+        <FailedRunPanel owner={owner} repo={repo} run={run} />
+      </>
+    );
   }
 
   const lore = run.result;
@@ -71,38 +91,41 @@ export default async function LorePage({
     githubTreeUrl(owner, repo, lore.snapshot.commitSha, location);
 
   return (
-    <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-              statusLabel={getAnalysisStatus(lore)}
-              statusTone={
-                lore.snapshot.status === "completed" ? "success" : "alert"
-              }
-              updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
-              branch={lore.snapshot.repository.defaultBranch}
-              language={languages}
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        <AnalysisRail
-          snapshot={lore.snapshot}
-          projects={lore.projects}
-          gaps={lore.gaps}
-          badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
-        />
-      }
-    >
-      <OverviewContent lore={lore} sourceUrl={sourceUrl} areaUrl={areaUrl} />
-    </LorePageFrame>
+    <>
+      {outcomeEvent}
+      <LorePageFrame
+        topBar={
+          <TopBar
+            left={
+              <RepoIdentity
+                owner={owner}
+                repo={repo}
+                visibility={
+                  lore.snapshot.repository.isPrivate ? "Private" : "Public"
+                }
+                statusLabel={getAnalysisStatus(lore)}
+                statusTone={
+                  lore.snapshot.status === "completed" ? "success" : "alert"
+                }
+                updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
+                branch={lore.snapshot.repository.defaultBranch}
+                language={languages}
+              />
+            }
+            actions={<ReanalyzeButton owner={owner} repo={repo} />}
+          />
+        }
+        rightRail={
+          <AnalysisRail
+            snapshot={lore.snapshot}
+            projects={lore.projects}
+            gaps={lore.gaps}
+            badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
+          />
+        }
+      >
+        <OverviewContent lore={lore} sourceUrl={sourceUrl} areaUrl={areaUrl} />
+      </LorePageFrame>
+    </>
   );
 }

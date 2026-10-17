@@ -11,28 +11,31 @@ import type { MetadataRoute } from "next";
 export const dynamic = "force-dynamic";
 
 /**
- * The home page plus every repository Overview that `isIndexableLore`
+ * The home page, `/explore`, `/manifesto`, and every repository Overview that `isIndexableLore`
  * accepts — the same rule its page's `robots`
  * metadata uses, so the sitemap never lists a page that says `noindex`.
- * A database error degrades to just the home page rather than a 500,
- * since crawlers would otherwise back off the whole sitemap.
+ * A database error degrades to just the static pages (`/explore` renders an
+ * empty state then) rather than a 500, since crawlers would
+ * otherwise back off the whole sitemap.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = siteMetadataBase();
-  const home: MetadataRoute.Sitemap[number] = {
-    url: new URL("/", base).toString(),
-  };
+  const staticPages: MetadataRoute.Sitemap = [
+    "/",
+    "/explore",
+    "/manifesto",
+  ].map((path) => ({ url: new URL(path, base).toString() }));
 
   let rows;
   try {
     rows = await listLatestRunIndexabilityFacts();
   } catch (error) {
     console.error("sitemap: failed to list repositories:", error);
-    return [home];
+    return staticPages;
   }
 
   return [
-    home,
+    ...staticPages,
     ...rows.filter(isIndexableLore).map((row) => ({
       url: new URL(`/lore/${row.owner}/${row.repo}`, base).toString(),
       lastModified: row.createdAt,
