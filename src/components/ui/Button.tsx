@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 const VARIANTS = {
@@ -22,21 +21,6 @@ export function Button({
 }) {
   return (
     <button
-      className={cn(baseClasses, VARIANTS[variant], className)}
-      {...props}
-    />
-  );
-}
-
-export function LinkButton({
-  variant = "secondary",
-  className,
-  href,
-  ...props
-}: React.ComponentProps<typeof Link> & { variant?: ButtonVariant }) {
-  return (
-    <Link
-      href={href}
       className={cn(baseClasses, VARIANTS[variant], className)}
       {...props}
     />
