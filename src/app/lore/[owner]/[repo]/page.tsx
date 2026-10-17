@@ -18,7 +18,8 @@ import { relativeTime } from "@/lib/relative-time";
 import { readmeBadgeMarkdown } from "@/lib/readme-badge";
 import {
   buildLoreMetadata,
-  loreRouteTitle,
+  loreOverviewDescription,
+  loreOverviewTitle,
   siteMetadataBase,
 } from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
@@ -31,9 +32,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
+  // A failed run can still carry a result, but the page renders the failure
+  // (`FailedRunPanel`), so its metadata mustn't describe that content.
+  const lore = run && run.status !== "failed" ? run.result : null;
   return buildLoreMetadata({
-    title: loreRouteTitle(owner, repo),
-    description: `Orientation for ${owner}/${repo}: a Start Here reading path, major structural areas, and entry points, each backed by evidence from the analyzed source.`,
+    title: loreOverviewTitle(owner, repo, lore),
+    description: loreOverviewDescription(owner, repo, lore),
     path: `/lore/${owner}/${repo}`,
     indexable: isIndexableLore(indexabilityFactsFromRun(run)),
   });

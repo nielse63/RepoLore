@@ -1,3 +1,4 @@
+import type { Lore } from "@/lore/model";
 import type { Metadata } from "next";
 
 const DEFAULT_OG_IMAGE = "/web-app-manifest-512x512.png";
@@ -54,6 +55,80 @@ export function loreRouteTitle(
 ): string {
   const repoLabel = `${owner}/${repo}`;
   return view ? `${repoLabel} ${view} — Repo Lore` : `${repoLabel} — Repo Lore`;
+}
+
+/** Major Areas as `OverviewContent` renders them: the root `"."` area adds no orientation value. */
+function majorAreaCount(lore: Lore): number {
+  return lore.structuralAreas.filter((area) => area.name !== ".").length;
+}
+
+/**
+ * The Overview's `<title>` when its analysis has both entry points and
+ * Major Areas to show, worded the way people search for a codebase
+ * ("next.js architecture", "next.js entry points") rather than just the
+ * repository name. Otherwise the plain `loreRouteTitle`, so a page without
+ * those sections never promises them. Callers pass `null` for a failed run
+ * (even one with a persisted result), since its page renders the failure.
+ */
+export function loreOverviewTitle(
+  owner: string,
+  repo: string,
+  lore: Lore | null
+): string {
+  return lore && lore.entryPoints.length > 0 && majorAreaCount(lore) > 0
+    ? `${owner}/${repo}: codebase architecture & entry points — Repo Lore`
+    : loreRouteTitle(owner, repo);
+}
+
+const DESCRIPTION_SUMMARY_MAX = 90;
+
+function countPhrase(count: number, noun: string): string {
+  if (count === 0) return `no ${noun}s`;
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** The repository's GitHub description as a leading sentence, truncated, or "" if it has none. */
+function leadSentence(description: string | undefined): string {
+  const summary = description?.trim().replace(/[.!?]+$/, "");
+  if (!summary) return "";
+  if (summary.length <= DESCRIPTION_SUMMARY_MAX) return `${summary}. `;
+  return `${summary.slice(0, DESCRIPTION_SUMMARY_MAX - 1).trimEnd()}… `;
+}
+
+/**
+ * The Overview's meta description: the repository's own GitHub description
+ * (truncated), then what this Lore actually found — the same entry point,
+ * Major Area, and Start Here counts the page renders, so the snippet never
+ * claims more than the page shows. Entry points are "probable" (the
+ * mission's wording; each carries its own certainty label), and a partial
+ * run says so, as the page's `PartialUnderstandingCard` does. Generic when
+ * there's no analysis (callers pass `null` for a failed run).
+ */
+export function loreOverviewDescription(
+  owner: string,
+  repo: string,
+  lore: Lore | null
+): string {
+  const label = `${owner}/${repo}`;
+  if (!lore) {
+    return `Orientation for ${label}: a Start Here reading path, major structural areas, and entry points, each backed by evidence from the analyzed source.`;
+  }
+
+  const entryPoints = countPhrase(
+    lore.entryPoints.length,
+    "probable entry point"
+  );
+  const majorAreas = countPhrase(majorAreaCount(lore), "major area");
+  const found =
+    lore.startHere.length > 0
+      ? `${entryPoints}, ${majorAreas}, and a Start Here reading path`
+      : `${entryPoints} and ${majorAreas}`;
+  const intro =
+    lore.snapshot.status === "completed"
+      ? `How ${label} is structured`
+      : `Partial analysis of how ${label} is structured`;
+
+  return `${leadSentence(lore.snapshot.repository.description)}${intro}: ${found}, with source links and certainty labels.`;
 }
 
 /**

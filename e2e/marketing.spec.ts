@@ -45,6 +45,15 @@ test("an indexable Overview is index, follow; its subviews stay noindex", async 
     "content",
     "index, follow"
   );
+  await expect(page).toHaveTitle(
+    `${owner}/${repo}: codebase architecture & entry points — Repo Lore`
+  );
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    "content",
+    new RegExp(
+      `How ${owner}/${repo} is structured: \\d+ probable entry points?`
+    )
+  );
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
     new RegExp(`${repoUrl}/opengraph-image`)
