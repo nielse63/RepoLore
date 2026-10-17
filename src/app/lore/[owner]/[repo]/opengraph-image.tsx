@@ -3,6 +3,7 @@ import {
   indexabilityFactsFromRun,
   isIndexableLore,
 } from "@/lib/lore-indexability";
+import { majorAreasOf } from "@/lore/major-areas";
 import { ImageResponse } from "next/og";
 
 export const alt = "Repo Lore orientation summary for this repository";
@@ -26,7 +27,8 @@ function plural(count: number, noun: string): string {
 
 /**
  * Social preview card for a repository's Overview:
- * the repository name plus its entry point and structural area counts.
+ * the repository name plus its entry point and Major Area (`majorAreasOf`)
+ * counts — the same numbers the Overview lists.
  * Counts are shown only when `isIndexableLore` holds — the same bar the
  * page needs to be listed in search — so a failed, partial, or empty run
  * never advertises numbers it can't back. Otherwise, or if the database
@@ -44,7 +46,7 @@ export default async function Image({
   try {
     const run = await getLatestAnalysisRunForRepo(owner, repo);
     if (run?.result && isIndexableLore(indexabilityFactsFromRun(run))) {
-      summary = `${plural(run.result.entryPoints.length, "entry point")} · ${plural(run.result.structuralAreas.length, "area")}`;
+      summary = `${plural(run.result.entryPoints.length, "entry point")} · ${plural(majorAreasOf(run.result.structuralAreas).length, "area")}`;
     }
   } catch (error) {
     console.error(`opengraph-image(${owner}/${repo}) failed:`, error);

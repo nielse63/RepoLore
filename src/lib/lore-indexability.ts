@@ -1,4 +1,5 @@
 import type { AnalysisRunRow } from "@/db/analysis-runs";
+import { majorAreasOf } from "@/lore/major-areas";
 
 /**
  * The minimal facts the indexing rule needs — small enough for the sitemap
@@ -9,7 +10,8 @@ import type { AnalysisRunRow } from "@/db/analysis-runs";
 export interface LoreIndexabilityFacts {
   runStatus: AnalysisRunRow["status"];
   entryPointCount: number;
-  structuralAreaCount: number;
+  /** Major Areas (`majorAreasOf`), as the Overview lists them. */
+  majorAreaCount: number;
   isPrivate: boolean;
 }
 
@@ -20,7 +22,7 @@ export function indexabilityFactsFromRun(
   return {
     runStatus: run.status,
     entryPointCount: run.result.entryPoints.length,
-    structuralAreaCount: run.result.structuralAreas.length,
+    majorAreaCount: majorAreasOf(run.result.structuralAreas).length,
     isPrivate: run.result.snapshot.repository.isPrivate,
   };
 }
@@ -29,7 +31,8 @@ export function indexabilityFactsFromRun(
  * Whether a repository's Overview is worth listing in search
  * (ADR-0017): its latest run — the one the page actually
  * renders — fully completed and found at least one entry point and one
- * structural area. A `'partial'` run is excluded because its gaps are
+ * Major Area (the root `"."` area alone leaves the Overview's Major Areas
+ * section empty, so it doesn't count). A `'partial'` run is excluded because its gaps are
  * material to what it shows, and a `'failed'` or empty run would be a thin
  * page. Private repositories are rejected at submission already; checked
  * here too so one can never be advertised by the sitemap.
@@ -40,6 +43,6 @@ export function isIndexableLore(facts: LoreIndexabilityFacts | null): boolean {
     facts.runStatus === "completed" &&
     !facts.isPrivate &&
     facts.entryPointCount > 0 &&
-    facts.structuralAreaCount > 0
+    facts.majorAreaCount > 0
   );
 }

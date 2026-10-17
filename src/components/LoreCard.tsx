@@ -7,8 +7,7 @@ import Link from "next/link";
  * indexable (`isIndexableLore`).
  */
 export function LoreCard({ lore }: { lore: LatestRunIndexabilityRow }) {
-  const { owner, repo, description, entryPointCount, structuralAreaCount } =
-    lore;
+  const { owner, repo, description, entryPointCount, majorAreaCount } = lore;
   return (
     <li>
       <Link
@@ -25,7 +24,7 @@ export function LoreCard({ lore }: { lore: LatestRunIndexabilityRow }) {
         )}
         <span className="mt-auto pt-3 text-xs text-muted">
           {entryPointCount} entry {entryPointCount === 1 ? "point" : "points"} ·{" "}
-          {structuralAreaCount} {structuralAreaCount === 1 ? "area" : "areas"}
+          {majorAreaCount} {majorAreaCount === 1 ? "major area" : "major areas"}
         </span>
       </Link>
     </li>

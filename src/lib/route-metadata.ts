@@ -1,3 +1,4 @@
+import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore } from "@/lore/model";
 import type { Metadata } from "next";
 
@@ -57,11 +58,6 @@ export function loreRouteTitle(
   return view ? `${repoLabel} ${view} — Repo Lore` : `${repoLabel} — Repo Lore`;
 }
 
-/** Major Areas as `OverviewContent` renders them: the root `"."` area adds no orientation value. */
-function majorAreaCount(lore: Lore): number {
-  return lore.structuralAreas.filter((area) => area.name !== ".").length;
-}
-
 /**
  * The Overview's `<title>` when its analysis has both entry points and
  * Major Areas to show, worded the way people search for a codebase
@@ -75,7 +71,9 @@ export function loreOverviewTitle(
   repo: string,
   lore: Lore | null
 ): string {
-  return lore && lore.entryPoints.length > 0 && majorAreaCount(lore) > 0
+  return lore &&
+    lore.entryPoints.length > 0 &&
+    majorAreasOf(lore.structuralAreas).length > 0
     ? `${owner}/${repo}: codebase architecture & entry points — Repo Lore`
     : loreRouteTitle(owner, repo);
 }
@@ -118,7 +116,10 @@ export function loreOverviewDescription(
     lore.entryPoints.length,
     "probable entry point"
   );
-  const majorAreas = countPhrase(majorAreaCount(lore), "major area");
+  const majorAreas = countPhrase(
+    majorAreasOf(lore.structuralAreas).length,
+    "major area"
+  );
   const found =
     lore.startHere.length > 0
       ? `${entryPoints}, ${majorAreas}, and a Start Here reading path`

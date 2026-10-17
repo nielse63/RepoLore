@@ -162,3 +162,15 @@ test("the home page shows example Lores and links to /explore", async ({
   await examples.getByRole("link", { name: "Browse all Lores" }).click();
   await expect(page).toHaveURL(/\/explore$/);
 });
+
+test("/explore's Major Area count matches the areas the Overview lists", async ({
+  page,
+}) => {
+  await page.goto("/explore");
+  const card = page.getByRole("link", { name: new RegExp(`${owner}/${repo}`) });
+  const match = (await card.textContent())?.match(/(\d+) major areas?/);
+  expect(match).not.toBeNull();
+
+  await page.goto(repoUrl);
+  await expect(page.locator("#major-areas h3")).toHaveCount(Number(match![1]));
+});

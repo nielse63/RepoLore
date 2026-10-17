@@ -12,7 +12,7 @@ function row(
     description: null,
     runStatus: "completed",
     entryPointCount: 3,
-    structuralAreaCount: 4,
+    majorAreaCount: 4,
     isPrivate: false,
     createdAt: new Date("2026-10-01T00:00:00Z"),
     ...overrides,
