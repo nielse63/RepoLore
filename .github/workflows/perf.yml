@@ -1,0 +1,57 @@
+name: Performance
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.ts"
+      - "postcss.config.mjs"
+      - "scripts/perf-vitals.ts"
+      - ".github/workflows/perf.yml"
+
+concurrency:
+  group: perf-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+      - name: Start production server
+        run: |
+          npm run start > next-start.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf -o /dev/null http://localhost:3000/api/health && exit 0
+            sleep 1
+          done
+          cat next-start.log
+          exit 1
+      # Compares against https://repolore.app; uses the runner's preinstalled Chrome.
+      - run: npm run test:perf
+      - name: Add report to job summary
+        if: always()
+        run: cat perf-report/report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf-report
+          path: |
+            perf-report/
+            next-start.log
+          if-no-files-found: ignore
