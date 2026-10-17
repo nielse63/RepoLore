@@ -1,0 +1,62 @@
+# Repositories `npm run seed` pre-analyzes, one
+# owner/repo per line; blank lines and `#` comments are ignored. Very large
+# repositories may hit extraction limits or fail — that's expected; a failed
+# run simply stays noindex and out of the sitemap.
+
+# TypeScript / JavaScript
+vercel/next.js
+vitejs/vite
+shadcn-ui/ui
+facebook/react
+vuejs/core
+sveltejs/svelte
+withastro/astro
+nuxt/nuxt
+remix-run/react-router
+expressjs/express
+fastify/fastify
+nestjs/nest
+honojs/hono
+trpc/trpc
+prisma/prisma
+drizzle-team/drizzle-orm
+colinhacks/zod
+TanStack/query
+TanStack/router
+pmndrs/zustand
+reduxjs/redux-toolkit
+react-hook-form/react-hook-form
+radix-ui/primitives
+tailwindlabs/tailwindcss
+axios/axios
+date-fns/date-fns
+socketio/socket.io
+vitest-dev/vitest
+prettier/prettier
+excalidraw/excalidraw
+calcom/cal.com
+payloadcms/payload
+n8n-io/n8n
+supabase/supabase
+
+# Python
+fastapi/fastapi
+fastapi/sqlmodel
+fastapi/typer
+pallets/flask
+pallets/click
+django/django
+encode/django-rest-framework
+encode/starlette
+encode/httpx
+psf/requests
+pydantic/pydantic
+sqlalchemy/sqlalchemy
+celery/celery
+Textualize/rich
+Textualize/textual
+pytest-dev/pytest
+python-poetry/poetry
+scrapy/scrapy
+streamlit/streamlit
+langchain-ai/langchain

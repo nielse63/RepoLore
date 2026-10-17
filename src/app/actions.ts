@@ -116,7 +116,7 @@ export type RefreshHistoryState =
 
 /**
  * Server Action backing the History page's "Refresh history" button
- * (docs/architecture/decisions/0010-history-page-real-data-scope.md).
+ * (ADR-0010).
  * Unlike `reanalyzeRepository`, this never touches the analyzer — it only
  * re-fetches and re-classifies commit diffs against whatever `Lore` was
  * last persisted.

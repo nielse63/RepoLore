@@ -159,3 +159,6 @@ vite.config.ts.timestamp-*
 # repomap
 .repomap
 .tmp
+
+# git worktrees
+.worktrees

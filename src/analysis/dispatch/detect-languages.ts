@@ -19,8 +19,7 @@ const ANALYZER_LANGUAGE_NAMES: Record<SupportedAnalyzer, readonly string[]> = {
  * classified bytes to have its analyzer run — comfortably above incidental
  * scaffolding (a lone build script) and comfortably below a genuine
  * secondary language doing real work. Disclosed, tunable default, not a
- * load-bearing design commitment — see
- * `docs/architecture/decisions/0007-language-detection-dispatch.md`.
+ * load-bearing design commitment (ADR-0007).
  */
 export const MIN_LANGUAGE_SHARE_FOR_ANALYSIS = 0.1;
 

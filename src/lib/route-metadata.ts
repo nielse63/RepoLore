@@ -59,19 +59,27 @@ export function loreRouteTitle(
 /**
  * Per-route metadata for a repository Lore view: unique title/description,
  * a self-referencing canonical, and Open Graph/Twitter cards (RL-004/RL-005).
- * Repository views show data from a specific analysis run rather than
- * evergreen content, and this app has no established indexing intent yet, so
- * they're marked `noindex, follow` explicitly rather than left ambiguous.
+ * `noindex, follow` unless the caller passes `indexable` — only the
+ * Overview route does, and only when `isIndexableLore` holds for its latest
+ * run (ADR-0017). Subviews stay `noindex` so each repository
+ * has one strong page in search rather than several thin ones.
+ *
+ * `images` is omitted for an indexable Overview so its file-based
+ * `opengraph-image.tsx` (the per-repository card) is used instead of the
+ * generic default.
  */
 export function buildLoreMetadata({
   title,
   description,
   path,
+  indexable = false,
 }: {
   title: string;
   description: string;
   path: string;
+  indexable?: boolean;
 }): Metadata {
+  const images = indexable ? undefined : [DEFAULT_OG_IMAGE];
   return {
     title,
     description,
@@ -82,15 +90,15 @@ export function buildLoreMetadata({
       url: path,
       siteName: "Repo Lore",
       type: "website",
-      images: [DEFAULT_OG_IMAGE],
+      ...(images && { images }),
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [DEFAULT_OG_IMAGE],
+      ...(images && { images }),
     },
-    robots: { index: false, follow: true },
+    robots: { index: indexable, follow: true },
   };
 }
 

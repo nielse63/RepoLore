@@ -2,6 +2,8 @@ import { scheduleBackgroundReanalysisIfStale } from "@/analysis/background-reana
 import { MobileNavProvider } from "@/components/lore-shell/MobileNavContext";
 import { Sidebar } from "@/components/lore-shell/Sidebar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
+import { isCrawlerUserAgent } from "@/lib/is-crawler-user-agent";
+import { headers } from "next/headers";
 
 export default async function LoreLayout({
   children,
@@ -19,7 +21,14 @@ export default async function LoreLayout({
   // Pull-triggered, staleness-gated background re-analysis (ADR-0013) — a
   // no-op unless this run is over a day old. Covers every page under this
   // layout, not just Overview, since it's already fetching `run` here.
-  if (run?.status !== "failed" && run?.result) {
+  // Skipped for crawlers: now that Overview pages can be indexed, a crawler
+  // fetch would otherwise be a visitor-less refresh (ADR-0017, docs/product/non-goals.md).
+  const userAgent = (await headers()).get("user-agent");
+  if (
+    run?.status !== "failed" &&
+    run?.result &&
+    !isCrawlerUserAgent(userAgent)
+  ) {
     scheduleBackgroundReanalysisIfStale(
       owner,
       repo,

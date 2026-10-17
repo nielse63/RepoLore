@@ -2,7 +2,7 @@ services:
   - type: web
     name: repolore
     runtime: node
-    plan: free
+    plan: pro
     buildCommand: npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
@@ -12,4 +12,4 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SITE_URL
-        sync: false
+        value: https://repolore.app

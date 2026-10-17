@@ -12,7 +12,8 @@ Evaluate proposals against these constraints:
 - The initial customer is a startup or small-to-medium engineering organization.
 - The initial supported ecosystem is TypeScript, JavaScript, and Python, sharing one language-neutral Lore model. React is framework-aware enrichment within the JavaScript/TypeScript analyzer, not a separate ecosystem or product.
 - The core promise is orientation confidence: within 15 minutes of opening a Lore, an experienced engineer should be able to identify probable entry points, major structural areas, important direct relationships, and a justified place to begin investigating a change, without relying on tribal knowledge.
-- The product creates a readable repository lore at a stable URL. Scheduled or automatic refresh stays limited to what's already shipped (manual re-analysis, plus the narrow pull-triggered staleness exception in ADR-0013) — no headless cron/webhook/polling refresh.
+- The product creates a readable repository lore at a stable URL. Scheduled or automatic refresh stays limited to what's already shipped (manual re-analysis, plus the narrow pull-triggered staleness exception in ADR-0013, triggered only by a person's page view, never a crawler's — ADR-0017) — no headless cron/webhook/polling refresh.
+- A repository's Overview is search-indexable when its latest run is completed, public, and has at least one entry point and structural area (ADR-0017, already approved). Subviews stay `noindex`. Treat that as settled; proposals to widen it (indexing subviews or partial/failed runs) or to add SEO content beyond the Lore itself still need review.
 - No health scores or generalized health findings.
 - Prefer managed services, standard libraries, deterministic analysis, and reversible decisions.
 - Reject speculative scalability, enterprise requirements, premature customization, and features that create ongoing support work.

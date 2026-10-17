@@ -1,7 +1,6 @@
 /**
  * Manual sanity check that the Python analyzer + derived views run against a
- * real, fetched GitHub repository instead of a local fixture
- * (implementation-plan.md session 13's real-repo validation pass).
+ * real, fetched GitHub repository instead of a local fixture.
  *
  * Usage: npm run analyze-python-repo -- <github-repository-url>
  * Requires GITHUB_TOKEN (see .env.example); npm run analyze-python-repo

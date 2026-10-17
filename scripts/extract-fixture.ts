@@ -1,7 +1,6 @@
 /**
  * Manual sanity check for JS/TS project extraction against a fixture
- * directory (no automated test suite yet — see implementation-plan.md
- * session 15).
+ * directory.
  *
  * Usage: npm run extract -- fixtures/ts-react-app
  */
@@ -23,9 +22,13 @@ for (const ep of result.entryPoints) {
   console.log(`  [${ep.certainty}] ${ep.kind} -> ${ep.location.filePath}`);
 }
 
-console.log(`\nInternal dependency relationships (${result.relationships.length}):`);
+console.log(
+  `\nInternal dependency relationships (${result.relationships.length}):`
+);
 for (const rel of result.relationships) {
-  console.log(`  [${rel.certainty}] ${rel.fromId} --${rel.kind}--> ${rel.toId}`);
+  console.log(
+    `  [${rel.certainty}] ${rel.fromId} --${rel.kind}--> ${rel.toId}`
+  );
 }
 
 console.log(`\nPublic contracts (${result.publicContracts.length}):`);
@@ -36,7 +39,7 @@ for (const contract of result.publicContracts) {
 console.log(`\nTest relationships (${result.testRelationships.length}):`);
 for (const testRel of result.testRelationships) {
   console.log(
-    `  [${testRel.certainty}] ${testRel.testLocation.filePath} -> ${testRel.implementationLocation.filePath}`,
+    `  [${testRel.certainty}] ${testRel.testLocation.filePath} -> ${testRel.implementationLocation.filePath}`
   );
 }
 

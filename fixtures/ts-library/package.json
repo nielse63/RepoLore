@@ -2,7 +2,7 @@
   "name": "ts-library-fixture",
   "private": true,
   "version": "0.0.0",
-  "description": "Fixture: a small plain-TypeScript (non-React) library, for JS/TS analyzer development (docs/architecture/implementation-plan.md, session 3).",
+  "description": "Fixture: a small plain-TypeScript (non-React) library, for JS/TS analyzer development.",
   "main": "src/index.ts",
   "devDependencies": {
     "typescript": "^5"

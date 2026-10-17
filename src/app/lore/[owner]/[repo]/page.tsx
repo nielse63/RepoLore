@@ -8,8 +8,17 @@ import { TopBar } from "@/components/lore-shell/TopBar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { getAnalysisStatus } from "@/helpers";
+import {
+  indexabilityFactsFromRun,
+  isIndexableLore,
+} from "@/lib/lore-indexability";
 import { relativeTime } from "@/lib/relative-time";
-import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
+import { readmeBadgeMarkdown } from "@/lib/readme-badge";
+import {
+  buildLoreMetadata,
+  loreRouteTitle,
+  siteMetadataBase,
+} from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -20,10 +29,12 @@ export async function generateMetadata({
   params: Promise<{ owner: string; repo: string }>;
 }): Promise<Metadata> {
   const { owner, repo } = await params;
+  const run = await getLatestAnalysisRunForRepo(owner, repo);
   return buildLoreMetadata({
     title: loreRouteTitle(owner, repo),
     description: `Orientation for ${owner}/${repo}: a Start Here reading path, major structural areas, and entry points, each backed by evidence from the analyzed source.`,
     path: `/lore/${owner}/${repo}`,
+    indexable: isIndexableLore(indexabilityFactsFromRun(run)),
   });
 }
 
@@ -87,6 +98,7 @@ export default async function LorePage({
           snapshot={lore.snapshot}
           projects={lore.projects}
           gaps={lore.gaps}
+          badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
         />
       }
     >

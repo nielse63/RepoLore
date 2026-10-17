@@ -24,6 +24,7 @@
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
+    "seed": "tsx --env-file-if-exists=.env.local scripts/seed-repos.ts",
     "prepare": "husky",
     "verify": ".bin/verify",
     "coverage:open": "open coverage/lcov-report/index.html ; open coverage/e2e/index.html"

@@ -1,6 +1,6 @@
 /**
  * Deterministic (non-AI) classification of commit diffs into `HistoryEntry`
- * facts, per docs/architecture/decisions/0010-history-page-real-data-scope.md.
+ * facts, per ADR-0010.
  * Everything here is regex/path-convention matching over commit patch text —
  * not real parsing (the ts-morph/tree-sitter analyzers own that) — so every
  * fact this module produces carries `certainty: "inferred"` or `"unknown"`,

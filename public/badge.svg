@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="118" height="20" role="img" aria-label="Repo Lore: explore">
+  <title>Repo Lore: explore</title>
+  <clipPath id="r"><rect width="118" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="66" height="20" fill="#20272a"/>
+    <rect x="66" width="52" height="20" fill="#08594f"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="33" y="14" textLength="56">Repo Lore</text>
+    <text x="92" y="14" textLength="42">explore</text>
+  </g>
+</svg>

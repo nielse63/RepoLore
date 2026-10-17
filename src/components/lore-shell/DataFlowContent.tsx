@@ -102,7 +102,7 @@ export interface DataFlowContentProps {
 /**
  * Real Data Flow view (ADR-0012) — for a chosen function, shows what
  * statically calls it and what it calls, with argument/return types where
- * explicitly annotated in source. Laid out to mirror `docs/designs/data-flow.png`'s
+ * explicitly annotated in source. Laid out as a
  * numbered-step list / evidence right-rail pattern, but every step, badge,
  * and evidence entry here is read from `lore.callableSignatures`/`callEdges`
  * — there is no journey narrative or system-boundary content, since the

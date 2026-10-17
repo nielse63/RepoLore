@@ -1,7 +1,6 @@
 /**
  * Manual sanity check for Python project extraction against a fixture
- * directory (no automated test suite yet — see implementation-plan.md
- * session 15).
+ * directory.
  *
  * Usage: npm run extract-python -- fixtures/python-app
  */
