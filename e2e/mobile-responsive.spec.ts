@@ -107,7 +107,7 @@ test.describe("RightRailShell mobile bottom sheet", () => {
       page.getByRole("heading", { name: "System map" })
     ).toBeVisible();
     await expect(
-      page.getByRole("img", {
+      page.getByRole("figure", {
         name: "Diagram of how major areas depend on each other",
       })
     ).toBeVisible();

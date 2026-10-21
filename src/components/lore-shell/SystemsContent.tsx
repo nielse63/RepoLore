@@ -3,7 +3,7 @@
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
-import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
+import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";

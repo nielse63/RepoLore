@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Builds the current working tree for production and serves it on
+# $PORT (default 3100), in the foreground. Port 3100 rather than 3000 so a
+# developer's `next dev` keeps running alongside (Next writes dev output to
+# `.next/dev`, so the two builds don't collide). Fails before building if
+# the port is already taken, so tests never hit some other server.
+#
+# Used as Playwright's `webServer` command and by `.bin/with-prod-server`.
+set -euo pipefail
+
+root=$(realpath "$(dirname "$(dirname "$0")")")
+cd "$root"
+
+port="${PORT:-3100}"
+
+if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+  echo "serve-prod: port $port is already in use; stop that process first." >&2
+  exit 1
+fi
+
+npm run build
+exec node_modules/.bin/next start --port "$port"

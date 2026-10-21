@@ -5,6 +5,7 @@ import {
   type LatestRunIndexabilityRow,
 } from "@/db/analysis-runs";
 import { indexableLores } from "@/lib/featured-lores";
+import { DEFAULT_OG_IMAGE } from "@/lib/route-metadata";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -25,11 +26,13 @@ export const metadata: Metadata = {
     url: "/explore",
     siteName: "Repo Lore",
     type: "website",
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Usage: .bin/with-prod-server <command> [args...]
+#
+# Builds and starts a production server (`.bin/serve-prod`, on $PORT,
+# default 3100), waits until /api/health answers, runs <command>, and shuts
+# the server down on any exit — success, failure, or Ctrl-C. Exits with
+# <command>'s status (or the server's, if it dies before becoming healthy).
+set -euo pipefail
+
+root=$(realpath "$(dirname "$(dirname "$0")")")
+cd "$root"
+
+port="${PORT:-3100}"
+export PORT="$port"
+
+# Checked here too (not just in serve-prod) so the health poll below can
+# never mistake some other server on this port for ours.
+if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+  echo "with-prod-server: port $port is already in use; stop that process first." >&2
+  exit 1
+fi
+
+# Job control puts the server in its own process group, so cleanup can
+# signal `npm run build`/`next start` and all their children at once.
+set -m
+.bin/serve-prod &
+server_pid=$!
+set +m
+
+cleanup() {
+  trap - EXIT INT TERM
+  if kill -0 "$server_pid" 2>/dev/null; then
+    kill -TERM -- "-$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+until curl -sf -o /dev/null "http://localhost:$port/api/health"; do
+  if ! kill -0 "$server_pid" 2>/dev/null; then
+    status=0
+    wait "$server_pid" || status=$?
+    echo "with-prod-server: server exited ($status) before becoming healthy." >&2
+    exit "$((status == 0 ? 1 : status))"
+  fi
+  sleep 1
+done
+
+"$@"
