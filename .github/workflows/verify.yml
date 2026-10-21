@@ -5,6 +5,17 @@ on:
     branches:
       - main
       - dev
+    paths:
+      - "src/**"
+      - "public/**"
+      - "fixtures/**"
+      - "e2e/**"
+      - "scripts/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.ts"
+      - "postcss.config.mjs"
 
 jobs:
   verify:
