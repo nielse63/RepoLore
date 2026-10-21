@@ -6,10 +6,8 @@ import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StaleAnalysisCard } from "@/components/lore-shell/StaleAnalysisCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
-import {
-  CertaintyBadge,
-  VARIANT_BY_CERTAINTY,
-} from "@/components/ui/CertaintyBadge";
+import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
+import { VARIANT_BY_CERTAINTY } from "@/components/ui/certainty-variant";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
