@@ -214,10 +214,9 @@ export function AreaDependencyDiagram({
 
   return (
     <div id="area-dependency-diagram">
-      <div
+      <figure
         className="w-full overflow-hidden rounded-lg border border-border"
         style={{ height: Math.min(Math.max(layout.height + 80, 320), 600) }}
-        role="figure"
         aria-label="Diagram of how major areas depend on each other"
       >
         <ReactFlow
@@ -240,7 +239,7 @@ export function AreaDependencyDiagram({
               offered at all. */}
           <Controls showInteractive={false} />
         </ReactFlow>
-      </div>
+      </figure>
       {legendEntries.length > 1 && (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           {legendEntries.map((entry) => (
