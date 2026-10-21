@@ -217,7 +217,7 @@ export function AreaDependencyDiagram({
       <div
         className="w-full overflow-hidden rounded-lg border border-border"
         style={{ height: Math.min(Math.max(layout.height + 80, 320), 600) }}
-        role="img"
+        role="figure"
         aria-label="Diagram of how major areas depend on each other"
       >
         <ReactFlow

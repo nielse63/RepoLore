@@ -58,14 +58,18 @@ export default async function LorePage({
   searchParams,
 }: {
   params: Promise<{ owner: string; repo: string }>;
-  searchParams: Promise<{ submitted?: string | string[] }>;
+  searchParams: Promise<{
+    submitted?: string | string[];
+    page?: string | string[];
+  }>;
 }) {
   const { owner, repo } = await params;
+  const { submitted, page } = await searchParams;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
   if (!run) return <NotAnalyzedPanel owner={owner} repo={repo} />;
 
   // Set by the home page's Server Action redirect, whose run is this latest one.
-  const outcomeEvent = (await searchParams).submitted ? (
+  const outcomeEvent = submitted ? (
     <SubmissionOutcomeEvent status={run.status} />
   ) : null;
 
@@ -124,7 +128,12 @@ export default async function LorePage({
           />
         }
       >
-        <OverviewContent lore={lore} sourceUrl={sourceUrl} areaUrl={areaUrl} />
+        <OverviewContent
+          lore={lore}
+          sourceUrl={sourceUrl}
+          areaUrl={areaUrl}
+          majorAreasPage={page}
+        />
       </LorePageFrame>
     </>
   );

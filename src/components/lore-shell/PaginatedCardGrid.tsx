@@ -1,55 +1,55 @@
 "use client";
 
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
-import { usePersistedPage } from "@/lib/use-persisted-page";
+import { usePathname, useRouter } from "next/navigation";
 
 export interface PaginatedCardGridProps {
   /**
-   * Fully-rendered `<Card>` elements (built by the caller, e.g. via
-   * `.map()`) — not a render-prop function, since the Server Component
-   * caller (Overview) can pass pre-rendered JSX across the client boundary
-   * but not a function reference.
+   * Fully-rendered `<Card>` elements for the current page only (built by
+   * the caller, e.g. via `.map()`) — not a render-prop function, since the
+   * Server Component caller (Overview) can pass pre-rendered JSX across the
+   * client boundary but not a function reference. Only the current page is
+   * passed, not every item, because a large repository can have thousands
+   * of Major Areas and serializing every card into the page payload made
+   * its Overview take tens of seconds to render.
    */
   items: React.ReactNode[];
-  /**
-   * Fixed page size — this grid's cards are variable height and laid out in
-   * two columns, so the fit-to-screen sizing `PaginatedList` uses (see
-   * `useFitPageSize`) can't measure it correctly; see `MAJOR_AREAS_PAGE_SIZE`.
-   */
-  pageSize: number;
-  /**
-   * Scopes the remembered page in sessionStorage — callers should include
-   * whatever this grid is specific to (e.g. a repository and a section) so
-   * unrelated grids never share a saved page.
-   */
-  storageKey: string;
+  /** Current page (1-based), already clamped by the caller (`parsePageParam`). */
+  page: number;
+  pageCount: number;
 }
 
 /**
- * Fixed-page-size pagination chrome for a responsive 2-column card grid —
- * used by Major Areas on Overview, the one paginated list in the Lore shell
- * that isn't a `Card > ul > li` list (see `PaginatedList`).
+ * Pagination chrome for a responsive 2-column card grid — used by Major
+ * Areas on Overview, the one paginated list in the Lore shell that isn't a
+ * `Card > ul > li` list (see `PaginatedList`). The page lives in the URL
+ * (`?page=N`, omitted for page 1) rather than in sessionStorage like
+ * `usePersistedPage`, so the server renders only that page's cards;
+ * changing page is a navigation that re-renders the route with the new
+ * `page`, keeping the scroll position.
  */
 export function PaginatedCardGrid({
   items,
-  pageSize,
-  storageKey,
+  page,
+  pageCount,
 }: PaginatedCardGridProps) {
-  const pageCount = Math.max(Math.ceil(items.length / pageSize), 1);
-  const [page, setPage] = usePersistedPage(storageKey, pageCount);
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const start = (page - 1) * pageSize;
-  const pageItems = items.slice(start, start + pageSize);
+  const goToPage = (next: number) =>
+    router.push(next === 1 ? pathname : `${pathname}?page=${next}`, {
+      scroll: false,
+    });
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{pageItems}</div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{items}</div>
 
-      {items.length > pageSize && (
+      {pageCount > 1 && (
         <PaginationNav
           page={page}
           pageCount={pageCount}
-          onPageChange={setPage}
+          onPageChange={goToPage}
         />
       )}
     </div>
