@@ -1,0 +1,95 @@
+name: Nightly release
+
+# Squash-merges dev into main once a night when dev's tree differs from
+# main's, which kicks off release.yml (tag + GitHub release, then main is
+# merged back into dev). Merges are squash-only, so dev's commits never
+# become ancestors of main; "unreleased changes" means a tree difference,
+# not commits missing from main.
+#
+# Uses the RELEASE_TOKEN secret (a fine-grained PAT with Contents and Pull
+# requests read/write, Checks and Commit statuses read) rather than
+# GITHUB_TOKEN: a PR opened or merged with GITHUB_TOKEN triggers no
+# workflows, so neither Verify nor Release would run.
+on:
+  schedule:
+    # Daily 06:00 UTC.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    # Covers waiting on verify.yml's e2e job (itself capped at 30 minutes).
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check dev for unreleased changes
+        id: diff
+        run: |
+          if git diff --quiet origin/main origin/dev; then
+            echo "dev matches main; nothing to release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --stat origin/main origin/dev | tail -1
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Reuses an open dev → main PR if there is one (e.g. left open by a
+      # previous night's failed checks).
+      - name: Find or open the dev → main pull request
+        id: pr
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          pr=$(gh pr list --base main --head dev --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            {
+              echo "Nightly merge of \`dev\` into \`main\`. Merging triggers the Release workflow."
+              echo
+              git log --no-merges --format='- %s' "$(git merge-base origin/main origin/dev)..origin/dev"
+            } > pr-body.md
+            url=$(gh pr create --base main --head dev \
+              --title "chore(release): merge dev into main" --body-file pr-body.md)
+            pr=${url##*/}
+          fi
+          echo "number=$pr" >> "$GITHUB_OUTPUT"
+          echo "head=$(gh pr view "$pr" --json headRefOid --jq .headRefOid)" >> "$GITHUB_OUTPUT"
+          echo "Using PR #$pr"
+
+      # A just-opened PR has no checks for a few seconds; one whose diff
+      # misses every workflow's paths filter (e.g. docs only) never gets any.
+      - name: Wait for checks
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          for _ in $(seq 1 20); do
+            count=$(gh pr checks "$PR" --json name --jq length 2>/dev/null || echo 0)
+            [ "$count" -gt 0 ] && break
+            sleep 15
+          done
+          if [ "$count" -eq 0 ]; then
+            echo "No checks reported for PR #$PR; merging without them."
+            exit 0
+          fi
+          # Let workflows queued by the same event register too.
+          sleep 30
+          gh pr checks "$PR" --watch --fail-fast --interval 30
+
+      # --match-head-commit refuses the merge if dev moved after the checks
+      # above started, so only verified commits reach main.
+      - name: Squash-merge into main
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" --squash \
+            --match-head-commit "${{ steps.pr.outputs.head }}"
