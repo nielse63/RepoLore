@@ -10,9 +10,9 @@
  * setup error. Metrics over budget do NOT fail it: they're reported (and,
  * in CI, commented on the PR) as advisory breaches.
  *
- * Usage: npm run test:perf
- *   PERF_TARGET_URL      instance under test (default http://localhost:3000,
- *                        expected to be a `npm run build && npm run start`)
+ * Usage: npm run test:perf (builds and starts a production server on port
+ * 3100 via `.bin/with-prod-server`, and stops it when this script exits)
+ *   PERF_TARGET_URL      instance under test (default http://localhost:3100)
  *   PERF_PRODUCTION_URL  baseline (default https://repolore.app)
  *   PERF_RUNS            runs per page/profile/instance (default 3)
  *   CHROME_PATH          Chrome binary, if Lighthouse can't find one
@@ -68,7 +68,7 @@ const PROFILES: { name: Profile; flags: string[] }[] = [
   },
 ];
 
-const targetUrl = process.env.PERF_TARGET_URL ?? "http://localhost:3000";
+const targetUrl = process.env.PERF_TARGET_URL ?? "http://localhost:3100";
 const productionUrl = process.env.PERF_PRODUCTION_URL ?? "https://repolore.app";
 const runs = Number(process.env.PERF_RUNS ?? 3);
 const outDir = path.join(process.cwd(), "perf-report");

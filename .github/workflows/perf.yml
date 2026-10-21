@@ -36,18 +36,9 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
       - run: npm ci
-      - run: npm run build
-      - name: Start production server
-        run: |
-          npm run start > next-start.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf -o /dev/null http://localhost:3000/api/health && exit 0
-            sleep 1
-          done
-          cat next-start.log
-          exit 1
-      # Compares against https://repolore.app; uses the runner's preinstalled
-      # Chrome. Fails only on Lighthouse/setup errors or a load that wasn't
+      # Builds and starts a production server on port 3100, then stops it
+      # when the check exits. Compares against https://repolore.app; uses the
+      # runner's preinstalled Chrome. Fails only on Lighthouse/setup errors or a load that wasn't
       # cold and direct — metrics over budget are advisory (see below).
       - run: npm run test:perf
         env:
@@ -82,7 +73,5 @@ jobs:
         if: always()
         with:
           name: perf-report
-          path: |
-            perf-report/
-            next-start.log
+          path: perf-report/
           if-no-files-found: ignore

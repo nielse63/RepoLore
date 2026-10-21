@@ -4,7 +4,8 @@ import {
   type ReporterDescription,
 } from "@playwright/test";
 
-const baseURL = "http://localhost:3000";
+/** Matches `.bin/serve-prod`'s default port, clear of `next dev`'s 3000. */
+const baseURL = "http://localhost:3100";
 
 /**
  * Set by `npm run test:e2e:coverage`. An env var rather than a `--coverage`
@@ -12,6 +13,14 @@ const baseURL = "http://localhost:3000";
  * config; worker processes inherit it, so `e2e/coverage.ts` reads it too.
  */
 const collectCoverage = process.env.E2E_COVERAGE === "true";
+
+/**
+ * Production Turbopack source maps name sources `[project]/src/...` (after
+ * monocart drops the `turbopack:///` scheme); strip that so filtering and
+ * the report work on plain `src/...` paths.
+ */
+const stripProjectPrefix = (sourcePath: string) =>
+  sourcePath.replace(/^\[project\]\//, "");
 
 const monocartReporter: ReporterDescription = [
   "monocart-reporter",
@@ -27,11 +36,11 @@ const monocartReporter: ReporterDescription = [
           !url.includes("[turbopack]") &&
           !url.includes("%5Bturbopack%5D") &&
           !url.includes("node_modules") &&
-          // Turbopack dev-mode chunks with no `sourceMappingURL` are
-          // tiny internal loader/registration stubs (a few hundred
-          // bytes) that can never resolve to a `src/` file — collecting
-          // them just adds noise (`localhost-3000/_next/static/chunks/
-          // _<hash>._.js`) to the report instead of a real source path.
+          // Chunks with no `sourceMappingURL` can never resolve to a
+          // `src/` file — collecting them just adds noise to the report
+          // instead of a real source path. The production build only
+          // emits browser source maps when `E2E_COVERAGE=true` (see
+          // `next.config.ts`).
           !!source?.includes("sourceMappingURL");
         return returnValue;
       },
@@ -44,19 +53,22 @@ const monocartReporter: ReporterDescription = [
         ) {
           return false;
         }
-        return sourcePath.startsWith("src/");
+        return stripProjectPrefix(sourcePath).startsWith("src/");
       },
+      sourcePath: stripProjectPrefix,
       lcov: true,
     },
   },
 ];
 
 /**
- * Functional/UI test suite, scoped to
- * pages that need no external services: the home page's client-side URL
- * validation. `reuseExistingServer` (local only) reuses a `next dev` a
- * developer already has running rather than failing to start a second one —
- * Next.js refuses to run two dev servers against the same directory.
+ * Functional/UI test suite (including the accessibility and SEO specs),
+ * run against a fresh production build of the current working tree:
+ * `.bin/serve-prod` runs `next build` then `next start` on port 3100, so a
+ * developer's `next dev` on 3000 is never reused or disturbed. Playwright
+ * stops that server when the run ends — passing, failing, or interrupted.
+ * `reuseExistingServer: false` makes a run fail rather than test whatever
+ * else might already be on 3100.
  *
  * `screenshot: "only-on-failure"` attaches a screenshot to each failing test,
  * viewable in the `html` reporter's own report (`npx playwright show-report`).
@@ -87,9 +99,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    command: ".bin/serve-prod",
+    url: `${baseURL}/api/health`,
+    reuseExistingServer: false,
+    // Covers `next build` as well as server startup.
+    timeout: 600_000,
   },
 });
