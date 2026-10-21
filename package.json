@@ -29,6 +29,7 @@
     "migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed-repos.ts",
     "seed:e2e": "tsx --env-file-if-exists=.env.local scripts/seed-e2e.ts",
+    "release": "tsx scripts/release.ts",
     "prepare": "husky",
     "verify": ".bin/verify",
     "coverage:open": "open coverage/lcov-report/index.html ; open coverage/e2e/index.html"

@@ -27,6 +27,8 @@ function GitHubMark() {
  * and at the end of `LorePageFrame`'s scrolling main column on Lore pages
  * (so the app shell's full-height layout is unchanged), where `spacingClassName`
  * replaces the default padding, since that column already provides its own.
+ * The copyright line ends with the build's git tag (`APP_VERSION`, set in
+ * `next.config.ts`) when one was available.
  */
 export function SiteFooter({
   spacingClassName = "px-8 py-6",
@@ -63,7 +65,10 @@ export function SiteFooter({
             </li>
           </ul>
         </nav>
-        <p>© {new Date().getFullYear()} Repo Lore</p>
+        <p>
+          © {new Date().getFullYear()} Repo Lore
+          {process.env.APP_VERSION ? ` | ${process.env.APP_VERSION}` : null}
+        </p>
       </div>
     </footer>
   );

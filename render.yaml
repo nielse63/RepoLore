@@ -6,6 +6,9 @@ services:
     buildCommand: NODE_ENV=development npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
+    # Deploy main only after its checks pass, so the Release workflow's tag
+    # exists before the build reads it for the footer version.
+    autoDeployTrigger: checksPass
     envVars:
       - key: GITHUB_TOKEN
         sync: false
