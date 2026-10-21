@@ -77,9 +77,8 @@ export function SystemDetailContent({
     lore.relationships
   );
 
-  const entryPoints = lore.entryPoints.filter((ep) =>
-    area.entryPointIds.includes(ep.id)
-  );
+  const entryPointIds = new Set(area.entryPointIds);
+  const entryPoints = lore.entryPoints.filter((ep) => entryPointIds.has(ep.id));
 
   const base = `/lore/${owner}/${repo}`;
   const classification = classifySystem(area);

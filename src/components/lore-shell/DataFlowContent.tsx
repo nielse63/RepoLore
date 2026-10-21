@@ -654,6 +654,7 @@ function ChainTreeRow({
   const Icon = KIND_ICON[signature.kind];
   const refs = referencesFor(id);
   const nextAncestorIds = [...ancestorIds, id];
+  const ancestorIdSet = new Set(nextAncestorIds);
 
   return (
     <li>
@@ -697,7 +698,7 @@ function ChainTreeRow({
       {expanded && (
         <ul className="divide-y divide-border">
           {childIds.map((childId) => {
-            if (nextAncestorIds.includes(childId)) {
+            if (ancestorIdSet.has(childId)) {
               const childSignature = byId.get(childId);
               if (!childSignature) return null;
               return (

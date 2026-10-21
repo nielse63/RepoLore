@@ -63,8 +63,10 @@ export default async function LorePage({
     page?: string | string[];
   }>;
 }) {
-  const { owner, repo } = await params;
-  const { submitted, page } = await searchParams;
+  const [{ owner, repo }, { submitted, page }] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const run = await getLatestAnalysisRunForRepo(owner, repo);
   if (!run) return <NotAnalyzedPanel owner={owner} repo={repo} />;
 

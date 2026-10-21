@@ -42,11 +42,12 @@ export function selectFeaturedLores(
 ): LatestRunIndexabilityRow[] {
   const candidates = rows.filter(isIndexableLore);
   const featuredOrder = FEATURED_REPOS.map((repo) => repo.toLowerCase());
+  const featuredSet = new Set(featuredOrder);
   const featured = featuredOrder.flatMap((wanted) =>
     candidates.filter((row) => slug(row) === wanted)
   );
   const rest = candidates
-    .filter((row) => !featuredOrder.includes(slug(row)))
+    .filter((row) => !featuredSet.has(slug(row)))
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return [...featured, ...rest].slice(0, limit);
 }
