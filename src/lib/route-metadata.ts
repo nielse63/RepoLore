@@ -2,7 +2,7 @@ import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore } from "@/lore/model";
 import type { Metadata } from "next";
 
-const DEFAULT_OG_IMAGE = "/web-app-manifest-512x512.png";
+const DEFAULT_OG_IMAGE = "/og-image.png";
 const FALLBACK_ORIGIN = "http://localhost:3000";
 
 /**
