@@ -18,6 +18,14 @@ import { expect, test } from "./coverage";
 const repoUrl = "/lore/nielse63/repo-lore-ts-nested-test-samples-fixture";
 const systemsUrl = `${repoUrl}/systems`;
 
+test.beforeEach(async ({ page }) => {
+  await page.goto(repoUrl);
+  await expect(
+    page.getByRole("heading", { name: /hasn't been analyzed yet/ }),
+    "The fixture's run is missing from DATABASE_URL — run `npm run seed:e2e` against it first"
+  ).toBeHidden();
+});
+
 test("the Overview lists a nested test directory as one Major Area, not one per sample case", async ({
   page,
 }) => {
