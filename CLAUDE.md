@@ -55,6 +55,8 @@ Two project-specific subagents are defined in `.claude/agents/` and should be in
 
 Do not commit, or offer to commit, any changes. Those will be performed manually by the user.
 
+When committing (only if explicitly asked to), follow the [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) standard for commit messages (e.g. `feat(analysis): ...`, `fix: ...`, `docs: ...`; mark breaking changes with `!` or a `BREAKING CHANGE:` footer).
+
 All pull requests are opened against the `dev` branch, not `main`.
 
 ## Workflow
