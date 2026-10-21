@@ -1,7 +1,7 @@
 "use client";
 
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export interface PaginatedCardGridProps {
   /**
@@ -34,12 +34,13 @@ export function PaginatedCardGrid({
   pageCount,
 }: PaginatedCardGridProps) {
   const router = useRouter();
-  const pathname = usePathname();
 
-  const goToPage = (next: number) =>
+  const goToPage = (next: number) => {
+    const { pathname } = window.location;
     router.push(next === 1 ? pathname : `${pathname}?page=${next}`, {
       scroll: false,
     });
+  };
 
   return (
     <div className="flex flex-col gap-4">
