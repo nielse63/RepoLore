@@ -27,3 +27,39 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: nielse63/RepoLore
+
+  # Playwright against a throwaway Postgres seeded from local source
+  # (`npm run seed:e2e`) — no GITHUB_TOKEN and no shared database.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: repolore
+          POSTGRES_PASSWORD: repolore
+          POSTGRES_DB: repolore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://repolore:repolore@localhost:5432/repolore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run migrate
+      - run: npm run seed:e2e
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
