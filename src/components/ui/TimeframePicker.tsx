@@ -24,7 +24,7 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 /** "Last N days" while unchanged from `defaultRange`, otherwise a formatted date range. */
-export function formatTimeframeLabel(
+function formatTimeframeLabel(
   range: DateRange,
   defaultRange: DateRange
 ): string {

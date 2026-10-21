@@ -6,15 +6,14 @@ import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StaleAnalysisCard } from "@/components/lore-shell/StaleAnalysisCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
-import {
-  CertaintyBadge,
-  VARIANT_BY_CERTAINTY,
-} from "@/components/ui/CertaintyBadge";
+import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
+import { VARIANT_BY_CERTAINTY } from "@/components/ui/certainty-variant";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import { parsePageParam } from "@/lib/page-param";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { majorAreasOf } from "@/lore/major-areas";
@@ -133,7 +132,7 @@ export function OverviewContent({
                       <ul className="mt-2 space-y-1 text-xs text-muted">
                         {item.evidence.map((e, i) => {
                           return (
-                            <li key={i}>
+                            <li key={listItemKey(i)}>
                               <span className={getCertaintyColor(e.certainty)}>
                                 [{certaintyLabel(e.certainty)}]
                               </span>{" "}

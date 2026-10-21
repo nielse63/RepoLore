@@ -20,8 +20,8 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    # DATABASE_URL is scoped to the steps that read it, not the job, so
+    # package lifecycle scripts run by the install step never see it.
     steps:
       - uses: actions/checkout@v7
         with:
@@ -34,7 +34,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run test:unit
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7

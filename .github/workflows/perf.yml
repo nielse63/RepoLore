@@ -28,8 +28,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    # DATABASE_URL is scoped to the steps that read it, not the job, so
+    # package lifecycle scripts run by the install step never see it.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -43,6 +43,7 @@ jobs:
       # cold and direct — metrics over budget are advisory (see below).
       - run: npm run test:perf
         env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PERF_PR_NUMBER: ${{ github.event.pull_request.number }}
           PERF_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
       - name: Add report to job summary

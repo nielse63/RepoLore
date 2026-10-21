@@ -87,8 +87,10 @@ export async function extractPythonProject(
   projectId = "."
 ): Promise<PythonExtraction> {
   const absoluteRoot = path.resolve(rootDir);
-  const sourceFiles = await discoverSourceFiles(absoluteRoot);
-  const config = await readPythonProjectConfig(absoluteRoot);
+  const [sourceFiles, config] = await Promise.all([
+    discoverSourceFiles(absoluteRoot),
+    readPythonProjectConfig(absoluteRoot),
+  ]);
 
   const importResult = extractImportRelationships(sourceFiles, absoluteRoot);
   const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot, config);
