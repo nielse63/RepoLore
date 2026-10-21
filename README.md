@@ -149,6 +149,8 @@ Desktop is the product's own budget; mobile (simulated slow 4G and a 4× CPU slo
 
 `.github/workflows/update-deps.yml` updates dependencies weekly (Mondays 09:00 UTC, or manually via "Run workflow"), committing straight to `dev` with no PR. It checks out `dev`, bumps every dependency in `package.json` to its latest version with [`npm-check-updates`](https://github.com/raineorshine/npm-check-updates) — majors and exact pins (`next`, `react`, `prettier`, …) included, except `@types/node`, which is held to its current major so it keeps matching `.nvmrc` — then `npm install`s to refresh `package-lock.json`. It then runs `npx eslint` (no `--fix`), `npm run format:check` (`prettier --check .`), `npm run build`, and `npm run test:unit`. If all of them pass, it commits only `package.json` and `package-lock.json` as `github-actions[bot]` (the message lists each bump) and pushes to `dev`. If any step fails, nothing is pushed and the run goes red. Fixing the breakage (or pinning the offending package) is manual. If nothing is outdated, it exits without committing. Uses `GITHUB_TOKEN` with `contents: write`, so it assumes `dev` isn't branch-protected. A push made with `GITHUB_TOKEN` doesn't trigger other workflows, which is fine here since none run on push to `dev`. Playwright and Lighthouse aren't part of this gate. `DATABASE_URL` is passed the same way as in `verify.yml`.
 
+`.github/workflows/release.yml` runs on every push to `main`. When the pushed commit came from a merged `dev` → `main` pull request (looked up via the GitHub API) and isn't already tagged, it runs `npm run release -- --patch --target <sha> --yes`, creating the next patch tag (e.g. `v0.0.1` → `v0.0.2`) and a GitHub release with auto-generated notes on that exact commit. Any other push to `main` passes without releasing. Uses `GITHUB_TOKEN` with `contents: write` (plus `pull-requests: read`). Render deploys `main` only after this check passes (see "Deployment"), so the tag exists before the build reads it for the footer version. `verify.yml`'s checkouts use `fetch-depth: 0` for the same reason: a shallow clone has no tags, and the footer e2e spec expects the version.
+
 ## Analyzing a real repository from the command line
 
 `npm run analyze-repo` runs the fetch-extract-analyze path against any real public GitHub repository without touching the database — useful for quickly checking analyzer output on a new repo:
@@ -170,6 +172,18 @@ Neither script runs the language-detection dispatch that the real `/lore/{owner}
 ## Seeding popular repositories
 
 `npm run seed [-- <list-file>]` (`scripts/seed-repos.ts`) pre-analyzes the repositories listed in `scripts/seed-repos.txt` (one `owner/repo` per line, `#` comments allowed) — deliberately just six of the most-starred TypeScript/JavaScript repositories, matching the home page's `FEATURED_REPOS`, since the earlier ~50-repository list took too long and overloaded the production database so there are indexable Lore pages to share. It runs each one, sequentially, through the same `analyzeAndPersistRepository` path a home-page submission uses, skips any repository analyzed under a day ago or currently rate-limited, and prints a per-repository status plus a final tally. Operator-run by hand only — never scheduled (`docs/product/non-goals.md`); ADR-0013's pull-triggered refresh keeps seeded pages current from there. Requires `GITHUB_TOKEN` and `DATABASE_URL` (loads `.env.local` if present); point `DATABASE_URL` at Neon to seed production.
+
+## Releases
+
+Versions are git tags only (`vX.Y.Z`); `package.json`'s `version` isn't used. Merging `dev` into `main` patch-bumps automatically (see "Continuous integration"). For a minor, major, or specific version, run `scripts/release.ts` (needs the `gh` CLI, authenticated with push access):
+
+```bash
+npm run release -- --minor            # or --major / --patch
+npm run release -- --version 1.2.0    # explicit; must be newer than the latest tag
+npm run release -- --minor --dry-run  # print the next tag only
+```
+
+It reads the latest tag from `origin` (not local tags), asks for confirmation (`--yes` skips it), and runs `gh release create <tag> --target main --generate-notes`, so GitHub creates the tag at `main`'s tip regardless of your local checkout (`--target <ref>` overrides). The version arithmetic lives in `src/lib/release-version.ts`. A manual release doesn't redeploy by itself: the footer shows the new tag from the next deploy of `main`.
 
 ## Database
 
@@ -193,4 +207,4 @@ First deploy, one-time setup:
 2. Apply the schema to it: `DATABASE_URL=<neon-connection-string> npm run migrate`.
 3. Create a free [Render](https://render.com) account, connect it to this GitHub repo, and deploy `render.yaml` as a Blueprint. When prompted, paste the real `GITHUB_TOKEN` (see `.env.example`) and the Neon connection string as `DATABASE_URL`.
 
-The service runs on Render's Pro plan, so it stays up instead of spinning down after 15 minutes idle the way the free tier did (no 30–60s cold start for the first visitor). The custom domain `repolore.app` is attached in the Render dashboard, and `render.yaml` sets `NEXT_PUBLIC_SITE_URL=https://repolore.app` so canonical/Open Graph/Twitter/sitemap/badge URLs use it rather than Render's own `RENDER_EXTERNAL_URL` (see `.env.example`). Subsequent deploys happen automatically on push to `main`; the footer's version is the latest tag at build time, so tag `main` (e.g. `git tag v0.0.2 && git push --tags`) before or with the deploy you want it to show; re-run `npm run migrate` against the Neon `DATABASE_URL` after any change to `src/db/migrations/`.
+The service runs on Render's Pro plan, so it stays up instead of spinning down after 15 minutes idle the way the free tier did (no 30–60s cold start for the first visitor). The custom domain `repolore.app` is attached in the Render dashboard, and `render.yaml` sets `NEXT_PUBLIC_SITE_URL=https://repolore.app` so canonical/Open Graph/Twitter/sitemap/badge URLs use it rather than Render's own `RENDER_EXTERNAL_URL` (see `.env.example`). Subsequent deploys happen automatically on push to `main`; `render.yaml` sets `autoDeployTrigger: checksPass`, so Render waits for `main`'s checks — including the Release workflow's tag — before building, and the footer shows the new version; re-run `npm run migrate` against the Neon `DATABASE_URL` after any change to `src/db/migrations/`.

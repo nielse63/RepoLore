@@ -1,0 +1,53 @@
+name: Release
+
+# Patch-bumps the version (a new vX.Y.Z tag plus a GitHub release) whenever
+# dev is merged into main. Render deploys main only once this check passes
+# (`autoDeployTrigger: checksPass` in render.yaml), so the tag exists before
+# the build reads it for the footer. Other pushes to main pass without
+# releasing. Minor/major/explicit versions: `npm run release` locally.
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Creates the tag and release; reads which PR the commit came from.
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for a dev → main merge not yet tagged
+        id: check
+        run: |
+          heads=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '.[] | select(.base.ref == "main" and .merged_at != null) | .head.ref')
+          if ! grep -qx dev <<<"$heads"; then
+            echo "Not a dev → main merge; skipping."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --tags --refs origin | grep -q "^${{ github.sha }}"; then
+            echo "${{ github.sha }} is already tagged; skipping."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.check.outputs.release == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - if: steps.check.outputs.release == 'true'
+        run: npm ci
+      - if: steps.check.outputs.release == 'true'
+        run: npm run release -- --patch --target "${{ github.sha }}" --yes
