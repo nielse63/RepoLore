@@ -1,11 +1,11 @@
 /**
- * Pure logic for the Lighthouse performance regression check
+ * Pure logic for the Lighthouse performance budget check
  * (`scripts/perf-vitals.ts`, `npm run test:perf`): takes per-run lab metrics
  * for a target instance and for production, reduces each to a median, and
- * flags a metric as over tolerance only when the target is worse than
- * production by more than BOTH its relative and absolute tolerance — so tiny
- * metrics (a 20ms TBT doubling to 40ms) and noise on large ones aren't
- * reported. Breaches are advisory: they're reported on the PR, never fail CI.
+ * flags a metric as over budget when the target's median exceeds that
+ * profile's budget (`BUDGETS`). Production is measured alongside purely as
+ * context — it never decides a breach. Breaches are advisory: they're
+ * reported on the PR, never fail CI.
  */
 
 /**
@@ -103,62 +103,48 @@ export type MetricId = (typeof METRIC_IDS)[number];
 
 export type MetricSample = Record<MetricId, number>;
 
-export interface MetricTolerance {
+export type Profile = "mobile" | "desktop";
+
+export interface MetricInfo {
   label: string;
   unit: "ms" | "unitless";
-  /** Allowed fractional increase over production, e.g. 0.2 for +20%. */
-  relative: number;
-  /** Allowed absolute increase over production, in the metric's unit. */
-  absolute: number;
-  /** Reported, but never counted as over tolerance, when false. */
+  /** Shown against its budget, but never counted as a breach, when false. */
   gate: boolean;
 }
 
-export const TOLERANCES: Record<MetricId, MetricTolerance> = {
-  "first-contentful-paint": {
-    label: "FCP",
-    unit: "ms",
-    relative: 0.2,
-    absolute: 200,
-    gate: true,
+export const METRICS: Record<MetricId, MetricInfo> = {
+  "first-contentful-paint": { label: "FCP", unit: "ms", gate: true },
+  "largest-contentful-paint": { label: "LCP", unit: "ms", gate: true },
+  "cumulative-layout-shift": { label: "CLS", unit: "unitless", gate: true },
+  "total-blocking-time": { label: "TBT", unit: "ms", gate: true },
+  "speed-index": { label: "Speed Index", unit: "ms", gate: true },
+  // Report-only: a CI-local server's TTFB reflects the runner's distance to
+  // the database and the lack of a network hop, not the PR's code.
+  "server-response-time": { label: "TTFB", unit: "ms", gate: false },
+};
+
+/**
+ * The most a page's median may reach, per profile (ms; CLS unitless).
+ * Desktop is the product owner's own budget. Mobile — simulated slow 4G and
+ * a 4x CPU slowdown, where e.g. a 0.5s FCP is unreachable even for
+ * production — uses Google's "good" Core Web Vitals / Lighthouse thresholds.
+ */
+export const BUDGETS: Record<Profile, Record<MetricId, number>> = {
+  desktop: {
+    "largest-contentful-paint": 1500,
+    "first-contentful-paint": 500,
+    "cumulative-layout-shift": 0.1,
+    "total-blocking-time": 150,
+    "speed-index": 1500,
+    "server-response-time": 500,
   },
-  "largest-contentful-paint": {
-    label: "LCP",
-    unit: "ms",
-    relative: 0.2,
-    absolute: 250,
-    gate: true,
-  },
-  // Relative change is meaningless near zero, so CLS gates on absolute only.
-  "cumulative-layout-shift": {
-    label: "CLS",
-    unit: "unitless",
-    relative: 0,
-    absolute: 0.05,
-    gate: true,
-  },
-  "total-blocking-time": {
-    label: "TBT",
-    unit: "ms",
-    relative: 0.5,
-    absolute: 100,
-    gate: true,
-  },
-  "speed-index": {
-    label: "Speed Index",
-    unit: "ms",
-    relative: 0.2,
-    absolute: 300,
-    gate: true,
-  },
-  // Informational only: a CI-local server's TTFB reflects the runner's
-  // distance to the database and the lack of a network hop, not the code.
-  "server-response-time": {
-    label: "TTFB",
-    unit: "ms",
-    relative: 0.5,
-    absolute: 200,
-    gate: false,
+  mobile: {
+    "largest-contentful-paint": 2500,
+    "first-contentful-paint": 1800,
+    "cumulative-layout-shift": 0.1,
+    "total-blocking-time": 200,
+    "speed-index": 3400,
+    "server-response-time": 800,
   },
 };
 
@@ -173,35 +159,41 @@ export function median(values: number[]): number {
 
 export interface MetricComparison {
   id: MetricId;
+  budget: number;
   target: number;
   production: number;
-  delta: number;
-  regressed: boolean;
+  /** The target's median exceeds the budget (gated metrics only). */
+  overBudget: boolean;
+  /** Context only: production's median also exceeds the budget. */
+  productionOverBudget: boolean;
 }
 
 export function compareMetric(
   id: MetricId,
+  profile: Profile,
   target: number,
-  production: number,
-  tolerance: MetricTolerance = TOLERANCES[id]
+  production: number
 ): MetricComparison {
-  const delta = target - production;
-  const relativeDelta =
-    production === 0 ? (delta > 0 ? Infinity : 0) : delta / production;
-  const regressed =
-    tolerance.gate &&
-    delta > tolerance.absolute &&
-    relativeDelta > tolerance.relative;
-  return { id, target, production, delta, regressed };
+  const budget = BUDGETS[profile][id];
+  return {
+    id,
+    budget,
+    target,
+    production,
+    overBudget: METRICS[id].gate && target > budget,
+    productionOverBudget: production > budget,
+  };
 }
 
 export function compareSamples(
+  profile: Profile,
   targetRuns: MetricSample[],
   productionRuns: MetricSample[]
 ): MetricComparison[] {
   return METRIC_IDS.map((id) =>
     compareMetric(
       id,
+      profile,
       median(targetRuns.map((run) => run[id])),
       median(productionRuns.map((run) => run[id]))
     )
@@ -209,14 +201,14 @@ export function compareSamples(
 }
 
 export function formatMetricValue(id: MetricId, value: number): string {
-  return TOLERANCES[id].unit === "ms"
+  return METRICS[id].unit === "ms"
     ? `${Math.round(value)} ms`
     : value.toFixed(3);
 }
 
 export interface PageComparison {
   path: string;
-  profile: string;
+  profile: Profile;
   metrics: MetricComparison[];
 }
 
@@ -227,28 +219,27 @@ export function formatMarkdownReport(
   pages: PageComparison[]
 ): string {
   const lines = [
-    "## Performance regression check",
+    "## Performance budget check",
     "",
-    `Target \`${targetUrl}\` vs. production \`${productionUrl}\` (median of each run set).`,
+    `Target \`${targetUrl}\` against each profile's budget (median of each run set), with production \`${productionUrl}\` for context.`,
     "",
   ];
   for (const page of pages) {
     lines.push(
       `### \`${page.path}\` (${page.profile})`,
       "",
-      "| Metric | Target | Production | Δ | Result |",
+      "| Metric | Budget | Target | Production | Result |",
       "| --- | --- | --- | --- | --- |"
     );
     for (const m of page.metrics) {
-      const tolerance = TOLERANCES[m.id];
-      const sign = m.delta > 0 ? "+" : m.delta < 0 ? "−" : "";
-      const result = !tolerance.gate
+      const info = METRICS[m.id];
+      const result = !info.gate
         ? "info"
-        : m.regressed
-          ? "⚠️ over tolerance"
+        : m.overBudget
+          ? "⚠️ over budget"
           : "✅";
       lines.push(
-        `| ${tolerance.label} | ${formatMetricValue(m.id, m.target)} | ${formatMetricValue(m.id, m.production)} | ${sign}${formatMetricValue(m.id, Math.abs(m.delta))} | ${result} |`
+        `| ${info.label} | ${formatMetricValue(m.id, m.budget)} | ${formatMetricValue(m.id, m.target)} | ${formatMetricValue(m.id, m.production)} | ${result} |`
       );
     }
     lines.push("");
@@ -258,24 +249,26 @@ export function formatMarkdownReport(
 
 export interface Breach {
   path: string;
-  profile: string;
+  profile: Profile;
   id: MetricId;
+  budget: number;
   target: number;
   production: number;
-  delta: number;
+  productionOverBudget: boolean;
 }
 
 export function breachesOf(pages: PageComparison[]): Breach[] {
   return pages.flatMap((page) =>
     page.metrics
-      .filter((m) => m.regressed)
-      .map(({ id, target, production, delta }) => ({
+      .filter((m) => m.overBudget)
+      .map(({ id, budget, target, production, productionOverBudget }) => ({
         path: page.path,
         profile: page.profile,
         id,
+        budget,
         target,
         production,
-        delta,
+        productionOverBudget,
       }))
   );
 }
@@ -295,12 +288,17 @@ export interface PrCommentContext {
   commitSha?: string;
 }
 
+/**
+ * Whether production is over the same budget tells a reader if the breach
+ * predates this PR, so the row says so rather than leaving it to inference.
+ */
 function breachRow(b: Breach): string {
-  return `| \`${b.path}\` | ${b.profile} | ${TOLERANCES[b.id].label} | ${formatMetricValue(b.id, b.target)} | ${formatMetricValue(b.id, b.production)} | +${formatMetricValue(b.id, b.delta)} |`;
+  const production = `${formatMetricValue(b.id, b.production)}${b.productionOverBudget ? " (also over)" : ""}`;
+  return `| \`${b.path}\` | ${b.profile} | ${METRICS[b.id].label} | ${formatMetricValue(b.id, b.budget)} | ${formatMetricValue(b.id, b.target)} | ${production} |`;
 }
 
 const BREACH_TABLE_HEADER = [
-  "| Page | Profile | Metric | This PR | Production | Δ |",
+  "| Page | Profile | Metric | Budget | This PR | Production |",
   "| --- | --- | --- | --- | --- | --- |",
 ];
 
@@ -311,9 +309,9 @@ export function newIssueUrl(
 ): string | undefined {
   if (!context.serverUrl || !context.repository) return undefined;
   const pr = context.prNumber ? ` (PR #${context.prNumber})` : "";
-  const title = `Performance: ${breaches.length} metric(s) over tolerance vs. production${pr}`;
+  const title = `Performance: ${breaches.length} metric(s) over budget${pr}`;
   const body = [
-    `\`npm run test:perf\` found these medians worse than ${context.productionUrl} beyond tolerance${context.commitSha ? ` at ${context.commitSha.slice(0, 7)}` : ""}:`,
+    `\`npm run test:perf\` found these medians over budget${context.commitSha ? ` at ${context.commitSha.slice(0, 7)}` : ""} (production: ${context.productionUrl}):`,
     "",
     ...BREACH_TABLE_HEADER,
     ...breaches.map(breachRow),
@@ -344,16 +342,16 @@ export function formatPrComment(
       PR_COMMENT_MARKER,
       "## ✅ Performance check",
       "",
-      `No metrics over tolerance vs. ${context.productionUrl}${commit}${run}.`,
+      `No metrics over budget${commit}${run}.`,
       "",
     ].join("\n");
   }
   const issueUrl = newIssueUrl(breaches, context);
   return [
     PR_COMMENT_MARKER,
-    `## ⚠️ Performance check: ${breaches.length} metric(s) over tolerance`,
+    `## ⚠️ Performance check: ${breaches.length} metric(s) over budget`,
     "",
-    `Medians of ${context.runs} Lighthouse run(s) per page and profile, worse than ${context.productionUrl} by more than both their relative and absolute tolerance${commit}${run}. **This doesn't block merging.**`,
+    `Medians of ${context.runs} Lighthouse run(s) per page and profile that exceed that profile's budget${commit}${run}; "also over" means production (${context.productionUrl}) exceeds it too, so the breach predates this PR. **This doesn't block merging.**`,
     "",
     ...BREACH_TABLE_HEADER,
     ...breaches.map(breachRow),

@@ -1,5 +1,6 @@
 import { isCrawlerUserAgent } from "@/lib/is-crawler-user-agent";
 import {
+  BUDGETS,
   breachesOf,
   coldLoadViolations,
   compareMetric,
@@ -17,13 +18,14 @@ import {
   type PageComparison,
 } from "../compare-vitals";
 
+/** Every metric comfortably within both profiles' budgets. */
 function sample(overrides: Partial<MetricSample> = {}): MetricSample {
   return {
-    "first-contentful-paint": 1000,
-    "largest-contentful-paint": 2000,
+    "first-contentful-paint": 300,
+    "largest-contentful-paint": 1000,
     "cumulative-layout-shift": 0,
     "total-blocking-time": 50,
-    "speed-index": 1500,
+    "speed-index": 1000,
     "server-response-time": 100,
     ...overrides,
   };
@@ -43,87 +45,116 @@ describe("median", () => {
   });
 });
 
-describe("compareMetric", () => {
-  it("does not regress when only the relative tolerance is exceeded", () => {
-    // +50% but only +100ms, under LCP's 250ms absolute tolerance.
-    expect(compareMetric("largest-contentful-paint", 300, 200).regressed).toBe(
-      false
-    );
+describe("BUDGETS", () => {
+  it("uses the product owner's desktop budget", () => {
+    expect(BUDGETS.desktop).toEqual({
+      "largest-contentful-paint": 1500,
+      "first-contentful-paint": 500,
+      "cumulative-layout-shift": 0.1,
+      "total-blocking-time": 150,
+      "speed-index": 1500,
+      "server-response-time": 500,
+    });
   });
 
-  it("does not regress when only the absolute tolerance is exceeded", () => {
-    // +300ms but only +10%, under LCP's 20% relative tolerance.
+  it("uses Google's 'good' thresholds on mobile", () => {
+    expect(BUDGETS.mobile).toEqual({
+      "largest-contentful-paint": 2500,
+      "first-contentful-paint": 1800,
+      "cumulative-layout-shift": 0.1,
+      "total-blocking-time": 200,
+      "speed-index": 3400,
+      "server-response-time": 800,
+    });
+  });
+});
+
+describe("compareMetric", () => {
+  it("is over budget only when the target exceeds it", () => {
     expect(
-      compareMetric("largest-contentful-paint", 3300, 3000).regressed
+      compareMetric("largest-contentful-paint", "desktop", 1500, 0).overBudget
+    ).toBe(false);
+    expect(
+      compareMetric("largest-contentful-paint", "desktop", 1501, 0)
+    ).toMatchObject({ budget: 1500, overBudget: true });
+  });
+
+  it("applies the profile's own budget", () => {
+    // 2000ms LCP: over desktop's 1.5s, within mobile's 2.5s.
+    expect(
+      compareMetric("largest-contentful-paint", "desktop", 2000, 0).overBudget
+    ).toBe(true);
+    expect(
+      compareMetric("largest-contentful-paint", "mobile", 2000, 0).overBudget
     ).toBe(false);
   });
 
-  it("regresses when both tolerances are exceeded", () => {
-    expect(compareMetric("largest-contentful-paint", 3000, 2000)).toMatchObject(
-      { delta: 1000, regressed: true }
-    );
+  it("ignores production when deciding a breach", () => {
+    // Faster than a slow production, but still over budget.
+    expect(
+      compareMetric("first-contentful-paint", "desktop", 600, 5000)
+    ).toMatchObject({ overBudget: true, productionOverBudget: true });
+    // Slower than a fast production, but within budget.
+    expect(
+      compareMetric("first-contentful-paint", "desktop", 450, 100)
+    ).toMatchObject({ overBudget: false, productionOverBudget: false });
   });
 
-  it("never regresses when the target is faster", () => {
-    expect(compareMetric("first-contentful-paint", 500, 2000).regressed).toBe(
-      false
-    );
+  it("gates CLS as a unitless value", () => {
+    expect(
+      compareMetric("cumulative-layout-shift", "desktop", 0.1, 0).overBudget
+    ).toBe(false);
+    expect(
+      compareMetric("cumulative-layout-shift", "desktop", 0.11, 0).overBudget
+    ).toBe(true);
   });
 
-  it("gates CLS on absolute change even when production is zero", () => {
-    expect(compareMetric("cumulative-layout-shift", 0.04, 0).regressed).toBe(
-      false
-    );
-    expect(compareMetric("cumulative-layout-shift", 0.06, 0).regressed).toBe(
-      true
-    );
-  });
-
-  it("never regresses an ungated metric", () => {
-    expect(compareMetric("server-response-time", 5000, 100).regressed).toBe(
-      false
-    );
+  it("never counts TTFB as a breach, but still records production's", () => {
+    expect(
+      compareMetric("server-response-time", "desktop", 5000, 900)
+    ).toMatchObject({ overBudget: false, productionOverBudget: true });
   });
 });
 
 describe("compareSamples", () => {
-  it("compares medians, so one outlier run does not regress", () => {
+  it("compares medians, so one outlier run is not a breach", () => {
     const target = [
       sample(),
       sample({ "largest-contentful-paint": 9000 }),
       sample(),
     ];
-    const result = compareSamples(target, [sample(), sample(), sample()]);
+    const result = compareSamples("desktop", target, [sample()]);
     expect(result.map((m) => m.id)).toEqual([...METRIC_IDS]);
-    expect(result.every((m) => !m.regressed)).toBe(true);
+    expect(result.every((m) => !m.overBudget)).toBe(true);
   });
 
-  it("flags a consistent regression", () => {
+  it("flags a consistent breach", () => {
     const slow = sample({ "total-blocking-time": 400 });
-    const result = compareSamples([slow, slow, slow], [sample(), sample()]);
-    expect(result.find((m) => m.id === "total-blocking-time")?.regressed).toBe(
+    const result = compareSamples("desktop", [slow, slow, slow], [sample()]);
+    expect(result.find((m) => m.id === "total-blocking-time")?.overBudget).toBe(
       true
     );
   });
 });
 
 describe("formatMarkdownReport", () => {
-  it("renders a row per metric with its result", () => {
+  it("renders a row per metric with its budget and result", () => {
     const metrics = compareSamples(
+      "desktop",
       [sample({ "largest-contentful-paint": 4000 })],
       [sample()]
     );
     const report = formatMarkdownReport(
       "http://localhost:3000",
       "https://repolore.app",
-      [{ path: "/", profile: "mobile", metrics }]
+      [{ path: "/", profile: "desktop", metrics }]
     );
-    expect(report).toContain("### `/` (mobile)");
+    expect(report).toContain("### `/` (desktop)");
     expect(report).toContain(
-      "| LCP | 4000 ms | 2000 ms | +2000 ms | ⚠️ over tolerance |"
+      "| LCP | 1500 ms | 4000 ms | 1000 ms | ⚠️ over budget |"
     );
-    expect(report).toContain("| CLS | 0.000 | 0.000 | 0.000 | ✅ |");
-    expect(report).toContain("| TTFB | 100 ms | 100 ms | 0 ms | info |");
+    expect(report).toContain("| CLS | 0.100 | 0.000 | 0.000 | ✅ |");
+    expect(report).toContain("| TTFB | 500 ms | 100 ms | 100 ms | info |");
   });
 });
 
@@ -215,16 +246,18 @@ describe("coldLoadViolations", () => {
 describe("PR comment", () => {
   const breaching: PageComparison = {
     path: "/explore",
-    profile: "mobile",
+    profile: "desktop",
     metrics: compareSamples(
-      [sample({ "largest-contentful-paint": 4000 })],
-      [sample()]
+      "desktop",
+      [sample({ "largest-contentful-paint": 4000, "speed-index": 2000 })],
+      // Production is over the Speed Index budget too, not the LCP one.
+      [sample({ "speed-index": 1800 })]
     ),
   };
   const clean: PageComparison = {
     path: "/",
-    profile: "desktop",
-    metrics: compareSamples([sample()], [sample()]),
+    profile: "mobile",
+    metrics: compareSamples("mobile", [sample()], [sample()]),
   };
   const context = {
     productionUrl: "https://repolore.app",
@@ -236,15 +269,25 @@ describe("PR comment", () => {
     commitSha: "abcdef1234567890",
   };
 
-  it("lists only metrics over tolerance as breaches", () => {
+  it("lists only metrics over budget as breaches", () => {
     expect(breachesOf([breaching, clean])).toEqual([
       {
         path: "/explore",
-        profile: "mobile",
+        profile: "desktop",
         id: "largest-contentful-paint",
+        budget: 1500,
         target: 4000,
-        production: 2000,
-        delta: 2000,
+        production: 1000,
+        productionOverBudget: false,
+      },
+      {
+        path: "/explore",
+        profile: "desktop",
+        id: "speed-index",
+        budget: 1500,
+        target: 2000,
+        production: 1800,
+        productionOverBudget: true,
       },
     ]);
   });
@@ -252,10 +295,13 @@ describe("PR comment", () => {
   it("reports breaches as non-blocking with a link to open a ticket", () => {
     const body = formatPrComment([breaching, clean], context, "FULL REPORT");
     expect(body.startsWith(PR_COMMENT_MARKER)).toBe(true);
-    expect(body).toContain("1 metric(s) over tolerance");
+    expect(body).toContain("2 metric(s) over budget");
     expect(body).toContain("This doesn't block merging.");
     expect(body).toContain(
-      "| `/explore` | mobile | LCP | 4000 ms | 2000 ms | +2000 ms |"
+      "| `/explore` | desktop | LCP | 1500 ms | 4000 ms | 1000 ms |"
+    );
+    expect(body).toContain(
+      "| `/explore` | desktop | Speed Index | 1500 ms | 2000 ms | 1800 ms (also over) |"
     );
     expect(body).toContain(
       "[creating a ticket](https://github.com/nielse63/RepoLore/issues/new?"
@@ -267,7 +313,7 @@ describe("PR comment", () => {
   it("renders an all-clear without breaches", () => {
     const body = formatPrComment([clean], context, "FULL REPORT");
     expect(body.startsWith(PR_COMMENT_MARKER)).toBe(true);
-    expect(body).toContain("No metrics over tolerance");
+    expect(body).toContain("No metrics over budget");
     expect(body).not.toContain("FULL REPORT");
   });
 
@@ -275,10 +321,10 @@ describe("PR comment", () => {
     const url = new URL(newIssueUrl(breachesOf([breaching]), context)!);
     expect(url.pathname).toBe("/nielse63/RepoLore/issues/new");
     expect(url.searchParams.get("title")).toBe(
-      "Performance: 1 metric(s) over tolerance vs. production (PR #36)"
+      "Performance: 2 metric(s) over budget (PR #36)"
     );
     const body = url.searchParams.get("body");
-    expect(body).toContain("| `/explore` | mobile | LCP |");
+    expect(body).toContain("| `/explore` | desktop | LCP | 1500 ms |");
     expect(body).toContain(
       "Workflow run: https://github.com/nielse63/RepoLore/actions/runs/42"
     );

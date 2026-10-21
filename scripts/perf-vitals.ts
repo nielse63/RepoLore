@@ -1,12 +1,13 @@
 /**
- * Performance regression check for key pages: runs Lighthouse
+ * Performance budget check for key pages: runs Lighthouse
  * (performance category only, mobile and desktop presets) against a target
  * instance and against production, alternating target/production on each
  * run so drift in the machine's load hits both equally, then compares the
- * medians via `src/perf/compare-vitals.ts`. Every page is a cold, direct
+ * target's medians to each profile's budget via `src/perf/compare-vitals.ts`
+ * (production is measured for context only). Every page is a cold, direct
  * load: a fresh Chrome profile per run, Lighthouse's storage reset, and no
  * redirect — any run that wasn't fails the check, as does any Lighthouse or
- * setup error. Metrics over tolerance do NOT fail it: they're reported (and,
+ * setup error. Metrics over budget do NOT fail it: they're reported (and,
  * in CI, commented on the PR) as advisory breaches.
  *
  * Usage: npm run test:perf
@@ -35,7 +36,8 @@ import {
   isNotAnalyzedLoreHtml,
   METRIC_IDS,
   perfUserAgent,
-  TOLERANCES,
+  METRICS,
+  type Profile,
   type LighthouseResult,
   type MetricSample,
   type PageComparison,
@@ -52,7 +54,7 @@ const PAGES = ["/", "/explore", "/manifesto", "/lore/sindresorhus/globby"];
  * No preset is Lighthouse's default: mobile with simulated throttling. Each
  * keeps its preset's own device user agent, plus the perf-bot token.
  */
-const PROFILES: { name: string; flags: string[] }[] = [
+const PROFILES: { name: Profile; flags: string[] }[] = [
   {
     name: "mobile",
     flags: [`--emulatedUserAgent=${perfUserAgent(userAgents.mobile)}`],
@@ -162,7 +164,7 @@ async function main() {
   // Every run's raw values, so noise in a median can be inspected afterwards.
   const samples: {
     path: string;
-    profile: string;
+    profile: Profile;
     target: MetricSample[];
     production: MetricSample[];
   }[] = [];
@@ -188,7 +190,7 @@ async function main() {
       pages.push({
         path: page,
         profile: profile.name,
-        metrics: compareSamples(targetRuns, productionRuns),
+        metrics: compareSamples(profile.name, targetRuns, productionRuns),
       });
     }
   }
@@ -226,17 +228,17 @@ async function main() {
   console.log(`\n${markdown}`);
 
   if (breaches.length === 0) {
-    console.log("✓ No metrics over tolerance against production.");
+    console.log("✓ No metrics over budget.");
     return;
   }
   // Advisory only: reported, never a non-zero exit.
-  console.warn(`⚠ ${breaches.length} metric(s) over tolerance (non-blocking):`);
+  console.warn(`⚠ ${breaches.length} metric(s) over budget (non-blocking):`);
   for (const b of breaches) {
-    const line = `${b.path} (${b.profile}): ${TOLERANCES[b.id].label}`;
+    const line = `${b.path} (${b.profile}): ${METRICS[b.id].label}`;
     console.warn(`  ${line}`);
     // Surfaces each breach as an annotation on the workflow run.
     if (process.env.GITHUB_ACTIONS) {
-      console.log(`::warning title=Performance over tolerance::${line}`);
+      console.log(`::warning title=Performance over budget::${line}`);
     }
   }
 }
