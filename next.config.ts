@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { latestGitTag } from "./src/lib/app-version";
 
 /**
  * Baseline security headers, applied to every route. The CSP is
@@ -48,6 +49,12 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * The latest git tag (e.g. `v0.0.1`), inlined at build time for the site
+   * footer. Empty when the build's clone has no tags, which hides it.
+   */
+  env: { APP_VERSION: latestGitTag() ?? "" },
+
   /**
    * `web-tree-sitter`/`tree-sitter-python` (ADR-0006) load a wasm binary at
    * runtime via filesystem paths resolved with `require.resolve`. Left to
