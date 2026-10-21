@@ -15,11 +15,12 @@
  * - `nielse63/repo-lore-ts-nested-test-samples-fixture` — analyzed from
  *   `fixtures/ts-nested-test-samples`, a monorepo package whose test suite
  *   nests many one-file sample-case directories under `packages/core/tests`
- *   (GitHub issue #50's Svelte-shaped layout), for
+ *   (GitHub issue #50's Svelte-shaped layout), plus a test-named
+ *   `packages/test` helper package that production code imports, for
  *   `nested-test-samples.spec.ts`. Local-only: unlike the other fixtures it
  *   has no GitHub repository, so it's keyed to a fixed placeholder commit.
- *   Its run is `'partial'` (Start Here falls below its minimum), so it's
- *   never indexable and doesn't show up on `/explore`.
+ *   Its run is `'completed'` and indexable, so `/explore` and the sitemap
+ *   list it alongside the other seeded runs.
  *
  * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
  * an ADR-0013 background re-analysis. Idempotent per ADR-0005: re-running

@@ -141,6 +141,45 @@ function testRootPath(filePath: string): string {
 }
 
 /**
+ * Test roots whose directory name is contradicted by detected structure, so
+ * their files aren't labeled tests by name alone: a non-test entry point
+ * inside one (e.g. a Next.js `app/test/page.tsx` route), or an import of one
+ * of its files from production code outside any test root (e.g. Django's
+ * shipped `django/test/` package, imported by `django/core`). Maps each such
+ * root path to the first contradiction found, cited as area evidence.
+ * Doesn't affect grouping — the root stays one area either way.
+ */
+function findContradictedTestRoots(
+  input: DeriveViewsInput,
+  isTestFile: DeriveViewsConfig["isTestFile"]
+): Map<string, string> {
+  const contradictions = new Map<string, string>();
+  for (const ep of input.entryPoints) {
+    const filePath = ep.location.filePath;
+    if (ep.kind === "test" || !isUnderTestRoot(filePath)) continue;
+    const root = testRootPath(filePath);
+    if (!contradictions.has(root)) {
+      contradictions.set(
+        root,
+        `'${filePath}' is detected as a ${describeEntryKind(ep.kind).toLowerCase()}`
+      );
+    }
+  }
+  for (const rel of input.relationships) {
+    if (!isUnderTestRoot(rel.toId)) continue;
+    if (isUnderTestRoot(rel.fromId) || isTestFile(rel.fromId)) continue;
+    const root = testRootPath(rel.toId);
+    if (!contradictions.has(root)) {
+      contradictions.set(
+        root,
+        `'${rel.fromId}', outside any test directory, depends on '${rel.toId}'`
+      );
+    }
+  }
+  return contradictions;
+}
+
+/**
  * Groups a file into an area at most `depth` directory levels under the
  * project root, e.g. at depth 2, "src/components/Header.tsx" ->
  * "src/components", "src/index.ts" -> "src". A file with no directory (at
@@ -292,6 +331,11 @@ function buildStructuralAreas(
   const { isTestFile, isToolingConfigFile, detectSpecialAreaResponsibility } =
     config;
 
+  const contradictedTestRoots = findContradictedTestRoots(input, isTestFile);
+  const isUnderUncontradictedTestRoot = (filePath: string) =>
+    isUnderTestRoot(filePath) &&
+    !contradictedTestRoots.has(testRootPath(filePath));
+
   const filesByAreaName = new Map<string, string[]>();
   for (const filePath of sourceFilePaths) {
     const name = areaNameByFile.get(filePath) ?? areaNameAtDepth(filePath, 2);
@@ -309,7 +353,7 @@ function buildStructuralAreas(
         name
       );
       const isAllTestFiles = files.every(
-        (f) => isTestFile(f) || isUnderTestRoot(f)
+        (f) => isTestFile(f) || isUnderUncontradictedTestRoot(f)
       );
       const isAllTestSupportFiles =
         !isAllTestFiles && files.every((f) => isTestSupportFile(f));
@@ -362,6 +406,22 @@ function buildStructuralAreas(
               : `${files.length - directoryOnlyFiles.length} source file(s) under '${name}' are recognized as test files; the other ${directoryOnlyFiles.length} lie under a conventional test directory (${testRootPaths.map((p) => `'${p}'`).join(", ")}) and are grouped as tests by directory name only, not recognized as individual test files.`,
         });
       }
+      const areaContradictedTestRoots = [
+        ...new Set(
+          files
+            .filter((f) => !isTestFile(f) && isUnderTestRoot(f))
+            .map(testRootPath)
+            .filter((root) => contradictedTestRoots.has(root))
+        ),
+      ];
+      for (const root of areaContradictedTestRoots) {
+        evidence.push({
+          kind: "test-directory-name-contradicted",
+          certainty: "detected",
+          location: { filePath: root },
+          description: `'${root}' is named like a test directory, but ${contradictedTestRoots.get(root)}, so its files aren't treated as tests by directory name.`,
+        });
+      }
       if (isAllTestSupportFiles) {
         evidence.push({
           kind: "test-support-directory-convention",
@@ -409,7 +469,7 @@ function buildStructuralAreas(
         evidence,
         gaps: areaGaps,
         productionFilePaths: files.filter(
-          (f) => !isTestFile(f) && !isUnderTestRoot(f)
+          (f) => !isTestFile(f) && !isUnderUncontradictedTestRoot(f)
         ),
       };
       return area;

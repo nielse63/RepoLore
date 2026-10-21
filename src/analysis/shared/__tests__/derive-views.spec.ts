@@ -141,6 +141,109 @@ describe("deriveViews structural areas", () => {
     ]);
   });
 
+  it("doesn't label a test-named directory as Tests when production code outside it imports it", () => {
+    // Django-shaped: `django/test/` is shipped library code, not a suite.
+    const relationships: Relationship[] = [
+      {
+        id: "rel-1",
+        kind: "depends-on",
+        fromId: "django/core/management/commands/test.py",
+        toId: "django/test/utils.py",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+    ];
+    const input = baseInput({
+      sourceFilePaths: [
+        "django/core/management/commands/test.py",
+        "django/test/client.py",
+        "django/test/utils.py",
+      ],
+      relationships,
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const area = structuralAreas.find((a) => a.name === "django/test");
+    expect(area?.responsibility).toBeUndefined();
+    expect(area?.productionFilePaths).toEqual([
+      "django/test/client.py",
+      "django/test/utils.py",
+    ]);
+    expect(
+      area?.evidence.find((e) => e.kind === "test-directory-name-contradicted")
+    ).toMatchObject({
+      certainty: "detected",
+      description:
+        "'django/test' is named like a test directory, but 'django/core/management/commands/test.py', outside any test directory, depends on 'django/test/utils.py', so its files aren't treated as tests by directory name.",
+    });
+  });
+
+  it("doesn't label a test-named directory as Tests when it holds a non-test entry point", () => {
+    // Next.js-shaped: `app/test` is an ordinary route segment.
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/app/page.tsx",
+        "src/app/test/page.tsx",
+        ...Array.from({ length: 10 }, (_, i) => `src/app/route${i}/page.tsx`),
+      ],
+      entryPoints: [
+        {
+          id: "entry-route",
+          kind: "route",
+          location: { filePath: "src/app/test/page.tsx" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const area = structuralAreas.find((a) => a.name === "src/app/test");
+    expect(area?.responsibility).toBeUndefined();
+    expect(area?.productionFilePaths).toEqual(["src/app/test/page.tsx"]);
+    expect(
+      area?.evidence.some((e) => e.kind === "test-directory-name-contradicted")
+    ).toBe(true);
+  });
+
+  it("still labels a test directory as Tests when only test files or its own files import it", () => {
+    const relationships: Relationship[] = [
+      {
+        id: "rel-1",
+        kind: "depends-on",
+        fromId: "src/math.test.ts",
+        toId: "pkg/tests/helpers.ts",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+      {
+        id: "rel-2",
+        kind: "depends-on",
+        fromId: "pkg/tests/run.ts",
+        toId: "pkg/tests/helpers.ts",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+    ];
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/math.test.ts",
+        "pkg/tests/helpers.ts",
+        "pkg/tests/run.ts",
+      ],
+      relationships,
+    });
+    const config: DeriveViewsConfig = {
+      ...noopConfig,
+      isTestFile: (f) => f.endsWith(".test.ts"),
+    };
+
+    const { structuralAreas } = deriveViews(input, config);
+    const area = structuralAreas.find((a) => a.name === "pkg/tests");
+    expect(area?.responsibility).toBe("Tests");
+    expect(area?.productionFilePaths).toEqual([]);
+  });
+
   it("doesn't claim a flat test directory's subdirectories were kept together when it has none", () => {
     const input = baseInput({
       sourceFilePaths: ["pkg/tests/a.ts", "pkg/tests/b.ts"],
