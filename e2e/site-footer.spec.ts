@@ -1,3 +1,4 @@
+import { latestGitTag } from "../src/lib/app-version";
 import { expect, test } from "./coverage";
 
 /**
@@ -6,8 +7,15 @@ import { expect, test } from "./coverage";
  * `/manifesto`, not-found, an unanalyzed repository) and a Lore page, where
  * it sits at the end of `LorePageFrame`'s main column. Those last two need
  * `DATABASE_URL` (the pinned fixture `nielse63/repo-lore-ts-react-app-fixture`
- * has a persisted run) but not `GITHUB_TOKEN`.
+ * has a persisted run) but not `GITHUB_TOKEN`. The version after the
+ * copyright is the same git tag the build read, so this needs a checkout
+ * with tags (CI fetches full history).
  */
+
+const version = latestGitTag();
+const copyright = `© ${new Date().getFullYear()} Repo Lore${
+  version ? ` | ${version}` : ""
+}`;
 
 const routes = [
   "/",
@@ -33,9 +41,7 @@ for (const route of routes) {
       "href",
       "https://github.com/nielse63/RepoLore"
     );
-    await expect(footer).toContainText(
-      `© ${new Date().getFullYear()} Repo Lore`
-    );
+    await expect(footer).toContainText(copyright);
   });
 }
 
