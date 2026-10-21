@@ -22,10 +22,9 @@ const SECURITY_HEADERS = [
       // `unsafe-eval` is added only outside production: React's development
       // mode uses eval() for debugging features (reconstructing
       // cross-environment call stacks, etc.) that it never uses in a
-      // production build, and Playwright's e2e suite runs against `next
-      // dev` (see playwright.config.ts), so a production-strength policy
-      // here would fail every e2e run without reflecting anything a real
-      // deployment (which always runs `next build`/`next start`) hits.
+      // production build, so a production-strength policy here would break
+      // `next dev` without reflecting anything a real deployment (which
+      // always runs `next build`/`next start`) hits.
       process.env.NODE_ENV === "production"
         ? "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com"
         : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
@@ -61,6 +60,14 @@ const nextConfig: NextConfig = {
    * resolved by real Node module resolution at runtime.
    */
   serverExternalPackages: ["web-tree-sitter", "tree-sitter-python"],
+
+  /**
+   * The e2e suite runs against a production build (`.bin/serve-prod`), and
+   * its V8 coverage report (`npm run test:e2e:coverage`) can only map
+   * chunks back to `src/` through browser source maps — so emit them for
+   * that build only, never for a deployed one.
+   */
+  productionBrowserSourceMaps: process.env.E2E_COVERAGE === "true",
 
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];

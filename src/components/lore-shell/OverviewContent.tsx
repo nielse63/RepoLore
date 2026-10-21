@@ -1,10 +1,8 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
 import { PaginatedCardGrid } from "@/components/lore-shell/PaginatedCardGrid";
-import {
-  MAJOR_AREAS_PAGE_SIZE,
-  PaginatedList,
-} from "@/components/lore-shell/PaginatedList";
+import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
+import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { PartialUnderstandingCard } from "@/components/lore-shell/PartialUnderstandingCard";
 import { StaleAnalysisCard } from "@/components/lore-shell/StaleAnalysisCard";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
@@ -17,6 +15,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { StepList } from "@/components/ui/StepList";
 import { isAnalysisStale } from "@/helpers";
 import { formatPath } from "@/lib/format-path";
+import { parsePageParam } from "@/lib/page-param";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { majorAreasOf } from "@/lore/major-areas";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
@@ -34,6 +33,8 @@ export interface OverviewContentProps {
   lore: Lore;
   sourceUrl?: (location: SourceLocation) => string;
   areaUrl?: (location: SourceLocation) => string;
+  /** The route's raw `?page=` search param for the Major Areas grid. */
+  majorAreasPage?: string | string[];
 }
 
 function certaintyLabel(certainty: CertaintyCategory): string {
@@ -51,6 +52,7 @@ export function OverviewContent({
   lore,
   sourceUrl,
   areaUrl = sourceUrl,
+  majorAreasPage,
 }: OverviewContentProps) {
   const { snapshot } = lore;
 
@@ -60,6 +62,18 @@ export function OverviewContent({
   const startHereUrl = (location: SourceLocation) =>
     areaFilePaths.has(location.filePath) ? areaUrl : sourceUrl;
   const majorAreas = majorAreasOf(lore.structuralAreas);
+  const majorAreasPageCount = Math.ceil(
+    majorAreas.length / MAJOR_AREAS_PAGE_SIZE
+  );
+  const majorAreasCurrentPage = parsePageParam(
+    majorAreasPage,
+    majorAreasPageCount
+  );
+  const majorAreasStart = (majorAreasCurrentPage - 1) * MAJOR_AREAS_PAGE_SIZE;
+  const majorAreasOnPage = majorAreas.slice(
+    majorAreasStart,
+    majorAreasStart + MAJOR_AREAS_PAGE_SIZE
+  );
   const diagramLayout = deriveProductionAreaDiagramLayout(
     majorAreas,
     lore.relationships
@@ -142,7 +156,7 @@ export function OverviewContent({
           <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
         </h2>
         <PaginatedCardGrid
-          items={majorAreas.map((area) => (
+          items={majorAreasOnPage.map((area) => (
             <Card key={area.id}>
               <div className="flex items-start gap-3">
                 <IconTile icon={Layers} variant="core" size="sm" />
@@ -185,8 +199,8 @@ export function OverviewContent({
               </dl>
             </Card>
           ))}
-          pageSize={MAJOR_AREAS_PAGE_SIZE}
-          storageKey={`major-areas-page:${snapshot.repository.owner}/${snapshot.repository.name}:overview`}
+          page={majorAreasCurrentPage}
+          pageCount={majorAreasPageCount}
         />
       </section>
 
