@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-Phase 2 (scaffolding) is underway. A real Next.js (App Router, TypeScript) app lives at the repo root. Automated tests are both unit (Jest, one spec file per analyzer module, gating every session's work) and functional (Playwright, driving real pages in a browser — currently the home page's client-side URL validation and the 404 page); see `npm run test` and `npm run test:e2e` below.
+Phase 2 (scaffolding) is underway. A real Next.js (App Router, TypeScript) app lives at the repo root. Automated tests are both unit (Jest, one spec file per analyzer module, gating every session's work) and functional (Playwright, driving real pages in a browser — the home page, `/explore`, `/manifesto`, the real `/lore/{owner}/{repo}` pages, 404s, plus accessibility (axe) and SEO-metadata sweeps); see the test scripts below.
 
 - `npm run dev` — start the dev server (serves `/api/health` as a liveness-only check, no DB)
 - `npm run build` — production build
 - `npm run start` — run the production build
 - `npm run lint` — ESLint (flat config, `eslint-config-next`)
-- `npm run test` — Jest unit test suite
-- `npm run test:coverage` — Jest unit test suite with a coverage report
-- `npm run test:e2e` — Playwright functional/UI test suite
+- `npm run test:unit` — Jest unit test suite (`test:unit:coverage` adds a coverage report)
+- `npm run test:e2e` — Playwright functional/UI test suite (builds and serves production on port 3100; reads persisted runs from `DATABASE_URL`)
+- `npm run test` — both suites, with coverage
+- `npm run migrate` then `npm run seed:e2e` — prepare a fresh local database for `test:e2e` (persists the pinned fixture and this repo's own tree from local source; no `GITHUB_TOKEN`; refuses non-local databases). CI runs exactly this against a throwaway Postgres.
 
 ## Testing
 
@@ -21,7 +22,7 @@ Every source code change must leave the test suites reflecting the new behavior,
 - **New code** (a module, component, route, or API handler with no existing coverage): add a Jest spec file (analyzers, one spec file per module) and, for anything user-facing, a Playwright spec exercising the real page.
 - **Changed code**: update the existing unit and/or e2e tests that cover it so they assert the new behavior — don't leave assertions describing the old behavior passing coincidentally, and don't just add a new test alongside a now-stale one.
 - **Removed code**: delete the tests (and fixtures) that existed only to cover it. Don't leave dead specs testing code that no longer exists.
-- Run `npm run test` and, when the change touches a page or user flow, `npm run test:e2e` before considering the change complete.
+- Run `npm run test:unit` and, when the change touches a page or user flow, `npm run test:e2e` before considering the change complete.
 - If a change is genuinely untestable (e.g. pure config, docs-only), state that explicitly rather than silently skipping test updates.
 
 ## Product
@@ -41,7 +42,7 @@ Constraints that should shape any proposed feature or dependency (see `product-s
 
 ## Architecture
 
-First-slice architecture (ADR-0001 through ADR-0006): a single Next.js deployable (the worker entrypoint and job queue are deferred until a synchronous path proves insufficient — see ADR-0001 and ADR-0004), GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis for JavaScript/TypeScript (ADR-0003), syntactic tree-sitter-python analysis for Python (ADR-0006), and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)` (ADR-0005). Both language extractors' derived views (Start Here, major areas) share one language-neutral core (`src/analysis/shared/derive-views.ts`); real end-to-end analysis submissions are still JS/TS-only pending a project-language-detection dispatch. Don't propose a different shape for ingestion, analysis, or job execution without a clear reason.
+First-slice architecture (ADR-0001 through ADR-0006): a single Next.js deployable (the worker entrypoint and job queue are deferred until a synchronous path proves insufficient — see ADR-0001 and ADR-0004), GitHub-tarball source acquisition with enforced extraction limits, syntactic (non-type-checked) ts-morph analysis for JavaScript/TypeScript (ADR-0003), syntactic tree-sitter-python analysis for Python (ADR-0006), and analysis results keyed by `(owner, repo, commit_sha, analyzer_version)` (ADR-0005). Both language extractors' derived views (Start Here, major areas) share one language-neutral core (`src/analysis/shared/derive-views.ts`); real submissions go through a language-detection dispatch (ADR-0007, `src/analysis/dispatch/`) that runs the JS/TS and/or Python analyzer based on GitHub's byte-weighted language breakdown. Architecture decisions are referenced in code by bare ADR-#### labels; the ADR documents themselves are no longer kept in the repo. Don't propose a different shape for ingestion, analysis, or job execution without a clear reason.
 
 ## Custom subagents
 

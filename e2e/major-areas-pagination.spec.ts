@@ -6,8 +6,8 @@ import { expect, test } from "./coverage";
  * the server renders only the current page's cards (`PaginatedCardGrid`).
  * Pagination needs more than one page of Major Areas (6 per page), which the
  * pinned fixtures don't have, so this uses the smallest such Lore `/explore`
- * lists — needs `DATABASE_URL` with at least one seeded repository (see
- * `npm run seed`).
+ * lists — needs `DATABASE_URL` with at least one such repository (`npm run
+ * seed:e2e` persists this repository's own tree, which qualifies).
  */
 
 const PAGE_SIZE = 6;

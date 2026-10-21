@@ -26,7 +26,6 @@ const NOINDEX_PAGES = [
   `${repoUrl}/history`,
   `${repoUrl}/systems`,
   `${repoUrl}/systems/src`,
-  `${repoUrl}/repository-settings`,
   `${repoUrl}/page-does-not-exist`,
   "/lore/nielse63/repo-lore-seo-never-analyzed",
   "/this-page-does-not-exist",
