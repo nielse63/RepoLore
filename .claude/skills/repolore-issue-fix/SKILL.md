@@ -8,7 +8,7 @@ argument-hint: "<issue URL or number> [additional constraints]"
 
 Resolve the issue identified by `$ARGUMENTS` in `nielse63/RepoLore`. Work through investigation, implementation, and local verification. The issue's diagnosis, suggested fix, logs, and comments are claims to evaluate, not established facts.
 
-Default scope: implement and test locally, then report results. Do not commit, push, open a pull request, post comments, close issues, or deploy unless separately instructed. Follow repository instructions and preserve existing user changes.
+Default scope: implement and test locally, post the confirmed diagnosis to the issue (see below), then report results. Do not commit, push, open a pull request, post any other comments, close issues, or deploy unless separately instructed. Follow repository instructions and preserve existing user changes.
 
 ## Establish the task and environment
 
@@ -27,6 +27,18 @@ Ask focused questions when the answer materially changes correctness, scope, or 
 4. Challenge the leading explanation. Identify the strongest credible alternative and perform a discriminating check that could show your explanation is wrong. Check whether the evidence supports all material symptoms and whether the proposed fix addresses the cause across affected paths. Expand this investigation only when uncertainty warrants it.
 
 If reproduction is impossible, explicitly distinguish confirmed facts from hypotheses. Seek the missing inputs or construct a faithful local reproduction. Do not silently substitute a different bug, claim a confirmed root cause from inspection alone, or make speculative production changes while a consequential ambiguity remains.
+
+### Post the confirmed diagnosis to the issue
+
+Once the diagnosis is complete and you have high confidence in the root cause — it is reproduced, traced to concrete code, and survived the discriminating check against the strongest alternative — add one comment to the issue with `gh issue comment <number> --repo nielse63/RepoLore --body-file <file>`, before implementing the fix. Write the body to a file in the scratchpad rather than inlining it. Include:
+
+- **Reproduction:** revision, command or interaction, expected vs. actual result.
+- **Root cause:** the trigger → execution path → incorrect state → observed failure chain, with `path:line` references.
+- **Alternative checked:** the strongest competing explanation and the evidence that ruled it out.
+- **Issue's proposed diagnosis:** whether it held up, and where it diverged.
+- **Planned fix:** the intended change and its scope, in a sentence or two.
+
+Do not post while the cause is still a hypothesis, reproduction failed, or a consequential ambiguity is unresolved; report the open questions to the user instead. Post at most one diagnosis comment per session; if a later finding materially changes the diagnosis, tell the user rather than posting again unless instructed. Keep the comment factual and free of private deliberation, and add no Claude or Claude Code attribution. If posting fails (auth, permissions), report the failure and include the drafted comment in the final report.
 
 For feature requests or other issues with no existing defect, establish the current behavior and agreed acceptance criteria instead of inventing a root cause. Tests should demonstrate the missing behavior before implementation.
 
@@ -57,7 +69,7 @@ If the repository lacks an end-to-end harness, inspect its integration boundarie
 Keep the report concise but auditable. Include:
 
 1. **Status:** verified locally, implemented but incompletely verified, or blocked. Use “fixed” or “resolved” only when the evidence supports the issue's acceptance criteria and all required local verification is complete.
-2. **Diagnosis:** the causal explanation, supporting code references and observed evidence, the alternative explanation checked, and whether the issue's proposed diagnosis held up. Label remaining hypotheses.
+2. **Diagnosis:** the causal explanation, supporting code references and observed evidence, the alternative explanation checked, and whether the issue's proposed diagnosis held up. Label remaining hypotheses. State whether the diagnosis comment was posted (with its URL) or why not.
 3. **Change:** what changed and how it addresses the demonstrated cause or requested behavior.
 4. **Verification:** original reproduction outcome; unit and end-to-end coverage mapping; exact commands and actual results; baseline failure → final pass evidence where applicable. Include unrun, skipped, failing, or blocked checks and their implications.
 5. **Remaining work:** unresolved acceptance criteria, meaningful risks, or required user input. Do not imply that local success proves a deployment or production environment has been repaired.
