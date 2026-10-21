@@ -1,0 +1,74 @@
+name: Update dependencies
+
+on:
+  schedule:
+    # Mondays 09:00 UTC.
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: update-deps
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Pushes the bumped manifests straight to dev; nothing else needs write
+    # access.
+    permissions:
+      contents: write
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - run: npm ci
+
+      # Bumps every dependency, majors and exact pins included, to latest.
+      # @types/node is held to its current major so it keeps tracking the
+      # Node version in .nvmrc.
+      - name: Bump package.json to latest
+        id: ncu
+        run: |
+          npx --yes npm-check-updates@23 -u --reject @types/node | tee ncu.log
+          npx --yes npm-check-updates@23 -u --filter @types/node --target minor | tee -a ncu.log
+          if git diff --quiet -- package.json; then
+            echo "No outdated packages."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.ncu.outputs.changed == 'true'
+        run: npm install
+
+      # Read-only variants of `npm run lint` / `npm run format`, so a
+      # violation fails the run instead of being silently rewritten.
+      - if: steps.ncu.outputs.changed == 'true'
+        run: npx eslint
+      - if: steps.ncu.outputs.changed == 'true'
+        run: npm run format:check
+      - if: steps.ncu.outputs.changed == 'true'
+        run: npm run build
+      - if: steps.ncu.outputs.changed == 'true'
+        run: npm run test:unit
+
+      - name: Commit and push to dev
+        if: steps.ncu.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          {
+            echo "chore(deps): update npm packages"
+            echo
+            grep '→' ncu.log | sed -E 's/^[[:space:]]+/- /'
+          } > commit-msg.txt
+          git commit -F commit-msg.txt
+          git push origin HEAD:dev
