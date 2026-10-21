@@ -1,0 +1,51 @@
+import { expect, test } from "./coverage";
+
+/**
+ * Regression coverage for GitHub issue #50: a test suite nesting many small
+ * sample-case directories (`packages/<pkg>/tests/<suite>/samples/<case>/`,
+ * as in `sveltejs/svelte`) used to become one Major Area per case — 2,994 of
+ * them for Svelte — none classified as tests. Reads the persisted run for
+ * the local-only fixture `nielse63/repo-lore-ts-nested-test-samples-fixture`
+ * (`fixtures/ts-nested-test-samples`, written by `npm run seed:e2e`; needs
+ * `DATABASE_URL`, not `GITHUB_TOKEN`), whose twelve one-file sample cases
+ * under `packages/core/tests` should be one "Tests" area alongside
+ * `packages/core/src`. Its run is honestly `'partial'`: with the sample
+ * cases no longer padding Start Here as fake "primary areas", its one
+ * two-file implementation area leaves Start Here below its three-item
+ * minimum — so it's not indexable and `/explore` doesn't list it.
+ */
+
+const repoUrl = "/lore/nielse63/repo-lore-ts-nested-test-samples-fixture";
+const systemsUrl = `${repoUrl}/systems`;
+
+test("the Overview lists a nested test directory as one Major Area, not one per sample case", async ({
+  page,
+}) => {
+  await page.goto(repoUrl);
+
+  await expect(page.locator("#major-areas h3")).toHaveText([
+    /^\/packages\/core\/src\s/,
+    /^\/packages\/core\/tests\s/,
+  ]);
+});
+
+test("the Systems page classifies the nested test directory as Tests", async ({
+  page,
+}) => {
+  await page.goto(systemsUrl);
+
+  await expect(page.getByText("2 systems identified")).toBeVisible();
+
+  await page
+    .getByRole("group", { name: "Filter by classification" })
+    .getByRole("button", { name: "Tests" })
+    .click();
+
+  await expect(page.getByText("Showing 1–1 of 2 systems")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^\/packages\/core\/tests\s/ })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /^\/packages\/core\/src\s/ })
+  ).toBeHidden();
+});
