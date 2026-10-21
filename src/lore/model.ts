@@ -104,7 +104,9 @@ export interface StructuralArea {
   gaps: Gap[];
   /**
    * This area's own source files, minus any matching the analyzing
-   * language's `isTestFile` convention — i.e. files that would actually
+   * language's `isTestFile` convention or living under a conventional test
+   * directory at any depth (`test`, `tests`, `__tests__`, `e2e` — see
+   * `src/analysis/shared/derive-views.ts`) — i.e. files that would actually
    * ship to production. Lets a presentation layer (the area dependency
    * diagram) exclude test files precisely, including from mixed areas that
    * hold both production and test files, without re-deriving test-file

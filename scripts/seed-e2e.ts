@@ -12,8 +12,17 @@
  * - `nielse63/RepoLore` — this repository's own committed tree (`git
  *   archive HEAD`, the same shape as a GitHub tarball), which has more than
  *   one page of Major Areas for `major-areas-pagination.spec.ts`.
+ * - `nielse63/repo-lore-ts-nested-test-samples-fixture` — analyzed from
+ *   `fixtures/ts-nested-test-samples`, a monorepo package whose test suite
+ *   nests many one-file sample-case directories under `packages/core/tests`
+ *   (GitHub issue #50's Svelte-shaped layout), plus a test-named
+ *   `packages/test` helper package that production code imports, for
+ *   `nested-test-samples.spec.ts`. Local-only: unlike the other fixtures it
+ *   has no GitHub repository, so it's keyed to a fixed placeholder commit.
+ *   Its run is `'completed'` and indexable, so `/explore` and the sitemap
+ *   list it alongside the other seeded runs.
  *
- * Both runs are stamped `analyzedAt: now`, so viewing them doesn't schedule
+ * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
  * an ADR-0013 background re-analysis. Idempotent per ADR-0005: re-running
  * against an already-seeded database leaves existing runs untouched.
  *
@@ -41,6 +50,10 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 /** `nielse63/repo-lore-ts-react-app-fixture`'s HEAD on GitHub, matching `fixtures/ts-react-app`. */
 const TS_REACT_APP_FIXTURE_SHA = "50857b9860ee568f54a6707098761857932ab02f";
+
+/** Placeholder: `fixtures/ts-nested-test-samples` has no GitHub repository. */
+const TS_NESTED_TEST_SAMPLES_FIXTURE_SHA =
+  "0000000000000000000000000000000000000050";
 
 async function seedRun(params: {
   owner: string;
@@ -99,6 +112,13 @@ async function main() {
     repoId: fixtureRepo.id,
     computedThroughSha: TS_REACT_APP_FIXTURE_SHA,
     entries: [],
+  });
+
+  await seedRun({
+    owner: "nielse63",
+    repo: "repo-lore-ts-nested-test-samples-fixture",
+    dir: path.join(process.cwd(), "fixtures/ts-nested-test-samples"),
+    commitSha: TS_NESTED_TEST_SAMPLES_FIXTURE_SHA,
   });
 
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "repolore-seed-e2e-"));

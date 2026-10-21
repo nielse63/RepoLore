@@ -100,15 +100,104 @@ const NON_PRIMARY_AREA_RESPONSIBILITIES = new Set([
 const MAX_FALLBACK_AREA_FILES = 10;
 
 /**
+ * Directory names conventionally holding a test suite — the union of each
+ * language's own `isTestFile` directory conventions (JS/TS: `test`, `tests`,
+ * `__tests__`, `e2e`; Python: `test`, `tests`), but recognized here at any
+ * depth, not only at the project root. Found validating against a real
+ * repository (`sveltejs/svelte`, GitHub issue #50): its
+ * `packages/svelte/tests/<suite>/samples/<case>/` layout held ~2,900
+ * one-or-two-file sample cases, and since none matched either `isTestFile`
+ * convention, subdividing split every case into its own area — 2,994 "major
+ * areas", none labeled as tests. Area grouping only: each language's
+ * `isTestFile` (and so test-relationship extraction) is unchanged, since
+ * treating thousands of sample inputs as tests would report each one as a
+ * test with no identifiable subject.
+ */
+const TEST_ROOT_DIRECTORY_NAMES = new Set([
+  "test",
+  "tests",
+  "__tests__",
+  "e2e",
+]);
+
+/** Index of a file's first directory segment that's a test root, or -1. */
+function testRootSegmentIndex(filePath: string): number {
+  return filePath
+    .split("/")
+    .slice(0, -1)
+    .findIndex((segment) => TEST_ROOT_DIRECTORY_NAMES.has(segment));
+}
+
+function isUnderTestRoot(filePath: string): boolean {
+  return testRootSegmentIndex(filePath) !== -1;
+}
+
+/** A file's directory path up to and including its first test root, e.g. "packages/x/tests". */
+function testRootPath(filePath: string): string {
+  return filePath
+    .split("/")
+    .slice(0, testRootSegmentIndex(filePath) + 1)
+    .join("/");
+}
+
+/**
+ * Test roots whose directory name is contradicted by detected structure, so
+ * their files aren't labeled tests by name alone: a non-test entry point
+ * inside one (e.g. a Next.js `app/test/page.tsx` route), or an import of one
+ * of its files from production code outside any test root (e.g. Django's
+ * shipped `django/test/` package, imported by `django/core`). Maps each such
+ * root path to the first contradiction found, cited as area evidence.
+ * Doesn't affect grouping — the root stays one area either way.
+ */
+function findContradictedTestRoots(
+  input: DeriveViewsInput,
+  isTestFile: DeriveViewsConfig["isTestFile"]
+): Map<string, string> {
+  const contradictions = new Map<string, string>();
+  for (const ep of input.entryPoints) {
+    const filePath = ep.location.filePath;
+    if (ep.kind === "test" || !isUnderTestRoot(filePath)) continue;
+    const root = testRootPath(filePath);
+    if (!contradictions.has(root)) {
+      contradictions.set(
+        root,
+        `'${filePath}' is detected as a ${describeEntryKind(ep.kind).toLowerCase()}`
+      );
+    }
+  }
+  for (const rel of input.relationships) {
+    if (!isUnderTestRoot(rel.toId)) continue;
+    if (isUnderTestRoot(rel.fromId) || isTestFile(rel.fromId)) continue;
+    const root = testRootPath(rel.toId);
+    if (!contradictions.has(root)) {
+      contradictions.set(
+        root,
+        `'${rel.fromId}', outside any test directory, depends on '${rel.toId}'`
+      );
+    }
+  }
+  return contradictions;
+}
+
+/**
  * Groups a file into an area at most `depth` directory levels under the
  * project root, e.g. at depth 2, "src/components/Header.tsx" ->
  * "src/components", "src/index.ts" -> "src". A file with no directory (at
- * the project root) always falls into ".", regardless of depth.
+ * the project root) always falls into ".", regardless of depth. A file under
+ * a test root never goes deeper than that root (e.g. "tests/unit/a.ts" ->
+ * "tests"), so a test suite stays one area however it's subdivided.
  */
-function areaNameAtDepth(filePath: string, depth: number): string {
+function areaNameAtDepth(
+  filePath: string,
+  depth: number,
+  capAtTestRoot = true
+): string {
   const directorySegments = filePath.split("/").slice(0, -1);
   if (directorySegments.length === 0) return ".";
-  return directorySegments.slice(0, depth).join("/");
+  const testRootIndex = capAtTestRoot ? testRootSegmentIndex(filePath) : -1;
+  const maxDepth =
+    testRootIndex === -1 ? depth : Math.min(depth, testRootIndex + 1);
+  return directorySegments.slice(0, maxDepth).join("/");
 }
 
 /**
@@ -120,18 +209,20 @@ function areaNameAtDepth(filePath: string, depth: number): string {
  * one oversized, illegible area. A bucket whose files all still share the
  * same directory one level deeper (a genuinely flat directory) stops
  * subdividing there even if it stays over the threshold — there's nothing
- * left to split by.
+ * left to split by. Likewise a test root (`TEST_ROOT_DIRECTORY_NAMES`) is
+ * never split further: its subdirectories are test cases, not structure.
  */
 function groupFilesIntoAreaNames(
   filePaths: string[],
-  maxFilesPerArea: number
+  maxFilesPerArea: number,
+  capAtTestRoot = true
 ): Map<string, string> {
   const areaNameByFile = new Map<string, string>();
 
   function assign(files: string[], depth: number) {
     const byName = new Map<string, string[]>();
     for (const filePath of files) {
-      const name = areaNameAtDepth(filePath, depth);
+      const name = areaNameAtDepth(filePath, depth, capAtTestRoot);
       const bucket = byName.get(name) ?? [];
       bucket.push(filePath);
       byName.set(name, bucket);
@@ -139,7 +230,9 @@ function groupFilesIntoAreaNames(
     for (const [name, bucketFiles] of byName) {
       const canSubdivideFurther =
         bucketFiles.length > maxFilesPerArea &&
-        bucketFiles.some((f) => areaNameAtDepth(f, depth + 1) !== name);
+        bucketFiles.some(
+          (f) => areaNameAtDepth(f, depth + 1, capAtTestRoot) !== name
+        );
       if (canSubdivideFurther) {
         assign(bucketFiles, depth + 1);
       } else {
@@ -150,6 +243,23 @@ function groupFilesIntoAreaNames(
 
   assign(filePaths, 2);
   return areaNameByFile;
+}
+
+/**
+ * Whether naming this area at its test root actually kept together files
+ * that subdividing would otherwise have split into several areas, so the
+ * rationale only says so when it's true.
+ */
+function wasKeptTogetherAsTestRoot(name: string, files: string[]): boolean {
+  if (!TEST_ROOT_DIRECTORY_NAMES.has(name.split("/").pop() ?? "")) {
+    return false;
+  }
+  const uncapped = groupFilesIntoAreaNames(
+    files,
+    MAX_FALLBACK_AREA_FILES,
+    false
+  );
+  return new Set(uncapped.values()).size > 1;
 }
 
 /**
@@ -221,6 +331,11 @@ function buildStructuralAreas(
   const { isTestFile, isToolingConfigFile, detectSpecialAreaResponsibility } =
     config;
 
+  const contradictedTestRoots = findContradictedTestRoots(input, isTestFile);
+  const isUnderUncontradictedTestRoot = (filePath: string) =>
+    isUnderTestRoot(filePath) &&
+    !contradictedTestRoots.has(testRootPath(filePath));
+
   const filesByAreaName = new Map<string, string[]>();
   for (const filePath of sourceFilePaths) {
     const name = areaNameByFile.get(filePath) ?? areaNameAtDepth(filePath, 2);
@@ -237,7 +352,9 @@ function buildStructuralAreas(
         files,
         name
       );
-      const isAllTestFiles = files.every((f) => isTestFile(f));
+      const isAllTestFiles = files.every(
+        (f) => isTestFile(f) || isUnderUncontradictedTestRoot(f)
+      );
       const isAllTestSupportFiles =
         !isAllTestFiles && files.every((f) => isTestSupportFile(f));
       const isAllToolingConfig = files.every((f) => isToolingConfigFile(f));
@@ -272,11 +389,37 @@ function buildStructuralAreas(
         });
       }
       if (isAllTestFiles) {
+        // Files under a nested test root that the language's own
+        // `isTestFile` doesn't match are grouped as tests by directory name
+        // alone, not recognized as test files — said so rather than implied.
+        const directoryOnlyFiles = files.filter((f) => !isTestFile(f));
+        const testRootPaths = [
+          ...new Set(directoryOnlyFiles.map(testRootPath)),
+        ];
         evidence.push({
           kind: "test-directory-convention",
           certainty: "inferred",
           location: { filePath: name },
-          description: `Every source file under '${name}' is recognized as a test file (naming convention or top-level 'test'/'tests' directory).`,
+          description:
+            directoryOnlyFiles.length === 0
+              ? `Every source file under '${name}' is recognized as a test file (naming convention or top-level 'test'/'tests' directory).`
+              : `${files.length - directoryOnlyFiles.length} source file(s) under '${name}' are recognized as test files; the other ${directoryOnlyFiles.length} lie under a conventional test directory (${testRootPaths.map((p) => `'${p}'`).join(", ")}) and are grouped as tests by directory name only, not recognized as individual test files.`,
+        });
+      }
+      const areaContradictedTestRoots = [
+        ...new Set(
+          files
+            .filter((f) => !isTestFile(f) && isUnderTestRoot(f))
+            .map(testRootPath)
+            .filter((root) => contradictedTestRoots.has(root))
+        ),
+      ];
+      for (const root of areaContradictedTestRoots) {
+        evidence.push({
+          kind: "test-directory-name-contradicted",
+          certainty: "detected",
+          location: { filePath: root },
+          description: `'${root}' is named like a test directory, but ${contradictedTestRoots.get(root)}, so its files aren't treated as tests by directory name.`,
         });
       }
       if (isAllTestSupportFiles) {
@@ -301,7 +444,11 @@ function buildStructuralAreas(
         projectId,
         name,
         location: { filePath: name },
-        rationale: `Groups ${files.length} source file(s) under '${name}'; no declared workspace, package, or source-root boundary was found, so files are grouped by directory.`,
+        rationale: `Groups ${files.length} source file(s) under '${name}'; no declared workspace, package, or source-root boundary was found, so files are grouped by directory.${
+          wasKeptTogetherAsTestRoot(name, files)
+            ? " As a conventional test directory, its subdirectories are kept together as one area rather than split into separate ones."
+            : ""
+        }`,
         responsibility: specialResponsibility
           ? specialResponsibility.responsibility
           : isAllTestFiles
@@ -321,7 +468,9 @@ function buildStructuralAreas(
         testRelationshipIds: areaTests.map((tr) => tr.id),
         evidence,
         gaps: areaGaps,
-        productionFilePaths: files.filter((f) => !isTestFile(f)),
+        productionFilePaths: files.filter(
+          (f) => !isTestFile(f) && !isUnderUncontradictedTestRoot(f)
+        ),
       };
       return area;
     });

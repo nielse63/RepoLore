@@ -36,10 +36,9 @@ jobs:
       - run: npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - run: npm run test:unit
+      - run: npm run test:unit:coverage
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         with:
