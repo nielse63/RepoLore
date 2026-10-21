@@ -31,8 +31,8 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -54,7 +54,7 @@ jobs:
       # token can't comment.
       - name: Comment breaches on PR
         if: success() && github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require("fs");
@@ -70,7 +70,7 @@ jobs:
             } else if (breaches.length > 0) {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: perf-report
