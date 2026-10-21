@@ -162,6 +162,3 @@ vite.config.ts.timestamp-*
 
 # git worktrees
 .worktrees
-
-# lighthouse performance regression report
-/perf-report/

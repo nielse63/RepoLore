@@ -16,7 +16,8 @@ const MOBILE_VIEWPORT = { width: 375, height: 812 };
 const DESKTOP_VIEWPORT = { width: 1280, height: 900 };
 
 // Every routed page that renders inside the shared app shell — used for the
-// generic no-horizontal-overflow sweep.
+// generic no-horizontal-overflow sweep. `repository-settings` isn't built yet
+// (404s, see Sidebar.tsx) and intentionally not covered here.
 const SHELL_ROUTES = [
   repoUrl,
   `${repoUrl}/architecture`,
@@ -106,7 +107,7 @@ test.describe("RightRailShell mobile bottom sheet", () => {
       page.getByRole("heading", { name: "System map" })
     ).toBeVisible();
     await expect(
-      page.getByRole("figure", {
+      page.getByRole("img", {
         name: "Diagram of how major areas depend on each other",
       })
     ).toBeVisible();

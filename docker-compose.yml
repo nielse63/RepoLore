@@ -1,17 +1,15 @@
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: repolore
       POSTGRES_PASSWORD: repolore
       POSTGRES_DB: repolore
     ports:
-      - "5432:5432"
-    # 18+ images keep data in a major-version subdirectory of
-    # /var/lib/postgresql, so the mount is the parent, not .../data.
+      - '5432:5432'
     volumes:
-      - repolore-db-data-18:/var/lib/postgresql
+      - repolore-db-data:/var/lib/postgresql/data
 
 volumes:
-  repolore-db-data-18:
+  repolore-db-data:

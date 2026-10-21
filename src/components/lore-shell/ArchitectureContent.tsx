@@ -1,7 +1,9 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
-import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
-import { PaginatedList } from "@/components/lore-shell/PaginatedList";
+import {
+  MAJOR_AREAS_PAGE_SIZE,
+  PaginatedList,
+} from "@/components/lore-shell/PaginatedList";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";

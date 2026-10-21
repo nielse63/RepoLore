@@ -2,17 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
 
-const viewportWidth = process.env.VIEWPORT_HEIGHT
-  ? parseInt(process.env.VIEWPORT_WIDTH)
-  : 1512;
-const viewportHeight = process.env.VIEWPORT_HEIGHT
-  ? parseInt(process.env.VIEWPORT_HEIGHT)
-  : 770;
-
 const __dirname = import.meta.dirname;
 const baseUrl = "http://localhost:3000";
 const repoPath = "lore/nielse63/RepoLore";
-const defaultPages = [
+const pages = [
   "",
   repoPath,
   `${repoPath}/architecture`,
@@ -21,7 +14,6 @@ const defaultPages = [
   `${repoPath}/data-flow`,
   `${repoPath}/dependencies`,
 ];
-const pages = process.env.PAGES.split(",").filter(Boolean) || defaultPages;
 
 const screenshotsDir = path.join(__dirname, "screenshots");
 if (!fs.existsSync(screenshotsDir)) {
@@ -34,8 +26,9 @@ const gotoPage = async (pageName = "") => {
   const url = `${baseUrl}/${pageName}`;
   const fileBasename = pageName.replace(/\//g, "-").replace(/^-/, "") || "home";
   const filename = `${fileBasename}.png`;
+  // console.log({ url, filename });
   const page = await browser.newPage({
-    viewport: { width: viewportWidth, height: viewportHeight },
+    viewport: { width: 1512, height: 770 },
   });
 
   await page.goto(url, { waitUntil: "networkidle" });

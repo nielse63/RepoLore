@@ -105,8 +105,7 @@ test("serves the static badge SVG", async ({ request }) => {
 test("a submission redirect reports the run's outcome once and strips the marker", async ({
   page,
 }) => {
-  // Stand in for gtag. The event fires on hydration, before the production
-  // layout's `afterInteractive` gtag shim would replace this stub.
+  // gtag is only injected in production builds; stand in for it.
   await page.addInitScript(() => {
     const events: string[] = [];
     (window as unknown as { __events: string[] }).__events = events;

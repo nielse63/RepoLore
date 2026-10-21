@@ -1,5 +1,4 @@
 import { SiteShell } from "@/components/SiteShell";
-import { DEFAULT_OG_IMAGE } from "@/lib/route-metadata";
 import type { Metadata } from "next";
 
 const TITLE = "The Repo Lore Manifesto";
@@ -16,13 +15,11 @@ export const metadata: Metadata = {
     url: "/manifesto",
     siteName: "Repo Lore",
     type: "article",
-    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
-    images: [DEFAULT_OG_IMAGE],
   },
 };
 

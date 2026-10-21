@@ -3,7 +3,7 @@ services:
     name: repolore
     runtime: node
     plan: pro
-    buildCommand: NODE_ENV=development npm install && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:

@@ -7,12 +7,14 @@ import { isIndexableLore } from "@/lib/lore-indexability";
  * better first impression than whatever was submitted most recently.
  */
 export const FEATURED_REPOS = [
+  "vercel/next.js",
   "facebook/react",
-  "sveltejs/svelte",
+  "fastapi/fastapi",
+  "vitejs/vite",
   "shadcn-ui/ui",
-  "excalidraw/excalidraw",
-  "axios/axios",
-  "tailwindlabs/tailwindcss",
+  "pallets/flask",
+  "colinhacks/zod",
+  "psf/requests",
 ] as const;
 
 const slug = (row: LatestRunIndexabilityRow) =>

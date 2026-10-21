@@ -7,6 +7,14 @@ import { usePersistedPage } from "@/lib/use-persisted-page";
 import { useRef } from "react";
 
 export const MAX_PAGE_SIZE = 15;
+/**
+ * Fixed page size for Major Areas (Overview, Architecture, Systems) — unlike
+ * the other paginated lists, Major Areas paginates at a fixed threshold
+ * rather than however many rows fit the screen, since Overview renders it as
+ * a 2-column grid of variable-height cards that fit-to-screen measurement
+ * (see `useFitPageSize`) can't size correctly.
+ */
+export const MAJOR_AREAS_PAGE_SIZE = 6;
 
 export interface PaginatedListProps {
   /**

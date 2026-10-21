@@ -166,6 +166,24 @@ function SidebarNav({
             Every claim is grounded in code, configuration, and infrastructure.
           </p>
         </div>
+
+        {/* Repository settings is not implemented yet; `/repository-settings`
+            currently 404s (see the route's own stub comment). */}
+        {/* <Link
+          href={`${base}/repository-settings`}
+          aria-current={
+            pathname === `${base}/repository-settings` ? "page" : undefined
+          }
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg border-t border-border px-3 pt-3 text-sm font-medium",
+            pathname === `${base}/repository-settings`
+              ? "text-tile-core-fg"
+              : "text-muted hover:text-foreground"
+          )}
+        >
+          <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Repository settings
+        </Link> */}
       </div>
     </>
   );

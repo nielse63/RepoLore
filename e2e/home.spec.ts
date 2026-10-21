@@ -60,22 +60,23 @@ test("shows an honest inline error for an invalid owner/repo shorthand", async (
 test("sends analytics events for a submission and its inline error", async ({
   page,
 }) => {
-  // The production layout's inline `gtag` shim (src/app/layout.tsx) pushes
-  // each call onto `window.dataLayer`; `gtag.js` itself is blocked (see
-  // e2e/coverage.ts), so nothing reaches GA. Wait for the shim (loaded
-  // `afterInteractive`) so the click's events aren't dropped.
+  // GA only loads in production (src/app/layout.tsx), so stub `gtag` to
+  // record what `trackEvent` sends.
+  await page.addInitScript(() => {
+    const events: string[] = [];
+    Object.assign(window, {
+      __events: events,
+      gtag: (_command: string, name: string) => events.push(name),
+    });
+  });
   await page.goto("/");
-  await page.waitForFunction(() => typeof window.gtag === "function");
   await page.getByRole("button", { name: "Analyze repository" }).click();
   await expect(page.getByText("A GitHub URL is required.")).toBeVisible();
 
   await expect
     .poll(() =>
-      page.evaluate(() =>
-        (window as unknown as { dataLayer: ArrayLike<unknown>[] }).dataLayer
-          .map((args) => Array.from(args))
-          .filter(([command]) => command === "event")
-          .map(([, name]) => name)
+      page.evaluate(
+        () => (window as unknown as { __events: string[] }).__events
       )
     )
     .toEqual(["submit_repo", "submit_repo_error"]);
@@ -258,10 +259,9 @@ test("loads with no failed asset requests or console errors", async ({
   const failedRequests: string[] = [];
   const consoleErrors: string[] = [];
 
-  // The Google Analytics tag is a fire-and-forget third-party script: the
-  // shared fixture blocks it (e2e/coverage.ts), as ad blockers do in
-  // production, and its failure (plus the browser's console error for it)
-  // doesn't indicate a page defect.
+  // The Google Analytics tag is a fire-and-forget third-party script: it
+  // may fail to load in this offline/sandboxed test environment (and in
+  // ad-blocking browsers in production) without indicating a page defect.
   const isThirdPartyAnalytics = (url: string) =>
     url.includes("googletagmanager.com") ||
     url.includes("google-analytics.com");
@@ -279,7 +279,7 @@ test("loads with no failed asset requests or console errors", async ({
     }
   });
   page.on("console", (msg) => {
-    if (msg.type() === "error" && !isThirdPartyAnalytics(msg.location().url)) {
+    if (msg.type() === "error") {
       consoleErrors.push(msg.text());
     }
   });

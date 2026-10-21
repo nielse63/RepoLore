@@ -8,23 +8,12 @@ import { addCoverageReport } from "monocart-reporter";
  * `test`/`expect` from here instead of `@playwright/test` in e2e specs so
  * their coverage is included. A no-op unless `E2E_COVERAGE=true` (set by
  * `npm run test:e2e:coverage`), matching when that reporter is registered.
- *
- * The same fixture also aborts every Google Analytics request: the suite runs
- * against a production build, which loads `gtag.js` (`src/app/layout.tsx`),
- * and test page views must never reach the real GA property. The layout's
- * inline `gtag`/`dataLayer` shim still runs, so specs can assert on
- * `window.dataLayer`.
  */
 const collectCoverage = process.env.E2E_COVERAGE === "true";
 
 export const test = base.extend<{ autoTestFixture: string }>({
   autoTestFixture: [
     async ({ page }, use) => {
-      await page.route(
-        /^https:\/\/([a-z0-9-]+\.)*(googletagmanager|google-analytics)\.com\//,
-        (route) => route.abort()
-      );
-
       const shouldCollect =
         collectCoverage && test.info().project.name === "chromium";
 
