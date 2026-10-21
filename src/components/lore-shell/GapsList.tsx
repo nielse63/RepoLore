@@ -2,6 +2,7 @@
 
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
+import { listItemKey } from "@/lib/list-item-key";
 import type { Gap } from "@/lore/model";
 
 export interface GapsListProps {
@@ -23,7 +24,10 @@ export function GapsList({ gaps, storageKey }: GapsListProps) {
   return (
     <PaginatedList
       items={gaps.map((gap, i) => (
-        <li key={i} className="flex items-start gap-2 px-6 py-3 text-sm">
+        <li
+          key={listItemKey(i)}
+          className="flex items-start gap-2 px-6 py-3 text-sm"
+        >
           <CertaintyBadge certainty={gap.certainty} />
           <span className="text-foreground">{gap.description}</span>
         </li>

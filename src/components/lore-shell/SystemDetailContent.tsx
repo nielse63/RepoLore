@@ -12,6 +12,7 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { relativeTime } from "@/lib/relative-time";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { majorAreasOf } from "@/lore/major-areas";
 import type { Lore, SourceLocation } from "@/lore/model";
@@ -107,7 +108,7 @@ export function SystemDetailContent({
           </p>
           <ul className="mt-4 space-y-3 text-sm">
             {area.evidence.map((evidence, i) => (
-              <li key={i}>
+              <li key={listItemKey(i)}>
                 <div className="flex items-center gap-2">
                   {evidence.location && (
                     <SourceLink
@@ -179,7 +180,7 @@ export function SystemDetailContent({
                   </SourceLink>
                 </li>
                 {area.importantLocations.map((location, i) => (
-                  <li key={i}>
+                  <li key={listItemKey(i)}>
                     <SourceLink location={location} sourceUrl={sourceUrl} />
                   </li>
                 ))}

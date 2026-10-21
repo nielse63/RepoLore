@@ -27,6 +27,7 @@ import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { cn } from "@/lib/cn";
 import { dependencyCategoryIcon } from "@/lib/dependency-category";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import { getPageItems } from "@/lib/pagination-range";
 import { useFitPageSize } from "@/lib/use-fit-page-size";
 import { usePersistedPage } from "@/lib/use-persisted-page";
@@ -273,7 +274,7 @@ export function DependenciesContent({
               </p>
               <ul className="mt-2 space-y-2">
                 {selected.evidence.map((evidence, i) => (
-                  <li key={i} className="text-sm">
+                  <li key={listItemKey(i)} className="text-sm">
                     <div className="flex items-center gap-2">
                       {evidence.location && (
                         <SourceLink
@@ -296,7 +297,7 @@ export function DependenciesContent({
                 <p className="text-sm font-medium text-foreground">Gaps</p>
                 <ul className="mt-2 space-y-2">
                   {selected.gaps.map((gap, i) => (
-                    <li key={i} className="text-sm">
+                    <li key={listItemKey(i)} className="text-sm">
                       <CertaintyBadge certainty={gap.certainty} />
                       <p className="mt-1 text-sm text-muted">
                         {gap.description}

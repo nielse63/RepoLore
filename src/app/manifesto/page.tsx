@@ -1,4 +1,5 @@
 import { SiteShell } from "@/components/SiteShell";
+import { listItemKey } from "@/lib/list-item-key";
 import { DEFAULT_OG_IMAGE } from "@/lib/route-metadata";
 import type { Metadata } from "next";
 
@@ -142,7 +143,7 @@ export default function ManifestoPage() {
               {blocks.map((block, index) =>
                 Array.isArray(block) ? (
                   <ul
-                    key={index}
+                    key={listItemKey(index)}
                     className="mt-4 list-disc space-y-1 pl-6 text-base leading-7 text-foreground"
                   >
                     {block.map((item) => (
@@ -151,7 +152,7 @@ export default function ManifestoPage() {
                   </ul>
                 ) : (
                   <p
-                    key={index}
+                    key={listItemKey(index)}
                     className="mt-4 text-base leading-7 text-foreground"
                   >
                     {block}

@@ -39,9 +39,9 @@ export function PaginationNav({
             onClick={() => onPageChange(page - 1)}
           />
         </PaginationItem>
-        {getPageItems(page, pageCount).map((item, i) =>
+        {getPageItems(page, pageCount).map((item) =>
           item === "ellipsis-start" || item === "ellipsis-end" ? (
-            <PaginationItem key={`${item}-${i}`}>
+            <PaginationItem key={item}>
               <PaginationEllipsis />
             </PaginationItem>
           ) : (

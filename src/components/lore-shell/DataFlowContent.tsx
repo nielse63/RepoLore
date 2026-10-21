@@ -14,6 +14,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import {
   buildCalleesIndex,
   deriveCallTreeRootIds,
@@ -314,7 +315,7 @@ export function DataFlowContent({
                 {focusImportance.reasons.length > 0 && (
                   <ul className="mt-3 space-y-1 text-sm text-muted">
                     {focusImportance.reasons.map((reason, i) => (
-                      <li key={i}>
+                      <li key={listItemKey(i)}>
                         • {describeImportanceReason(reason, stateNameById)}
                       </li>
                     ))}
@@ -330,7 +331,10 @@ export function DataFlowContent({
               ) : (
                 <ul className="mt-2 space-y-1.5">
                   {focus.parameters.map((p, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
+                    <li
+                      key={listItemKey(i)}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <code className="font-mono text-xs text-foreground">
                         {p.name}
                       </code>
@@ -420,7 +424,7 @@ export function DataFlowContent({
               </p>
               <ul className="mt-3 space-y-3">
                 {focusEvidence.map((e, i) => (
-                  <li key={i}>
+                  <li key={listItemKey(i)}>
                     {e.location && (
                       <p className="font-mono text-xs">
                         <SourceLink
