@@ -88,6 +88,190 @@ describe("deriveViews structural areas", () => {
     expect(structuralAreas.map((a) => a.name)).toEqual(["src/components"]);
   });
 
+  it("keeps a nested test directory's many small subdirectories as one Tests area rather than one area each", () => {
+    // Svelte-shaped (GitHub issue #50): `packages/svelte/tests/<suite>/
+    // samples/<case>/` held ~2,900 one-or-two-file cases, each becoming its
+    // own "major area". The config's `isTestFile` recognizes none of these
+    // files (as JS/TS's doesn't: neither a test filename nor a top-level
+    // test directory), so the directory name alone must decide.
+    const sampleFiles = "abcdefghijkl"
+      .split("")
+      .map((c) => `packages/x/tests/runtime/samples/${c}/_config.js`);
+    const input = baseInput({
+      sourceFilePaths: ["packages/x/src/index.ts", ...sampleFiles],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    expect(structuralAreas.map((a) => a.name).sort()).toEqual([
+      "packages/x/src",
+      "packages/x/tests",
+    ]);
+    const testsArea = structuralAreas.find(
+      (a) => a.name === "packages/x/tests"
+    );
+    expect(testsArea?.responsibility).toBe("Tests");
+    expect(testsArea?.productionFilePaths).toEqual([]);
+    expect(testsArea?.rationale).toContain("conventional test directory");
+    expect(
+      testsArea?.evidence.find((e) => e.kind === "test-directory-convention")
+        ?.description
+    ).toBe(
+      "0 source file(s) under 'packages/x/tests' are recognized as test files; the other 12 lie under a conventional test directory ('packages/x/tests') and are grouped as tests by directory name only, not recognized as individual test files."
+    );
+    const srcArea = structuralAreas.find((a) => a.name === "packages/x/src");
+    expect(srcArea?.responsibility).toBeUndefined();
+    expect(srcArea?.productionFilePaths).toEqual(["packages/x/src/index.ts"]);
+  });
+
+  it("groups a top-level test directory's subdirectories into one area named at the test root", () => {
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/index.ts",
+        "tests/unit/a.ts",
+        "tests/integration/b.ts",
+        "__tests__/helpers/c.ts",
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    expect(structuralAreas.map((a) => a.name).sort()).toEqual([
+      "__tests__",
+      "src",
+      "tests",
+    ]);
+  });
+
+  it("doesn't label a test-named directory as Tests when production code outside it imports it", () => {
+    // Django-shaped: `django/test/` is shipped library code, not a suite.
+    const relationships: Relationship[] = [
+      {
+        id: "rel-1",
+        kind: "depends-on",
+        fromId: "django/core/management/commands/test.py",
+        toId: "django/test/utils.py",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+    ];
+    const input = baseInput({
+      sourceFilePaths: [
+        "django/core/management/commands/test.py",
+        "django/test/client.py",
+        "django/test/utils.py",
+      ],
+      relationships,
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const area = structuralAreas.find((a) => a.name === "django/test");
+    expect(area?.responsibility).toBeUndefined();
+    expect(area?.productionFilePaths).toEqual([
+      "django/test/client.py",
+      "django/test/utils.py",
+    ]);
+    expect(
+      area?.evidence.find((e) => e.kind === "test-directory-name-contradicted")
+    ).toMatchObject({
+      certainty: "detected",
+      description:
+        "'django/test' is named like a test directory, but 'django/core/management/commands/test.py', outside any test directory, depends on 'django/test/utils.py', so its files aren't treated as tests by directory name.",
+    });
+  });
+
+  it("doesn't label a test-named directory as Tests when it holds a non-test entry point", () => {
+    // Next.js-shaped: `app/test` is an ordinary route segment.
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/app/page.tsx",
+        "src/app/test/page.tsx",
+        ...Array.from({ length: 10 }, (_, i) => `src/app/route${i}/page.tsx`),
+      ],
+      entryPoints: [
+        {
+          id: "entry-route",
+          kind: "route",
+          location: { filePath: "src/app/test/page.tsx" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const area = structuralAreas.find((a) => a.name === "src/app/test");
+    expect(area?.responsibility).toBeUndefined();
+    expect(area?.productionFilePaths).toEqual(["src/app/test/page.tsx"]);
+    expect(
+      area?.evidence.some((e) => e.kind === "test-directory-name-contradicted")
+    ).toBe(true);
+  });
+
+  it("still labels a test directory as Tests when only test files or its own files import it", () => {
+    const relationships: Relationship[] = [
+      {
+        id: "rel-1",
+        kind: "depends-on",
+        fromId: "src/math.test.ts",
+        toId: "pkg/tests/helpers.ts",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+      {
+        id: "rel-2",
+        kind: "depends-on",
+        fromId: "pkg/tests/run.ts",
+        toId: "pkg/tests/helpers.ts",
+        certainty: "detected",
+        evidence: [evidence],
+      },
+    ];
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/math.test.ts",
+        "pkg/tests/helpers.ts",
+        "pkg/tests/run.ts",
+      ],
+      relationships,
+    });
+    const config: DeriveViewsConfig = {
+      ...noopConfig,
+      isTestFile: (f) => f.endsWith(".test.ts"),
+    };
+
+    const { structuralAreas } = deriveViews(input, config);
+    const area = structuralAreas.find((a) => a.name === "pkg/tests");
+    expect(area?.responsibility).toBe("Tests");
+    expect(area?.productionFilePaths).toEqual([]);
+  });
+
+  it("doesn't claim a flat test directory's subdirectories were kept together when it has none", () => {
+    const input = baseInput({
+      sourceFilePaths: ["pkg/tests/a.ts", "pkg/tests/b.ts"],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const area = structuralAreas.find((a) => a.name === "pkg/tests");
+    expect(area?.responsibility).toBe("Tests");
+    expect(area?.rationale).not.toContain("conventional test directory");
+  });
+
+  it("does not treat a directory merely containing 'test' in its name as a test root", () => {
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/testing/a.ts",
+        "src/testing/b.ts",
+        ...Array.from({ length: 11 }, (_, i) => `src/latest/sub${i}/x.ts`),
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    expect(structuralAreas.map((a) => a.name)).toContain("src/testing");
+    expect(structuralAreas.map((a) => a.name)).toContain("src/latest/sub0");
+    expect(structuralAreas.every((a) => a.responsibility === undefined)).toBe(
+      true
+    );
+  });
+
   it('marks an area as "Tests" when every file is a test file per the config', () => {
     const input = baseInput({ sourceFilePaths: ["src/math.test.ts"] });
     const config: DeriveViewsConfig = {
@@ -244,6 +428,29 @@ describe("deriveViews start here", () => {
     expect(
       startHere.some((item) => item.whatItRepresents.includes("fixtures"))
     ).toBe(false);
+  });
+
+  it("does not pad with a large nested test directory as a primary area", () => {
+    // Once a nested `tests` directory is one area instead of many tiny ones
+    // (GitHub issue #50), it's the largest area by file count — padding must
+    // still skip it as non-primary rather than recommending it.
+    const input = baseInput({
+      sourceFilePaths: [
+        "packages/x/src/main.ts",
+        "packages/x/lib/util.ts",
+        ...Array.from(
+          { length: 12 },
+          (_, i) => `packages/x/tests/samples/case${i}/_config.js`
+        ),
+      ],
+      entryPoints: [bootstrapEntry("packages/x/src/main.ts")],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "packages/x/src/main.ts",
+      "packages/x/lib",
+    ]);
   });
 
   it("closes with a representative test relationship when one exists", () => {

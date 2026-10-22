@@ -1,4 +1,5 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
+import { AreaRelationshipsTable } from "@/components/lore-shell/AreaRelationshipsTable";
 import { GapsList } from "@/components/lore-shell/GapsList";
 import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
@@ -7,7 +8,6 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
-import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
@@ -200,47 +200,10 @@ export function ArchitectureContent({
             />
           </Card>
         )}
-        <Card className="p-0">
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>Area</Th>
-                <Th>Depends on</Th>
-                <Th>Certainty</Th>
-              </Tr>
-            </Thead>
-            <tbody>
-              {areaRelationships.map((edge) => (
-                <Tr key={`${edge.fromAreaId}->${edge.toAreaId}`}>
-                  <Td>
-                    <SourceLink
-                      location={edge.fromAreaLocation}
-                      sourceUrl={areaUrl}
-                    >
-                      {formatPath(edge.fromAreaName)}
-                    </SourceLink>
-                  </Td>
-                  <Td>
-                    <SourceLink
-                      location={edge.toAreaLocation}
-                      sourceUrl={areaUrl}
-                    >
-                      {formatPath(edge.toAreaName)}
-                    </SourceLink>
-                  </Td>
-                  <Td>
-                    <CertaintyBadge certainty="detected" />
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
-          {areaRelationships.length === 0 && (
-            <p className="px-6 py-4 text-sm text-muted">
-              No direct relationships were detected between areas.
-            </p>
-          )}
-        </Card>
+        <AreaRelationshipsTable
+          relationships={areaRelationships}
+          areaUrl={areaUrl}
+        />
       </section>
 
       {!!lore.entryPoints.length && (

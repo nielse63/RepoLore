@@ -2,7 +2,9 @@
 
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { AreaRelationshipsTable } from "@/components/lore-shell/AreaRelationshipsTable";
 import { MAX_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
+import { PaginationNav } from "@/components/lore-shell/PaginationNav";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { TopBar } from "@/components/lore-shell/TopBar";
@@ -10,15 +12,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { Table, Td, Th, Thead, Tr } from "@/components/ui/Table";
@@ -26,8 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { cn } from "@/lib/cn";
 import { dependencyCategoryIcon } from "@/lib/dependency-category";
-import { formatPath } from "@/lib/format-path";
-import { getPageItems } from "@/lib/pagination-range";
+import { listItemKey } from "@/lib/list-item-key";
 import { useFitPageSize } from "@/lib/use-fit-page-size";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
@@ -35,6 +27,7 @@ import type {
   ExternalDependency,
   ExternalDependencyScope,
   Lore,
+  SourceLocation,
 } from "@/lore/model";
 import {
   ArrowDown,
@@ -113,6 +106,94 @@ function usedByLocations(dependency: ExternalDependency) {
     locations.push(evidence);
   }
   return locations;
+}
+
+/** The right rail for the selected external dependency: description, usage locations, evidence, and gaps. */
+function DependencyDetailRail({
+  dependency,
+  sourceUrl,
+}: {
+  dependency: ExternalDependency;
+  sourceUrl: (location: SourceLocation) => string;
+}) {
+  const usedBy = usedByLocations(dependency);
+  return (
+    <RightRailShell title={dependency.name}>
+      <Badge variant="primary">
+        {SCOPE_LABEL[dependency.scope]} dependency
+      </Badge>
+
+      <div className="mt-3">
+        {dependency.description ? (
+          <>
+            <p className="text-sm text-muted">{dependency.description}</p>
+            <p className="mt-1 text-xs text-muted">
+              via {dependency.descriptionSource === "pypi" ? "PyPI" : "npm"}{" "}
+              registry
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-muted">
+            No description available for this package.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="text-sm font-medium text-foreground">Used by</p>
+        <ul className="mt-2 space-y-2">
+          {usedBy.map((evidence) => (
+            <li key={evidence.location!.filePath} className="text-sm">
+              <SourceLink location={evidence.location!} sourceUrl={sourceUrl} />
+            </li>
+          ))}
+          {usedBy.length === 0 && (
+            <li className="text-sm text-muted">
+              No usage was matched in the analyzed source.
+            </li>
+          )}
+        </ul>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <FileText className="h-4 w-4" aria-hidden="true" /> Evidence
+        </p>
+        <ul className="mt-2 space-y-2">
+          {dependency.evidence.map((evidence, i) => (
+            <li key={listItemKey(i)} className="text-sm">
+              <div className="flex items-center gap-2">
+                {evidence.location && (
+                  <SourceLink
+                    location={evidence.location}
+                    sourceUrl={sourceUrl}
+                  />
+                )}
+                <CertaintyBadge certainty={evidence.certainty} />
+              </div>
+              <p className="mt-0.5 text-sm text-muted">
+                {evidence.description}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {dependency.gaps.length > 0 && (
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="text-sm font-medium text-foreground">Gaps</p>
+          <ul className="mt-2 space-y-2">
+            {dependency.gaps.map((gap, i) => (
+              <li key={listItemKey(i)} className="text-sm">
+                <CertaintyBadge certainty={gap.certainty} />
+                <p className="mt-1 text-sm text-muted">{gap.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </RightRailShell>
+  );
 }
 
 export interface DependenciesContentProps {
@@ -227,86 +308,7 @@ export function DependenciesContent({
       }
       rightRail={
         selected ? (
-          <RightRailShell title={selected.name}>
-            <Badge variant="primary">
-              {SCOPE_LABEL[selected.scope]} dependency
-            </Badge>
-
-            <div className="mt-3">
-              {selected.description ? (
-                <>
-                  <p className="text-sm text-muted">{selected.description}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    via {selected.descriptionSource === "pypi" ? "PyPI" : "npm"}{" "}
-                    registry
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted">
-                  No description available for this package.
-                </p>
-              )}
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">Used by</p>
-              <ul className="mt-2 space-y-2">
-                {usedByLocations(selected).map((evidence) => (
-                  <li key={evidence.location!.filePath} className="text-sm">
-                    <SourceLink
-                      location={evidence.location!}
-                      sourceUrl={sourceUrl}
-                    />
-                  </li>
-                ))}
-                {usedByLocations(selected).length === 0 && (
-                  <li className="text-sm text-muted">
-                    No usage was matched in the analyzed source.
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <FileText className="h-4 w-4" aria-hidden="true" /> Evidence
-              </p>
-              <ul className="mt-2 space-y-2">
-                {selected.evidence.map((evidence, i) => (
-                  <li key={i} className="text-sm">
-                    <div className="flex items-center gap-2">
-                      {evidence.location && (
-                        <SourceLink
-                          location={evidence.location}
-                          sourceUrl={sourceUrl}
-                        />
-                      )}
-                      <CertaintyBadge certainty={evidence.certainty} />
-                    </div>
-                    <p className="mt-0.5 text-sm text-muted">
-                      {evidence.description}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {selected.gaps.length > 0 && (
-              <div className="mt-6 border-t border-border pt-4">
-                <p className="text-sm font-medium text-foreground">Gaps</p>
-                <ul className="mt-2 space-y-2">
-                  {selected.gaps.map((gap, i) => (
-                    <li key={i} className="text-sm">
-                      <CertaintyBadge certainty={gap.certainty} />
-                      <p className="mt-1 text-sm text-muted">
-                        {gap.description}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </RightRailShell>
+          <DependencyDetailRail dependency={selected} sourceUrl={sourceUrl} />
         ) : undefined
       }
     >
@@ -438,38 +440,12 @@ export function DependenciesContent({
             </Card>
 
             {filtered.length > pageSize && (
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      disabled={page === 1}
-                      onClick={() => setPage(page - 1)}
-                    />
-                  </PaginationItem>
-                  {getPageItems(page, pageCount).map((item, i) =>
-                    item === "ellipsis-start" || item === "ellipsis-end" ? (
-                      <PaginationItem key={`${item}-${i}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    ) : (
-                      <PaginationItem key={item}>
-                        <PaginationLink
-                          isActive={item === page}
-                          onClick={() => setPage(item)}
-                        >
-                          {item}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      disabled={page === pageCount}
-                      onClick={() => setPage(page + 1)}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <PaginationNav
+                className="mt-4"
+                page={page}
+                pageCount={pageCount}
+                onPageChange={setPage}
+              />
             )}
           </TabsContent>
 
@@ -477,47 +453,10 @@ export function DependenciesContent({
             <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
               <Link2 className="h-4 w-4" aria-hidden="true" /> How areas connect
             </h2>
-            <Card className="p-0">
-              <Table>
-                <Thead>
-                  <Tr>
-                    <Th>Area</Th>
-                    <Th>Depends on</Th>
-                    <Th>Certainty</Th>
-                  </Tr>
-                </Thead>
-                <tbody>
-                  {areaRelationships.map((edge) => (
-                    <Tr key={`${edge.fromAreaId}->${edge.toAreaId}`}>
-                      <Td>
-                        <SourceLink
-                          location={edge.fromAreaLocation}
-                          sourceUrl={areaUrl}
-                        >
-                          {formatPath(edge.fromAreaName)}
-                        </SourceLink>
-                      </Td>
-                      <Td>
-                        <SourceLink
-                          location={edge.toAreaLocation}
-                          sourceUrl={areaUrl}
-                        >
-                          {formatPath(edge.toAreaName)}
-                        </SourceLink>
-                      </Td>
-                      <Td>
-                        <CertaintyBadge certainty="detected" />
-                      </Td>
-                    </Tr>
-                  ))}
-                </tbody>
-              </Table>
-              {areaRelationships.length === 0 && (
-                <p className="px-6 py-4 text-sm text-muted">
-                  No direct relationships were detected between areas.
-                </p>
-              )}
-            </Card>
+            <AreaRelationshipsTable
+              relationships={areaRelationships}
+              areaUrl={areaUrl}
+            />
           </TabsContent>
         </Tabs>
       </div>

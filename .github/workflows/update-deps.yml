@@ -18,13 +18,13 @@ jobs:
     # access.
     permissions:
       contents: write
-    env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    # DATABASE_URL is scoped to the steps that read it, not the job, so
+    # package lifecycle scripts run by the install step never see it.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: dev
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -56,8 +56,12 @@ jobs:
         run: npm run format:check
       - if: steps.ncu.outputs.changed == 'true'
         run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - if: steps.ncu.outputs.changed == 'true'
         run: npm run test:unit
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Commit and push to dev
         if: steps.ncu.outputs.changed == 'true'

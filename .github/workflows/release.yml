@@ -4,7 +4,9 @@ name: Release
 # dev is merged into main. Render deploys main only once this check passes
 # (`autoDeployTrigger: checksPass` in render.yaml), so the tag exists before
 # the build reads it for the footer. Other pushes to main pass without
-# releasing. Minor/major/explicit versions: `npm run release` locally.
+# releasing. After a release, main is merged back into dev so the new tag
+# is reachable from dev. Minor/major/explicit versions: `npm run release`
+# locally. nightly-release.yml opens and merges the dev → main PR nightly.
 on:
   push:
     branches:
@@ -18,14 +20,18 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Creates the tag and release; reads which PR the commit came from.
+    # Creates the tag and release, and pushes the main → dev merge; reads
+    # which PR the commit came from.
     permissions:
       contents: write
       pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          # Full history, for the main → dev merge below.
+          fetch-depth: 0
 
       - name: Check for a dev → main merge not yet tagged
         id: check
@@ -43,7 +49,7 @@ jobs:
           fi
 
       - if: steps.check.outputs.release == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -51,3 +57,15 @@ jobs:
         run: npm ci
       - if: steps.check.outputs.release == 'true'
         run: npm run release -- --patch --target "${{ github.sha }}" --yes
+
+      # Brings the tag into dev's history. Fails (leaving dev untouched) if
+      # the merge conflicts, which only happens when dev changed the same
+      # lines after this release's PR merged; resolve that merge by hand.
+      - name: Merge main back into dev
+        if: steps.check.outputs.release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B dev origin/dev
+          git merge --no-edit origin/main
+          git push origin HEAD:dev

@@ -22,11 +22,11 @@
  * PERF_COMMIT_SHA (the PR head, not the merge commit) feed the comment.
  */
 
+import { userAgents } from "lighthouse/core/config/constants.js";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import { userAgents } from "lighthouse/core/config/constants.js";
 import {
   breachesOf,
   coldLoadViolations,
@@ -35,12 +35,12 @@ import {
   formatPrComment,
   isNotAnalyzedLoreHtml,
   METRIC_IDS,
-  perfUserAgent,
   METRICS,
-  type Profile,
+  perfUserAgent,
   type LighthouseResult,
   type MetricSample,
   type PageComparison,
+  type Profile,
 } from "../src/perf/compare-vitals";
 
 /**
@@ -55,10 +55,6 @@ const PAGES = ["/", "/explore", "/manifesto", "/lore/sindresorhus/globby"];
  * keeps its preset's own device user agent, plus the perf-bot token.
  */
 const PROFILES: { name: Profile; flags: string[] }[] = [
-  {
-    name: "mobile",
-    flags: [`--emulatedUserAgent=${perfUserAgent(userAgents.mobile)}`],
-  },
   {
     name: "desktop",
     flags: [

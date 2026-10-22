@@ -120,7 +120,7 @@ export function HistoryContent({
   nowIso,
 }: HistoryContentProps) {
   const [kind, setKind] = useState<HistoryChangeKind | "all">("all");
-  const [selectedId, setSelectedId] = useState(entries[0]?.id);
+  const [selectedId, setSelectedId] = useState<string>();
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const defaultRange = useMemo<DateRange>(
     () => ({

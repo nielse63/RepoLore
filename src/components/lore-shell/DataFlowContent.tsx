@@ -14,6 +14,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
+import { listItemKey } from "@/lib/list-item-key";
 import {
   buildCalleesIndex,
   deriveCallTreeRootIds,
@@ -26,6 +27,7 @@ import type {
   Evidence,
   FunctionImportance,
   Lore,
+  SourceLocation,
 } from "@/lore/model";
 import {
   Braces,
@@ -261,180 +263,16 @@ export function DataFlowContent({
       }
       rightRail={
         focus ? (
-          <RightRailShell title={focus.name}>
-            <Badge variant="primary">{KIND_LABEL[focus.kind]}</Badge>
-
-            <div className="mt-3">
-              <SourceLink location={focus.location} sourceUrl={sourceUrl} />
-            </div>
-
-            {focusImportance && (
-              <div className="mt-6 border-t border-border pt-4">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-medium text-foreground">
-                    Importance
-                  </p>
-                  <span className="text-2xl font-semibold text-foreground">
-                    {focusImportance.score}
-                  </span>
-                </div>
-                {focusImportance.roles.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {focusImportance.roles.map((role) => (
-                      <Badge key={role}>{ROLE_LABEL[role]}</Badge>
-                    ))}
-                  </div>
-                )}
-                <ul className="mt-3 space-y-1">
-                  {(
-                    Object.entries(focusImportance.vector) as [
-                      keyof typeof focusImportance.vector,
-                      number,
-                    ][]
-                  ).map(([dimension, value]) => (
-                    <li
-                      key={dimension}
-                      className="flex items-center gap-2 text-xs text-muted"
-                    >
-                      <span className="w-36 shrink-0">
-                        {VECTOR_LABEL[dimension]}
-                      </span>
-                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-                        <span
-                          className="block h-full rounded-full bg-primary"
-                          style={{ width: `${value}%` }}
-                        />
-                      </span>
-                      <span className="w-8 shrink-0 text-right text-foreground">
-                        {value}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                {focusImportance.reasons.length > 0 && (
-                  <ul className="mt-3 space-y-1 text-sm text-muted">
-                    {focusImportance.reasons.map((reason, i) => (
-                      <li key={i}>
-                        • {describeImportanceReason(reason, stateNameById)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">Parameters</p>
-              {focus.parameters.length === 0 ? (
-                <p className="mt-1 text-sm text-muted">No parameters.</p>
-              ) : (
-                <ul className="mt-2 space-y-1.5">
-                  {focus.parameters.map((p, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm">
-                      <code className="font-mono text-xs text-foreground">
-                        {p.name}
-                      </code>
-                      {p.typeAnnotation ? (
-                        <code className="font-mono text-xs text-muted">
-                          : {p.typeAnnotation}
-                        </code>
-                      ) : (
-                        <CertaintyBadge certainty="unknown" />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">Return type</p>
-              <div className="mt-1">
-                {focus.returnType ? (
-                  <code className="font-mono text-xs text-foreground">
-                    {focus.returnType}
-                  </code>
-                ) : (
-                  <CertaintyBadge certainty="unknown" />
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">
-                Called by ({callers.length})
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {callers.map((c) => (
-                  <li key={c.id} className="text-sm">
-                    <button
-                      type="button"
-                      onClick={() => selectFocus(c.id)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {c.name}
-                    </button>{" "}
-                    <span className="text-xs text-muted">
-                      {formatPath(c.location.filePath)}
-                    </span>
-                  </li>
-                ))}
-                {callers.length === 0 && (
-                  <li className="text-sm text-muted">
-                    No statically resolvable callers were found.
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">
-                Calls ({callees.length})
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {callees.map((c) => (
-                  <li key={c.id} className="text-sm">
-                    <button
-                      type="button"
-                      onClick={() => selectFocus(c.id)}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {c.name}
-                    </button>{" "}
-                    <span className="text-xs text-muted">
-                      {formatPath(c.location.filePath)}
-                    </span>
-                  </li>
-                ))}
-                {callees.length === 0 && (
-                  <li className="text-sm text-muted">
-                    No statically resolvable calls were found.
-                  </li>
-                )}
-              </ul>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <p className="text-sm font-medium text-foreground">
-                Evidence ({focusEvidence.length})
-              </p>
-              <ul className="mt-3 space-y-3">
-                {focusEvidence.map((e, i) => (
-                  <li key={i}>
-                    {e.location && (
-                      <p className="font-mono text-xs">
-                        <SourceLink
-                          location={e.location}
-                          sourceUrl={sourceUrl}
-                        />
-                      </p>
-                    )}
-                    <p className="mt-1 text-sm text-muted">{e.description}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </RightRailShell>
+          <FocusDetailRail
+            focus={focus}
+            focusImportance={focusImportance}
+            stateNameById={stateNameById}
+            callers={callers}
+            callees={callees}
+            focusEvidence={focusEvidence}
+            sourceUrl={sourceUrl}
+            onSelect={selectFocus}
+          />
         ) : undefined
       }
     >
@@ -492,67 +330,14 @@ export function DataFlowContent({
         </div>
 
         {view === "list" ? (
-          <Card className="mt-4 p-0">
-            <ul className="divide-y divide-border">
-              {listItems.slice(0, LIST_CAP).map((s) => {
-                const Icon = KIND_ICON[s.kind];
-                const active = s.id === focusId;
-                const refs = referencesFor(s.id);
-                const importance = importanceById.get(s.id);
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => selectFocus(s.id)}
-                      className={
-                        "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
-                        (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
-                      }
-                    >
-                      <IconTile
-                        icon={Icon}
-                        variant={active ? "core" : "neutral"}
-                        size="sm"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground">
-                          {s.name}
-                        </p>
-                        <p className="truncate text-sm text-muted">
-                          {formatPath(s.location.filePath)}
-                        </p>
-                      </div>
-                      {importance && importance.roles[0] && (
-                        <Badge variant="primary">
-                          {ROLE_LABEL[importance.roles[0]]}
-                        </Badge>
-                      )}
-                      <Badge>{KIND_LABEL[s.kind]}</Badge>
-                      {importance && (
-                        <span className="shrink-0 text-sm font-semibold text-foreground">
-                          {importance.score}
-                        </span>
-                      )}
-                      <span className="shrink-0 text-sm text-muted">
-                        {refs} reference{refs === 1 ? "" : "s"}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-              {listItems.length === 0 && (
-                <li className="px-6 py-4 text-sm text-muted">
-                  No functions match &quot;{query}&quot;.
-                </li>
-              )}
-            </ul>
-            {listItems.length > LIST_CAP && (
-              <p className="border-t border-border px-6 py-3 text-center text-sm text-muted">
-                Showing the first {LIST_CAP} of {listItems.length} matching
-                functions — refine your search to narrow the list.
-              </p>
-            )}
-          </Card>
+          <FunctionListView
+            items={listItems}
+            query={query}
+            focusId={focusId}
+            importanceById={importanceById}
+            referencesFor={referencesFor}
+            onSelect={selectFocus}
+          />
         ) : query.trim() ? (
           <Card className="mt-3 p-0">
             {matches.length === 0 ? (
@@ -611,6 +396,285 @@ export function DataFlowContent({
   );
 }
 
+interface FunctionListViewProps {
+  items: CallableSignature[];
+  query: string;
+  focusId: EntityId | undefined;
+  importanceById: Map<EntityId, FunctionImportance>;
+  referencesFor: (id: EntityId) => number;
+  onSelect: (id: EntityId) => void;
+}
+
+/** The List tab: every matching function (capped at `LIST_CAP`) with its role, kind, importance, and reference count. */
+function FunctionListView({
+  items,
+  query,
+  focusId,
+  importanceById,
+  referencesFor,
+  onSelect,
+}: FunctionListViewProps) {
+  return (
+    <Card className="mt-4 p-0">
+      <ul className="divide-y divide-border">
+        {items.slice(0, LIST_CAP).map((s) => {
+          const Icon = KIND_ICON[s.kind];
+          const active = s.id === focusId;
+          const refs = referencesFor(s.id);
+          const importance = importanceById.get(s.id);
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(s.id)}
+                className={
+                  "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
+                  (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
+                }
+              >
+                <IconTile
+                  icon={Icon}
+                  variant={active ? "core" : "neutral"}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    {s.name}
+                  </p>
+                  <p className="truncate text-sm text-muted">
+                    {formatPath(s.location.filePath)}
+                  </p>
+                </div>
+                {importance && importance.roles[0] && (
+                  <Badge variant="primary">
+                    {ROLE_LABEL[importance.roles[0]]}
+                  </Badge>
+                )}
+                <Badge>{KIND_LABEL[s.kind]}</Badge>
+                {importance && (
+                  <span className="shrink-0 text-sm font-semibold text-foreground">
+                    {importance.score}
+                  </span>
+                )}
+                <span className="shrink-0 text-sm text-muted">
+                  {refs} reference{refs === 1 ? "" : "s"}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+        {items.length === 0 && (
+          <li className="px-6 py-4 text-sm text-muted">
+            No functions match &quot;{query}&quot;.
+          </li>
+        )}
+      </ul>
+      {items.length > LIST_CAP && (
+        <p className="border-t border-border px-6 py-3 text-center text-sm text-muted">
+          Showing the first {LIST_CAP} of {items.length} matching functions —
+          refine your search to narrow the list.
+        </p>
+      )}
+    </Card>
+  );
+}
+
+interface FocusDetailRailProps {
+  focus: CallableSignature;
+  focusImportance: FunctionImportance | undefined;
+  stateNameById: Map<EntityId, string>;
+  callers: CallableSignature[];
+  callees: CallableSignature[];
+  focusEvidence: Evidence[];
+  sourceUrl: (location: SourceLocation) => string;
+  onSelect: (id: EntityId) => void;
+}
+
+/** The right rail for the focused function: importance, signature, direct callers/callees, and evidence. */
+function FocusDetailRail({
+  focus,
+  focusImportance,
+  stateNameById,
+  callers,
+  callees,
+  focusEvidence,
+  sourceUrl,
+  onSelect,
+}: FocusDetailRailProps) {
+  return (
+    <RightRailShell title={focus.name}>
+      <Badge variant="primary">{KIND_LABEL[focus.kind]}</Badge>
+
+      <div className="mt-3">
+        <SourceLink location={focus.location} sourceUrl={sourceUrl} />
+      </div>
+
+      {focusImportance && (
+        <div className="mt-6 border-t border-border pt-4">
+          <div className="flex items-baseline justify-between">
+            <p className="text-sm font-medium text-foreground">Importance</p>
+            <span className="text-2xl font-semibold text-foreground">
+              {focusImportance.score}
+            </span>
+          </div>
+          {focusImportance.roles.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {focusImportance.roles.map((role) => (
+                <Badge key={role}>{ROLE_LABEL[role]}</Badge>
+              ))}
+            </div>
+          )}
+          <ul className="mt-3 space-y-1">
+            {(
+              Object.entries(focusImportance.vector) as [
+                keyof typeof focusImportance.vector,
+                number,
+              ][]
+            ).map(([dimension, value]) => (
+              <li
+                key={dimension}
+                className="flex items-center gap-2 text-xs text-muted"
+              >
+                <span className="w-36 shrink-0">{VECTOR_LABEL[dimension]}</span>
+                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
+                  <span
+                    className="block h-full rounded-full bg-primary"
+                    style={{ width: `${value}%` }}
+                  />
+                </span>
+                <span className="w-8 shrink-0 text-right text-foreground">
+                  {value}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {focusImportance.reasons.length > 0 && (
+            <ul className="mt-3 space-y-1 text-sm text-muted">
+              {focusImportance.reasons.map((reason, i) => (
+                <li key={listItemKey(i)}>
+                  • {describeImportanceReason(reason, stateNameById)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="text-sm font-medium text-foreground">Parameters</p>
+        {focus.parameters.length === 0 ? (
+          <p className="mt-1 text-sm text-muted">No parameters.</p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {focus.parameters.map((p, i) => (
+              <li
+                key={listItemKey(i)}
+                className="flex items-center gap-2 text-sm"
+              >
+                <code className="font-mono text-xs text-foreground">
+                  {p.name}
+                </code>
+                {p.typeAnnotation ? (
+                  <code className="font-mono text-xs text-muted">
+                    : {p.typeAnnotation}
+                  </code>
+                ) : (
+                  <CertaintyBadge certainty="unknown" />
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="text-sm font-medium text-foreground">Return type</p>
+        <div className="mt-1">
+          {focus.returnType ? (
+            <code className="font-mono text-xs text-foreground">
+              {focus.returnType}
+            </code>
+          ) : (
+            <CertaintyBadge certainty="unknown" />
+          )}
+        </div>
+      </div>
+
+      <RelatedFunctionList
+        label="Called by"
+        signatures={callers}
+        emptyMessage="No statically resolvable callers were found."
+        onSelect={onSelect}
+      />
+
+      <RelatedFunctionList
+        label="Calls"
+        signatures={callees}
+        emptyMessage="No statically resolvable calls were found."
+        onSelect={onSelect}
+      />
+
+      <div className="mt-6 border-t border-border pt-4">
+        <p className="text-sm font-medium text-foreground">
+          Evidence ({focusEvidence.length})
+        </p>
+        <ul className="mt-3 space-y-3">
+          {focusEvidence.map((e, i) => (
+            <li key={listItemKey(i)}>
+              {e.location && (
+                <p className="font-mono text-xs">
+                  <SourceLink location={e.location} sourceUrl={sourceUrl} />
+                </p>
+              )}
+              <p className="mt-1 text-sm text-muted">{e.description}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </RightRailShell>
+  );
+}
+
+/** One "Called by"/"Calls" section of the Data Flow right rail; clicking a row re-focuses on that function. */
+function RelatedFunctionList({
+  label,
+  signatures,
+  emptyMessage,
+  onSelect,
+}: {
+  label: string;
+  signatures: CallableSignature[];
+  emptyMessage: string;
+  onSelect: (id: EntityId) => void;
+}) {
+  return (
+    <div className="mt-6 border-t border-border pt-4">
+      <p className="text-sm font-medium text-foreground">
+        {label} ({signatures.length})
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {signatures.map((c) => (
+          <li key={c.id} className="text-sm">
+            <button
+              type="button"
+              onClick={() => onSelect(c.id)}
+              className="font-medium text-primary hover:underline"
+            >
+              {c.name}
+            </button>{" "}
+            <span className="text-xs text-muted">
+              {formatPath(c.location.filePath)}
+            </span>
+          </li>
+        ))}
+        {signatures.length === 0 && (
+          <li className="text-sm text-muted">{emptyMessage}</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
 interface ChainTreeRowProps {
   id: EntityId;
   ancestorIds: EntityId[];
@@ -654,6 +718,7 @@ function ChainTreeRow({
   const Icon = KIND_ICON[signature.kind];
   const refs = referencesFor(id);
   const nextAncestorIds = [...ancestorIds, id];
+  const ancestorIdSet = new Set(nextAncestorIds);
 
   return (
     <li>
@@ -697,7 +762,7 @@ function ChainTreeRow({
       {expanded && (
         <ul className="divide-y divide-border">
           {childIds.map((childId) => {
-            if (nextAncestorIds.includes(childId)) {
+            if (ancestorIdSet.has(childId)) {
               const childSignature = byId.get(childId);
               if (!childSignature) return null;
               return (
