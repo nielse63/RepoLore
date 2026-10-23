@@ -32,10 +32,12 @@ test("the Overview lists a nested test directory as one Major Area, not one per 
 }) => {
   await page.goto(repoUrl);
 
+  // Ranked order (issue #48): implementation areas by relationships, then
+  // the Tests area last.
   await expect(page.locator("#major-areas h3")).toHaveText([
     /^\/packages\/core\/src\s/,
-    /^\/packages\/core\/tests\s/,
     /^\/packages\/test\s/,
+    /^\/packages\/core\/tests\s/,
   ]);
 });
 

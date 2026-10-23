@@ -19,7 +19,11 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { formatPath } from "@/lib/format-path";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { majorAreasOf } from "@/lore/major-areas";
+import {
+  compareMajorAreas,
+  majorAreasOf,
+  majorAreasOrderNote,
+} from "@/lore/major-areas";
 import type { Lore, StructuralArea } from "@/lore/model";
 import {
   classifySystem,
@@ -93,8 +97,13 @@ export function SystemsContent({
     () => deriveProductionAreaDiagramLayout(majorAreas, lore.relationships),
     [majorAreas, lore.relationships]
   );
+  // Slugs come from the persisted order (their collision suffixes depend
+  // on it); only the list's presentation order is ranked.
   const slugEntries = useMemo(
-    () => assignSystemSlugs(majorAreas),
+    () =>
+      assignSystemSlugs(majorAreas).sort((a, b) =>
+        compareMajorAreas(a.area, b.area)
+      ),
     [majorAreas]
   );
   const totalEvidence = majorAreas.reduce(
@@ -192,6 +201,11 @@ export function SystemsContent({
             {totalEvidence} supporting references
           </span>
         </p>
+        {majorAreas.length > 1 && (
+          <p className="mt-1 text-sm text-muted">
+            {majorAreasOrderNote(majorAreas)}
+          </p>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <label htmlFor="systems-search" className="sr-only">

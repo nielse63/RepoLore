@@ -16,7 +16,11 @@ import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { parsePageParam } from "@/lib/page-param";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { majorAreasOf } from "@/lore/major-areas";
+import {
+  majorAreasOf,
+  majorAreasOrderNote,
+  rankMajorAreas,
+} from "@/lore/major-areas";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
   ArrowRight,
@@ -69,7 +73,7 @@ export function OverviewContent({
     majorAreasPageCount
   );
   const majorAreasStart = (majorAreasCurrentPage - 1) * MAJOR_AREAS_PAGE_SIZE;
-  const majorAreasOnPage = majorAreas.slice(
+  const majorAreasOnPage = rankMajorAreas(majorAreas).slice(
     majorAreasStart,
     majorAreasStart + MAJOR_AREAS_PAGE_SIZE
   );
@@ -154,6 +158,11 @@ export function OverviewContent({
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
           <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
         </h2>
+        {majorAreas.length > 1 && (
+          <p className="-mt-1 mb-3 text-sm text-muted">
+            {majorAreasOrderNote(majorAreas)}
+          </p>
+        )}
         <PaginatedCardGrid
           items={majorAreasOnPage.map((area) => (
             <Card key={area.id}>
