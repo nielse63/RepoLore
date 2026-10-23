@@ -25,7 +25,7 @@ jobs:
         run: |
           files=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             --paginate --jq '.[].filename')
-          if grep -qE '^(src|public|fixtures|e2e|scripts)/|^(package\.json|package-lock\.json|next\.config\.ts|postcss\.config\.mjs|\.github/workflows/verify\.yml)$' <<<"$files"; then
+          if grep -qE '^(src|public|fixtures|e2e|scripts)/|^(package\.json|package-lock\.json|next\.config\.ts|jest\.config\.ts|postcss\.config\.mjs|\.github/workflows/verify\.yml)$' <<<"$files"; then
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "No code changes; skipping verify and e2e."
@@ -60,6 +60,14 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: nielse63/RepoLore
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: nielse63/RepoLore
+          report_type: test_results
+          files: ./test-results/junit.xml
 
   # Playwright against a throwaway Postgres seeded from local source
   # (`npm run seed:e2e`) — no GITHUB_TOKEN and no shared database.
