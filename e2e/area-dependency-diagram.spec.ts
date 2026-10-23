@@ -290,3 +290,85 @@ test("a fully connected diagram lists no unconnected areas", async ({
     page.getByRole("list", { name: "Not connected to other areas" })
   ).toHaveCount(0);
 });
+
+/**
+ * Above `MAX_DIAGRAM_AREAS` (30) connected areas the diagram shows only the
+ * 30 with the most detected relationships, instead of no diagram at all.
+ * Against the seeded `nielse63/repo-lore-ts-many-areas-fixture`
+ * (`fixtures/ts-many-areas`): `/src/hub` imports `/src/module-01` through
+ * `/src/module-33`, and `/src/standalone` imports nothing. So 34 areas are
+ * connected, the hub has the most relationships and every module ties at
+ * one, and the name tie-break shows modules 01–29.
+ */
+test.describe("above the diagram size ceiling", () => {
+  const manyAreasUrl = "/lore/nielse63/repo-lore-ts-many-areas-fixture";
+
+  test("Architecture shows the 30 areas with the most detected relationships and says so", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${manyAreasUrl}/architecture`);
+    const diagram = page.locator("#area-dependency-diagram");
+    const nodes = diagram.locator(".react-flow__node");
+
+    await expect(nodes).toHaveCount(30);
+    await expect(nodes.filter({ hasText: /^\/src\/hub$/ })).toHaveCount(1);
+    await expect(nodes.filter({ hasText: /^\/src\/module-29$/ })).toHaveCount(
+      1
+    );
+    await expect(
+      nodes.filter({ hasText: /^\/src\/module-3[0-3]$/ })
+    ).toHaveCount(0);
+    await expect(diagram.locator(".react-flow__edge")).toHaveCount(29);
+
+    await expect(
+      diagram.getByText(
+        "Showing the 30 areas with the most detected relationships, of 34 connected areas."
+      )
+    ).toBeVisible();
+    await expect(
+      diagram.getByRole("link", { name: "Component Connections" })
+    ).toHaveAttribute(
+      "href",
+      `${manyAreasUrl}/architecture#component-connections`
+    );
+    await expect(
+      diagram.getByText("1 area has no detected production relationships.")
+    ).toBeVisible();
+    await expect(
+      page.getByRole("list", { name: "Not connected to other areas" })
+    ).toHaveCount(0);
+  });
+
+  test("the Overview and the Systems rail render the truncated diagram instead of a fallback", async ({
+    page,
+  }) => {
+    await page.goto(manyAreasUrl);
+    await expect(
+      page.getByRole("heading", { name: "How Areas Connect" })
+    ).toBeVisible();
+    await expect(page.locator(".react-flow__node")).toHaveCount(30);
+
+    await page.goto(`${manyAreasUrl}/systems`);
+    await expect(page.locator(".react-flow__node")).toHaveCount(30);
+    await expect(
+      page.getByText("Not enough connected systems were detected to diagram.")
+    ).toHaveCount(0);
+  });
+
+  test("a System subview always shows its own area and counts neighbors", async ({
+    page,
+  }) => {
+    await page.goto(`${manyAreasUrl}/systems/src-hub`);
+    const diagram = page.locator("#area-dependency-diagram");
+    const nodes = diagram.locator(".react-flow__node");
+
+    await expect(nodes).toHaveCount(30);
+    await expect(nodes.filter({ hasText: /^\/src\/hub$/ })).toHaveCount(1);
+    await expect(
+      diagram.getByText(
+        "Showing this system and the 29 neighbors with the most detected relationships, of 33 connected neighbors."
+      )
+    ).toBeVisible();
+  });
+});

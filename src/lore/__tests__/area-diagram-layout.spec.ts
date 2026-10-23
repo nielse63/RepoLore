@@ -130,14 +130,88 @@ describe("deriveAreaDiagramLayout", () => {
     expect(deriveAreaDiagramLayout([], [])).toBeNull();
   });
 
-  it("returns null above the diagram size ceiling", () => {
-    const areas = Array.from({ length: MAX_DIAGRAM_AREAS + 1 }, (_, i) =>
-      area({ id: `area:${i}`, name: `area-${i}` })
+  describe("above the diagram size ceiling", () => {
+    // A hub importing MAX_DIAGRAM_AREAS + 3 leaves: the hub has the most
+    // detected relationships, and every leaf ties at one, so the name
+    // tie-break decides which leaves are shown.
+    const leafCount = MAX_DIAGRAM_AREAS + 3;
+    const hub = area({ id: "area:hub", name: "hub" });
+    const leaves = Array.from({ length: leafCount }, (_, i) => {
+      const n = String(i + 1).padStart(2, "0");
+      return area({ id: `area:leaf-${n}`, name: `leaf-${n}` });
+    });
+    const standalone = area({ id: "area:standalone", name: "standalone" });
+    const hubEdges = leaves.map((leaf) =>
+      edge({ fromAreaId: "area:hub", toAreaId: leaf.id })
     );
-    const chain = areas
-      .slice(1)
-      .map((a, i) => edge({ fromAreaId: areas[i].id, toAreaId: a.id }));
-    expect(deriveAreaDiagramLayout(areas, chain)).toBeNull();
+
+    it("shows only the areas with the most detected relationships, ties by name", () => {
+      // Input order is reversed so the result can't just be the first N given.
+      const layout = deriveAreaDiagramLayout(
+        [...leaves].reverse().concat(hub, standalone),
+        hubEdges
+      );
+
+      expect(layout).not.toBeNull();
+      const shown = layout!.nodes.map((n) => n.id).sort();
+      expect(shown).toEqual(
+        [
+          "area:hub",
+          ...leaves.slice(0, MAX_DIAGRAM_AREAS - 1).map((l) => l.id),
+        ].sort()
+      );
+      expect(layout!.edges).toHaveLength(MAX_DIAGRAM_AREAS - 1);
+      for (const e of layout!.edges) {
+        expect(shown).toContain(e.fromId);
+        expect(shown).toContain(e.toId);
+      }
+      expect(layout!.connectedAreaCount).toBe(leafCount + 1);
+      expect(layout!.unconnected.map((a) => a.id)).toEqual(["area:standalone"]);
+    });
+
+    it("ranks relationships by distinct neighbor area, in or out", () => {
+      // leaf-33 (last by name, so dropped on a tie) gets a second neighbor;
+      // a reverse edge back to the hub must not count as a second one.
+      const extra = area({ id: "area:extra", name: "extra" });
+      const layout = deriveAreaDiagramLayout(
+        [hub, ...leaves, extra],
+        [
+          ...hubEdges,
+          edge({ fromAreaId: "area:leaf-33", toAreaId: "area:extra" }),
+          edge({ fromAreaId: "area:leaf-01", toAreaId: "area:hub" }),
+        ]
+      );
+
+      const shown = layout!.nodes.map((n) => n.id);
+      expect(shown).toContain("area:leaf-33");
+      expect(shown).not.toContain("area:leaf-29");
+      expect(shown).toHaveLength(MAX_DIAGRAM_AREAS);
+    });
+
+    it("always shows the pinned area, even with fewer relationships", () => {
+      const layout = deriveAreaDiagramLayout(
+        [hub, ...leaves],
+        hubEdges,
+        "area:leaf-33"
+      );
+
+      const shown = layout!.nodes.map((n) => n.id);
+      expect(shown).toContain("area:leaf-33");
+      expect(shown).toContain("area:hub");
+      expect(shown).not.toContain("area:leaf-29");
+      expect(shown).toHaveLength(MAX_DIAGRAM_AREAS);
+    });
+  });
+
+  it("reports every connected area as shown below the ceiling", () => {
+    const api = area({ id: "area:api", name: "api" });
+    const worker = area({ id: "area:worker", name: "worker" });
+    const layout = deriveAreaDiagramLayout(
+      [api, worker],
+      [edge({ fromAreaId: "area:api", toAreaId: "area:worker" })]
+    );
+    expect(layout!.connectedAreaCount).toBe(2);
+    expect(layout!.nodes).toHaveLength(2);
   });
 
   it("does not throw on a mutual (cyclic) dependency", () => {

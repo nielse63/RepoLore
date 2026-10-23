@@ -3,7 +3,7 @@
 import { githubTreeUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import type { Relationship, StructuralArea } from "@/lore/model";
+import type { EntityId, Relationship, StructuralArea } from "@/lore/model";
 import {
   Background,
   Controls,
@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import Link from "next/link";
 import { useMemo } from "react";
 
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
@@ -139,6 +140,9 @@ export interface AreaDependencyDiagramProps {
   owner: string;
   repo: string;
   commitSha: string;
+  // A System subview's own area: always shown when the diagram is
+  // truncated to `MAX_DIAGRAM_AREAS`, with the caption counting neighbors.
+  pinnedAreaId?: EntityId;
 }
 
 /**
@@ -164,8 +168,13 @@ export function AreaDependencyDiagram({
   owner,
   repo,
   commitSha,
+  pinnedAreaId,
 }: AreaDependencyDiagramProps) {
-  const layout = deriveProductionAreaDiagramLayout(areas, relationships);
+  const layout = deriveProductionAreaDiagramLayout(
+    areas,
+    relationships,
+    pinnedAreaId
+  );
 
   const nodes: Node<AreaNodeData>[] = useMemo(
     () =>
@@ -202,6 +211,8 @@ export function AreaDependencyDiagram({
   );
 
   if (!layout) return null;
+
+  const truncated = layout.connectedAreaCount > layout.nodes.length;
 
   const legendEntries = Array.from(
     new Map(
@@ -251,7 +262,32 @@ export function AreaDependencyDiagram({
           <Controls showInteractive={false} />
         </ReactFlow>
       </figure>
-      {layout.unconnected.length > 0 && (
+      {/* Wording per `product-scope-guardian`: the selection is a count of
+          the edges drawn here, never an importance judgment (ADR-0014). */}
+      {truncated && (
+        <p className="mt-3 text-xs text-muted">
+          {pinnedAreaId
+            ? `Showing this system and the ${layout.nodes.length - 1} neighbors with the most detected relationships, of ${layout.connectedAreaCount - 1} connected neighbors.`
+            : `Showing the ${layout.nodes.length} areas with the most detected relationships, of ${layout.connectedAreaCount} connected areas.`}{" "}
+          Counts include only imports resolved to a file in this repository;
+          unresolved or dynamic imports are Unknown. Full list:{" "}
+          <Link
+            href={`/lore/${owner}/${repo}/architecture#component-connections`}
+            className="font-medium text-primary hover:underline"
+          >
+            Component Connections
+          </Link>
+          .
+        </p>
+      )}
+      {truncated && layout.unconnected.length > 0 && (
+        <p className="mt-1 text-xs text-muted">
+          {layout.unconnected.length}{" "}
+          {layout.unconnected.length === 1 ? "area has" : "areas have"} no
+          detected production relationships.
+        </p>
+      )}
+      {!truncated && layout.unconnected.length > 0 && (
         <div className="mt-3 text-xs text-muted">
           <p id="area-dependency-diagram-unconnected">
             Not connected to other areas:

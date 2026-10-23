@@ -1,0 +1,7 @@
+{
+  "name": "ts-many-areas-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Fixture: a hub area importing 33 one-file module areas, plus one standalone area with no relationships, so its area diagram has more connected areas than MAX_DIAGRAM_AREAS.",
+  "main": "src/hub/index.ts"
+}

@@ -10,8 +10,9 @@ import type {
 
 /**
  * Above this many nodes, a layered diagram stops being readable at a glance
- * — callers should fall back to the existing table-only presentation
- * instead (see ADR-0009).
+ * (see ADR-0009), so a larger graph shows only this many connected areas —
+ * the ones with the most detected relationships — and the caller's caption
+ * points to the full Component Connections table.
  */
 export const MAX_DIAGRAM_AREAS = 30;
 
@@ -48,6 +49,8 @@ export interface AreaDiagramLayout {
   nodes: AreaDiagramNode[];
   edges: AreaDiagramEdge[];
   unconnected: AreaDiagramUnconnectedArea[];
+  /** Areas with at least one edge; more than `nodes.length` when truncated. */
+  connectedAreaCount: number;
 }
 
 /**
@@ -60,16 +63,21 @@ export interface AreaDiagramLayout {
  * of them in the top rank beside the real roots, widening the diagram until
  * `fitView` can't fit it (GitHub issue #51).
  *
+ * Above `MAX_DIAGRAM_AREAS` connected areas, only that many are laid out:
+ * `pinnedAreaId` (a System subview's own area) first, then by detected
+ * relationships — distinct neighbor areas, in or out, counted over these
+ * same edges, so the selection can be checked against what's drawn — then
+ * by name. Only edges between shown areas are kept.
+ *
  * Returns `null` when there's nothing meaningful to draw (fewer than two
- * areas, or no edges between them) or when there are too many areas to stay
- * readable (`MAX_DIAGRAM_AREAS`) — callers should fall back to a table in
- * that case.
+ * areas, or no edges between them).
  */
 export function deriveAreaDiagramLayout(
   areas: StructuralArea[],
-  edges: AreaRelationship[]
+  edges: AreaRelationship[],
+  pinnedAreaId?: EntityId
 ): AreaDiagramLayout | null {
-  if (areas.length < 2 || areas.length > MAX_DIAGRAM_AREAS) return null;
+  if (areas.length < 2) return null;
 
   const areaIds = new Set(areas.map((area) => area.id));
   const relevantEdges = edges.filter(
@@ -77,19 +85,46 @@ export function deriveAreaDiagramLayout(
   );
   if (relevantEdges.length === 0) return null;
 
-  const connectedIds = new Set(
-    relevantEdges.flatMap((edge) => [edge.fromAreaId, edge.toAreaId])
+  const neighbors = new Map<EntityId, Set<EntityId>>();
+  for (const edge of relevantEdges) {
+    for (const [a, b] of [
+      [edge.fromAreaId, edge.toAreaId],
+      [edge.toAreaId, edge.fromAreaId],
+    ]) {
+      if (!neighbors.has(a)) neighbors.set(a, new Set());
+      neighbors.get(a)!.add(b);
+    }
+  }
+  const connectedAreas = areas.filter((area) => neighbors.has(area.id));
+  const degree = (area: StructuralArea) => neighbors.get(area.id)!.size;
+  const selectedIds = new Set(
+    [...connectedAreas]
+      .sort(
+        (a, b) =>
+          Number(b.id === pinnedAreaId) - Number(a.id === pinnedAreaId) ||
+          degree(b) - degree(a) ||
+          a.name.localeCompare(b.name)
+      )
+      .slice(0, MAX_DIAGRAM_AREAS)
+      .map((area) => area.id)
   );
-  const connectedAreas = areas.filter((area) => connectedIds.has(area.id));
+  const shownEdges = relevantEdges.filter(
+    (edge) => selectedIds.has(edge.fromAreaId) && selectedIds.has(edge.toAreaId)
+  );
+  // A selected area whose only neighbors were left out has nothing to draw.
+  const shownIds = new Set(
+    shownEdges.flatMap((edge) => [edge.fromAreaId, edge.toAreaId])
+  );
+  const shownAreas = connectedAreas.filter((area) => shownIds.has(area.id));
 
   const graph = new dagre.graphlib.Graph();
   graph.setGraph({ rankdir: "TB", nodesep: 32, ranksep: 56 });
   graph.setDefaultEdgeLabel(() => ({}));
 
-  for (const area of connectedAreas) {
+  for (const area of shownAreas) {
     graph.setNode(area.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   }
-  for (const edge of relevantEdges) {
+  for (const edge of shownEdges) {
     graph.setEdge(edge.fromAreaId, edge.toAreaId);
   }
 
@@ -98,7 +133,7 @@ export function deriveAreaDiagramLayout(
   const graphLabel = graph.graph();
   const areaById = new Map(areas.map((area) => [area.id, area]));
 
-  const nodes: AreaDiagramNode[] = connectedAreas.map((area) => {
+  const nodes: AreaDiagramNode[] = shownAreas.map((area) => {
     const { x, y } = graph.node(area.id);
     return {
       id: area.id,
@@ -112,7 +147,7 @@ export function deriveAreaDiagramLayout(
     };
   });
 
-  const diagramEdges: AreaDiagramEdge[] = relevantEdges.map((edge) => {
+  const diagramEdges: AreaDiagramEdge[] = shownEdges.map((edge) => {
     const fromArea = areaById.get(edge.fromAreaId)!;
     const toArea = areaById.get(edge.toAreaId)!;
     const graphEdge = graph.edge(edge.fromAreaId, edge.toAreaId);
@@ -132,12 +167,13 @@ export function deriveAreaDiagramLayout(
     nodes,
     edges: diagramEdges,
     unconnected: areas
-      .filter((area) => !connectedIds.has(area.id))
+      .filter((area) => !neighbors.has(area.id))
       .map((area) => ({
         id: area.id,
         name: area.name,
         location: area.location,
       })),
+    connectedAreaCount: connectedAreas.length,
   };
 }
 
@@ -158,7 +194,8 @@ export function deriveAreaDiagramLayout(
  */
 export function deriveProductionAreaDiagramLayout(
   areas: StructuralArea[],
-  relationships: Relationship[]
+  relationships: Relationship[],
+  pinnedAreaId?: EntityId
 ): AreaDiagramLayout | null {
   const productionAreas = areas.filter(
     (area) => (area.productionFilePaths ?? []).length > 0
@@ -167,5 +204,9 @@ export function deriveProductionAreaDiagramLayout(
     productionAreas,
     relationships
   );
-  return deriveAreaDiagramLayout(productionAreas, productionRelationships);
+  return deriveAreaDiagramLayout(
+    productionAreas,
+    productionRelationships,
+    pinnedAreaId
+  );
 }
