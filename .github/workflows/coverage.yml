@@ -1,0 +1,48 @@
+name: Coverage
+
+# Uploads unit-test coverage for every push to dev or main (i.e. each merged
+# PR), so Codecov has a base-branch report to compare PR coverage
+# (verify.yml) against. Pushes made with GITHUB_TOKEN, such as release.yml's
+# main → dev merge, trigger no workflows and so aren't covered.
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    # DATABASE_URL is scoped to the steps that read it, not the job, so
+    # package lifecycle scripts run by the install step never see it.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run test:unit:coverage
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: nielse63/RepoLore
+          fail_ci_if_error: true
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: nielse63/RepoLore
+          report_type: test_results
+          files: ./test-results/junit.xml
