@@ -1,4 +1,5 @@
 import type { Parser } from "web-tree-sitter";
+import type { Relationship } from "@/lore/model";
 import type { PythonSourceFile } from "../discovery";
 import { createPythonParser, parsePythonSource } from "../parser";
 import { extractEntryPoints } from "../entry-points";
@@ -87,6 +88,57 @@ describe("extractEntryPoints", () => {
     ];
     const entryPoints = extractEntryPoints(files, "/root", emptyConfig());
     expect(entryPoints).toEqual([]);
+  });
+
+  it("does not treat a bootstrap guard under a nested test directory as an entry point (GitHub issue #65)", () => {
+    const files = [
+      file(
+        "pkg/tests/run_all.py",
+        'if __name__ == "__main__":\n    unittest.main()\n'
+      ),
+    ];
+    const entryPoints = extractEntryPoints(files, "/root", emptyConfig());
+    expect(entryPoints).toEqual([]);
+  });
+
+  it("does not treat a test suite's __main__.py as a cli entry point (GitHub issue #65)", () => {
+    // `python -m pkg.tests` runs the suite; a cli entry point here would
+    // also contradict the directory and re-admit run_all.py's guard.
+    const files = [
+      file("pkg/tests/__main__.py", "run_tests()\n"),
+      file(
+        "pkg/tests/run_all.py",
+        'if __name__ == "__main__":\n    unittest.main()\n'
+      ),
+      file("tests/__main__.py", "run_tests()\n"),
+    ];
+    const entryPoints = extractEntryPoints(files, "/root", emptyConfig());
+    expect(entryPoints).toEqual([]);
+  });
+
+  it("still detects that guard when production code imports from the directory", () => {
+    // A test-named package production code imports isn't a test suite
+    // (e.g. Django's shipped `django/test/`).
+    const files = [
+      file("django/test/runner.py", 'if __name__ == "__main__":\n    run()\n'),
+    ];
+    const productionImport: Relationship = {
+      id: "rel",
+      kind: "depends-on",
+      fromId: "django/core/handlers.py",
+      toId: "django/test/runner.py",
+      certainty: "detected",
+      evidence: [],
+    };
+    const entryPoints = extractEntryPoints(files, "/root", emptyConfig(), [
+      productionImport,
+    ]);
+    expect(entryPoints).toEqual([
+      expect.objectContaining({
+        kind: "bootstrap",
+        location: { filePath: "django/test/runner.py" },
+      }),
+    ]);
   });
 
   it("resolves the package name to its __init__.py as a library entry point", () => {

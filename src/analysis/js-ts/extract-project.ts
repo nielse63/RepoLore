@@ -39,7 +39,8 @@ import {
   type DetectedReactComponent,
 } from "./react-components";
 import { readJsTsProjectConfig } from "./project-config";
-import { extractTestRelationships } from "./tests";
+import { isUnderUncontradictedTestRoot } from "../shared/derive-views";
+import { extractTestRelationships, isTestFile } from "./tests";
 
 export interface JsTsExtraction {
   project: LoreProject;
@@ -221,7 +222,11 @@ export function extractJsTsProject(
     absoluteRoot,
     projectConfig.aliases
   );
-  const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot);
+  const entryPoints = extractEntryPoints(
+    sourceFiles,
+    absoluteRoot,
+    importResult.relationships
+  );
   const publicContracts = extractPublicSurface(
     entryPoints,
     sourceFiles,
@@ -231,11 +236,6 @@ export function extractJsTsProject(
     entryPoints
       .filter((ep) => ep.kind === "library")
       .map((ep) => ep.location.filePath)
-  );
-  const testResult = extractTestRelationships(
-    sourceFiles,
-    absoluteRoot,
-    packageEntryPointFilePaths
   );
   const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
   const externalDependencies = extractExternalDependencies(
@@ -260,6 +260,22 @@ export function extractJsTsProject(
     frameworkBehaviorNodes.push(...result.behaviorNodes);
     frameworkBehaviorEdges.push(...result.behaviorEdges);
   }
+
+  // After the framework detectors, so a framework route under a test-named
+  // directory (e.g. Next.js `app/test/page.tsx`) contradicts it here exactly
+  // as it does for area grouping.
+  const testResult = extractTestRelationships(
+    sourceFiles,
+    absoluteRoot,
+    packageEntryPointFilePaths,
+    isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [...entryPoints, ...frameworkEntryPoints],
+        relationships: importResult.relationships,
+      },
+      isTestFile
+    )
+  );
 
   const callBehaviorEdges: BehaviorEdge[] = callGraph.callEdges.map((edge) => ({
     id: `js-ts-behavior-call-${edge.id}`,

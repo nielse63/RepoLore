@@ -6,6 +6,7 @@ import type {
 } from "@/lore/model";
 import {
   deriveViews,
+  isUnderUncontradictedTestRoot,
   type DeriveViewsConfig,
   type DeriveViewsInput,
 } from "../derive-views";
@@ -472,5 +473,72 @@ describe("deriveViews start here", () => {
     const { startHere } = deriveViews(input, noopConfig);
     const last = startHere[startHere.length - 1];
     expect(last.location.filePath).toBe("src/main.test.ts");
+  });
+});
+
+describe("isUnderUncontradictedTestRoot", () => {
+  const dependsOn = (fromId: string, toId: string): Relationship => ({
+    id: `${fromId}->${toId}`,
+    kind: "depends-on",
+    fromId,
+    toId,
+    certainty: "detected",
+    evidence: [evidence],
+  });
+
+  it("is true for a file under a test directory at any depth", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      { entryPoints: [], relationships: [] },
+      () => false
+    );
+    expect(isUnder("packages/x/tests/helpers.ts")).toBe(true);
+    expect(isUnder("pkg/tests/run_all.py")).toBe(true);
+    expect(isUnder("tests/foo.js")).toBe(true);
+    expect(isUnder("packages/x/src/index.ts")).toBe(false);
+    // The file name alone isn't a test root; only a directory is.
+    expect(isUnder("src/test")).toBe(false);
+  });
+
+  it("is false under a test directory that production code imports", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [],
+        relationships: [
+          dependsOn("packages/core/src/compile.ts", "packages/test/assert.ts"),
+        ],
+      },
+      () => false
+    );
+    expect(isUnder("packages/test/assert.ts")).toBe(false);
+    expect(isUnder("packages/core/tests/run.ts")).toBe(true);
+  });
+
+  it("ignores imports from other test files or test directories", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [],
+        relationships: [
+          dependsOn("src/app.test.ts", "packages/x/tests/helpers.ts"),
+          dependsOn("e2e/home.ts", "packages/x/tests/helpers.ts"),
+        ],
+      },
+      (f) => f.endsWith(".test.ts")
+    );
+    expect(isUnder("packages/x/tests/helpers.ts")).toBe(true);
+  });
+
+  it("is false under a test directory holding a non-test entry point", () => {
+    const route: EntryPoint = {
+      id: "route",
+      kind: "framework",
+      location: { filePath: "app/test/page.tsx" },
+      certainty: "detected",
+      evidence: [evidence],
+    };
+    const isUnder = isUnderUncontradictedTestRoot(
+      { entryPoints: [route], relationships: [] },
+      () => false
+    );
+    expect(isUnder("app/test/helpers.ts")).toBe(false);
   });
 });

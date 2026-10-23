@@ -26,7 +26,8 @@ import { extractExternalDependencies } from "./external-dependencies";
 import { extractImportRelationships } from "./imports";
 import { extractPublicSurface } from "./public-surface";
 import { readPythonProjectConfig } from "./project-config";
-import { extractTestRelationships } from "./tests";
+import { isUnderUncontradictedTestRoot } from "../shared/derive-views";
+import { extractTestRelationships, isTestFile } from "./tests";
 
 export interface PythonExtraction {
   project: LoreProject;
@@ -93,11 +94,20 @@ export async function extractPythonProject(
   ]);
 
   const importResult = extractImportRelationships(sourceFiles, absoluteRoot);
-  const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot, config);
+  const entryPoints = extractEntryPoints(
+    sourceFiles,
+    absoluteRoot,
+    config,
+    importResult.relationships
+  );
   const publicContracts = extractPublicSurface(entryPoints, sourceFiles);
   const testResult = extractTestRelationships(
     sourceFiles,
-    importResult.resolvedDependenciesByFile
+    importResult.resolvedDependenciesByFile,
+    isUnderUncontradictedTestRoot(
+      { entryPoints, relationships: importResult.relationships },
+      isTestFile
+    )
   );
   const externalDependencies = extractExternalDependencies(
     config.dependencies,

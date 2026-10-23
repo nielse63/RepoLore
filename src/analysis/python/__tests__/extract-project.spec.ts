@@ -80,6 +80,33 @@ describe("extractPythonProject", () => {
     expect(result.testRelationships).toHaveLength(1);
   });
 
+  it("treats a nested test directory's harness and helpers as neither entry points nor test subjects (GitHub issue #65)", async () => {
+    rootDir = await makeFixture({
+      "pyproject.toml": '[project]\nname = "mylib"\n',
+      "mylib/__init__.py": "def f():\n    return 1\n",
+      "pkg/__init__.py": "",
+      "pkg/tests/__init__.py": "",
+      "pkg/tests/helpers.py": "def helper():\n    return 1\n",
+      "pkg/tests/test_core.py":
+        "from pkg.tests.helpers import helper\nimport mylib\n",
+      "pkg/tests/run_all.py":
+        'import unittest\nif __name__ == "__main__":\n    unittest.main()\n',
+    });
+
+    const result = await extractPythonProject(rootDir);
+
+    expect(result.entryPoints.map((ep) => ep.location.filePath)).toEqual([
+      "mylib/__init__.py",
+    ]);
+    expect(result.project.kind).toBe("library");
+    expect(
+      result.testRelationships.map((t) => [
+        t.testLocation.filePath,
+        t.implementationLocation.filePath,
+      ])
+    ).toEqual([["pkg/tests/test_core.py", "mylib/__init__.py"]]);
+  });
+
   it("collects gaps from import and test extraction", async () => {
     rootDir = await makeFixture({
       "app.py": "from .missing import x\n",

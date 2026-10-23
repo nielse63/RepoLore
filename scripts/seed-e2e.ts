@@ -16,8 +16,9 @@
  *   `fixtures/ts-nested-test-samples`, a monorepo package whose test suite
  *   nests many one-file sample-case directories under `packages/core/tests`
  *   (GitHub issue #50's Svelte-shaped layout), plus a test-named
- *   `packages/test` helper package that production code imports, for
- *   `nested-test-samples.spec.ts`. Local-only: unlike the other fixtures it
+ *   `packages/test` helper package that production code imports, and a
+ *   runnable harness and test helper nested in that suite (GitHub issue
+ *   #65), for `nested-test-samples.spec.ts`. Local-only: unlike the other fixtures it
  *   has no GitHub repository, so it's keyed to a fixed placeholder commit.
  *   Its run is `'completed'` and indexable, so `/explore` and the sitemap
  *   list it alongside the other seeded runs. Its History cache is built by

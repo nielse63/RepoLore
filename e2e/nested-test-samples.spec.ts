@@ -14,10 +14,18 @@ import { expect, test } from "./coverage";
  * `django/test/`), so detected structure overrules its name and it stays an
  * implementation area. The fixture has no GitHub repository, so its run is
  * keyed to a placeholder commit and its source links lead nowhere.
+ *
+ * GitHub issue #65: the same nested suite holds a runnable harness
+ * (`run-harness.js`, a `ReactDOM.render` call) and a test helper
+ * (`helpers.js`) that `compile.test.js` imports. File-level analysis used to
+ * miss that they're under a test directory, so the harness became the
+ * Lore's bootstrap entry point and Start Here's first step, and the helper
+ * was reported as the implementation `compile.test.js` tests.
  */
 
 const repoUrl = "/lore/nielse63/repo-lore-ts-nested-test-samples-fixture";
 const systemsUrl = `${repoUrl}/systems`;
+const architectureUrl = `${repoUrl}/architecture`;
 
 test.beforeEach(async ({ page }) => {
   await page.goto(repoUrl);
@@ -82,4 +90,41 @@ test("a test-named directory that production code imports stays an implementatio
   await expect(
     page.getByRole("link", { name: /^\/packages\/core\/src\s/ })
   ).toBeVisible();
+});
+
+test("Start Here and Entry Points don't treat a harness in the nested test directory as where the system starts", async ({
+  page,
+}) => {
+  await page.goto(repoUrl);
+
+  const startHereSteps = page.locator("#start-here ol > li");
+  await expect(startHereSteps.first()).toContainText(
+    "/packages/core/src/index.ts"
+  );
+  await expect(page.locator("#start-here")).not.toContainText("run-harness");
+
+  await page.goto(architectureUrl);
+  const entryPoints = page
+    .getByRole("heading", { name: "Entry Points" })
+    .locator("xpath=..");
+  await expect(entryPoints.getByRole("listitem")).toHaveText([
+    /^Library \/packages\/core\/src\/index\.ts/,
+  ]);
+});
+
+test("a test's helper in the nested test directory isn't reported as the implementation it tests", async ({
+  page,
+}) => {
+  await page.goto(architectureUrl);
+
+  const testRelationships = page.locator("#test-relationships");
+  await expect(testRelationships.getByRole("listitem")).toHaveText([
+    /\/packages\/core\/tests\/runtime\/compile\.test\.js.*tests.*\/packages\/core\/src\/compile\.ts/,
+  ]);
+  // Matched by filename convention once the helper import is discounted —
+  // not by an import, so it must say so.
+  await expect(testRelationships.getByRole("listitem")).toContainText(
+    "Inferred"
+  );
+  await expect(testRelationships).not.toContainText("helpers.js");
 });

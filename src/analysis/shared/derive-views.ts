@@ -111,7 +111,10 @@ const MAX_FALLBACK_AREA_FILES = 10;
  * areas", none labeled as tests. Area grouping only: each language's
  * `isTestFile` (and so test-relationship extraction) is unchanged, since
  * treating thousands of sample inputs as tests would report each one as a
- * test with no identifiable subject.
+ * test with no identifiable subject. Extraction instead uses
+ * `isUnderUncontradictedTestRoot` below only to *remove* candidates — never
+ * to add tests — so a nested harness isn't a bootstrap entry point and a
+ * nested helper isn't a test's subject (GitHub issue #65).
  */
 const TEST_ROOT_DIRECTORY_NAMES = new Set([
   "test",
@@ -128,12 +131,12 @@ function testRootSegmentIndex(filePath: string): number {
     .findIndex((segment) => TEST_ROOT_DIRECTORY_NAMES.has(segment));
 }
 
-function isUnderTestRoot(filePath: string): boolean {
+export function isUnderTestRoot(filePath: string): boolean {
   return testRootSegmentIndex(filePath) !== -1;
 }
 
 /** A file's directory path up to and including its first test root, e.g. "packages/x/tests". */
-function testRootPath(filePath: string): string {
+export function testRootPath(filePath: string): string {
   return filePath
     .split("/")
     .slice(0, testRootSegmentIndex(filePath) + 1)
@@ -149,8 +152,8 @@ function testRootPath(filePath: string): string {
  * root path to the first contradiction found, cited as area evidence.
  * Doesn't affect grouping — the root stays one area either way.
  */
-function findContradictedTestRoots(
-  input: DeriveViewsInput,
+export function findContradictedTestRoots(
+  input: Pick<DeriveViewsInput, "entryPoints" | "relationships">,
   isTestFile: DeriveViewsConfig["isTestFile"]
 ): Map<string, string> {
   const contradictions = new Map<string, string>();
@@ -177,6 +180,22 @@ function findContradictedTestRoots(
     }
   }
   return contradictions;
+}
+
+/**
+ * Predicate for "under a test root its name isn't contradicted by detected
+ * structure" (see `findContradictedTestRoots`) — the rule area grouping
+ * uses to label a nested test directory "Tests", shared with each
+ * language's extraction so a file's area and its own classification agree.
+ */
+export function isUnderUncontradictedTestRoot(
+  input: Pick<DeriveViewsInput, "entryPoints" | "relationships">,
+  isTestFile: DeriveViewsConfig["isTestFile"]
+): (filePath: string) => boolean {
+  const contradictedTestRoots = findContradictedTestRoots(input, isTestFile);
+  return (filePath) =>
+    isUnderTestRoot(filePath) &&
+    !contradictedTestRoots.has(testRootPath(filePath));
 }
 
 /**
@@ -332,9 +351,10 @@ function buildStructuralAreas(
     config;
 
   const contradictedTestRoots = findContradictedTestRoots(input, isTestFile);
-  const isUnderUncontradictedTestRoot = (filePath: string) =>
-    isUnderTestRoot(filePath) &&
-    !contradictedTestRoots.has(testRootPath(filePath));
+  const isUnderUncontradictedTestRootFile = isUnderUncontradictedTestRoot(
+    input,
+    isTestFile
+  );
 
   const filesByAreaName = new Map<string, string[]>();
   for (const filePath of sourceFilePaths) {
@@ -353,7 +373,7 @@ function buildStructuralAreas(
         name
       );
       const isAllTestFiles = files.every(
-        (f) => isTestFile(f) || isUnderUncontradictedTestRoot(f)
+        (f) => isTestFile(f) || isUnderUncontradictedTestRootFile(f)
       );
       const isAllTestSupportFiles =
         !isAllTestFiles && files.every((f) => isTestSupportFile(f));
@@ -469,7 +489,7 @@ function buildStructuralAreas(
         evidence,
         gaps: areaGaps,
         productionFilePaths: files.filter(
-          (f) => !isTestFile(f) && !isUnderUncontradictedTestRoot(f)
+          (f) => !isTestFile(f) && !isUnderUncontradictedTestRootFile(f)
         ),
       };
       return area;

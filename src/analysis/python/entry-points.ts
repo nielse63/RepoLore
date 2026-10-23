@@ -6,7 +6,8 @@
  */
 
 import type { Node as TSNode } from "web-tree-sitter";
-import type { EntryPoint } from "@/lore/model";
+import type { EntryPoint, Relationship } from "@/lore/model";
+import { isUnderUncontradictedTestRoot } from "../shared/derive-views";
 import type { PythonSourceFile } from "./discovery";
 import { buildModuleResolutionIndex } from "./module-resolution";
 import type { PythonProjectConfig } from "./project-config";
@@ -47,7 +48,8 @@ function moduleSegmentsFromDottedPath(dottedPath: string): string[] {
 export function extractEntryPoints(
   sourceFiles: PythonSourceFile[],
   rootDir: string,
-  config: PythonProjectConfig
+  config: PythonProjectConfig,
+  relationships: Relationship[] = []
 ): EntryPoint[] {
   const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
   const entryPoints: EntryPoint[] = [];
@@ -80,7 +82,21 @@ export function extractEntryPoints(
     });
   }
 
-  // 2. The `__main__.py` convention (`python -m package` runs it).
+  // Files in a test suite are never the application's real entry point —
+  // test files, and files under a nested test directory (e.g.
+  // `pkg/tests/run_all.py`, GitHub issue #65) unless detected structure
+  // contradicts its name. Judged from the import relationships and the
+  // declared console scripts above, not steps 2–3's own results, so a test
+  // suite's `__main__.py` can't contradict its own directory.
+  const isUnderTestDirectory = isUnderUncontradictedTestRoot(
+    { entryPoints, relationships },
+    isTestFile
+  );
+  const isInTestSuite = (relativePath: string) =>
+    isTestFile(relativePath) || isUnderTestDirectory(relativePath);
+
+  // 2. The `__main__.py` convention (`python -m package` runs it), outside
+  // a test suite (`python -m pkg.tests` runs tests, not the application).
   for (const sourceFile of sourceFiles) {
     if (claimedPaths.has(sourceFile.relativePath)) continue;
     if (
@@ -89,6 +105,7 @@ export function extractEntryPoints(
     ) {
       continue;
     }
+    if (isInTestSuite(sourceFile.relativePath)) continue;
     claimedPaths.add(sourceFile.relativePath);
     entryPoints.push({
       id: `python-entry-dunder-main-${sourceFile.relativePath}`,
@@ -106,12 +123,11 @@ export function extractEntryPoints(
     });
   }
 
-  // 3. A top-level `if __name__ == "__main__":` bootstrap guard. Test files
-  // are skipped even when they happen to match (e.g. a `unittest.main()`
-  // guard) — never a real application entry point.
+  // 3. A top-level `if __name__ == "__main__":` bootstrap guard, outside a
+  // test suite (e.g. a `unittest.main()` guard in a test file).
   for (const sourceFile of sourceFiles) {
     if (claimedPaths.has(sourceFile.relativePath)) continue;
-    if (isTestFile(sourceFile.relativePath)) continue;
+    if (isInTestSuite(sourceFile.relativePath)) continue;
     const hasGuard = directChildrenOfType(
       sourceFile.tree.rootNode,
       "if_statement"

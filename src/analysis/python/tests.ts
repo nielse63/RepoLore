@@ -10,6 +10,11 @@
  * recognition covers `unittest.TestCase`-based suites, since those
  * conventionally live in the same locations (both conventional pytest and
  * unittest layouts are in scope).
+ *
+ * Files under a nested test directory (`isUnderTestDirectory`, e.g.
+ * `pkg/tests/helpers.py`) are never an implementation subject, but aren't
+ * test files themselves either (GitHub issue #65; see
+ * `../shared/derive-views`'s `TEST_ROOT_DIRECTORY_NAMES`).
  */
 
 import path from "node:path";
@@ -43,10 +48,13 @@ function conventionalSubjectName(testBasename: string): string | undefined {
 
 export function extractTestRelationships(
   sourceFiles: PythonSourceFile[],
-  resolvedDependenciesByFile: Map<string, string[]>
+  resolvedDependenciesByFile: Map<string, string[]>,
+  isUnderTestDirectory: (relativeFilePath: string) => boolean = () => false
 ): PythonTestExtractionResult {
   const testRelationships: TestRelationship[] = [];
   const gaps: Gap[] = [];
+  const isImplementationFile = (relativeFilePath: string) =>
+    !isTestFile(relativeFilePath) && !isUnderTestDirectory(relativeFilePath);
 
   for (const testFile of sourceFiles.filter((sf) =>
     isTestFile(sf.relativePath)
@@ -56,7 +64,7 @@ export function extractTestRelationships(
 
     const resolvedImplementationTargets = (
       resolvedDependenciesByFile.get(testPath) ?? []
-    ).filter((targetPath) => !isTestFile(targetPath));
+    ).filter(isImplementationFile);
 
     if (resolvedImplementationTargets.length > 0) {
       const implementationPath = resolvedImplementationTargets[0];
@@ -81,7 +89,7 @@ export function extractTestRelationships(
     const conventionMatch = subjectName
       ? sourceFiles.find(
           (sf) =>
-            !isTestFile(sf.relativePath) &&
+            isImplementationFile(sf.relativePath) &&
             path.basename(sf.relativePath).replace(/\.py$/, "") === subjectName
         )
       : undefined;

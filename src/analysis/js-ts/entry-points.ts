@@ -7,7 +7,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Node, SyntaxKind, type SourceFile } from "ts-morph";
-import type { EntryPoint } from "@/lore/model";
+import type { EntryPoint, Relationship } from "@/lore/model";
+import { isUnderUncontradictedTestRoot } from "../shared/derive-views";
 import { isTestFile } from "./tests";
 
 function toRelative(rootDir: string, absoluteFilePath: string): string {
@@ -129,7 +130,8 @@ function callsReactDomRender(sourceFile: SourceFile): boolean {
 
 export function extractEntryPoints(
   sourceFiles: SourceFile[],
-  rootDir: string
+  rootDir: string,
+  relationships: Relationship[] = []
 ): EntryPoint[] {
   const entryPoints: EntryPoint[] = [];
   const pkg = readPackageJson(rootDir);
@@ -237,11 +239,19 @@ export function extractEntryPoints(
   // Runtime-bootstrap heuristic: a file that calls ReactDOM's render/createRoot.
   // Test files are skipped even when they happen to match — defense in depth
   // alongside the `.render` property-access requirement above, since a test
-  // file is never the application's real bootstrap entry point.
+  // file is never the application's real bootstrap entry point. So are
+  // files under a nested test directory (e.g. `packages/x/tests/`, GitHub
+  // issue #65) unless detected structure contradicts its name — judged from
+  // the import relationships and the declared entry points found above, not
+  // this heuristic's own results.
+  const isUnderTestDirectory = isUnderUncontradictedTestRoot(
+    { entryPoints, relationships },
+    isTestFile
+  );
   for (const sourceFile of sourceFiles) {
     const filePath = toRelative(rootDir, sourceFile.getFilePath());
     if (claimedPaths.has(filePath)) continue;
-    if (isTestFile(filePath)) continue;
+    if (isTestFile(filePath) || isUnderTestDirectory(filePath)) continue;
     if (!callsReactDomRender(sourceFile)) continue;
     claimedPaths.add(filePath);
     entryPoints.push({

@@ -31,6 +31,13 @@
  * of 215 test relationships resolved to that single entry file instead of
  * the directories they actually exercise (e.g. `test/arguments/cwd.js`
  * exercises `lib/arguments/cwd.js`, not `index.js`).
+ *
+ * Files under a nested test directory (`isUnderTestDirectory`, e.g.
+ * `packages/x/tests/helpers.ts`) are never an implementation subject either
+ * — the same false-subject bug `e2e/` had above, at any depth (GitHub issue
+ * #65) — but aren't test files themselves: treating every one as a test
+ * would flood the Lore with subject-less tests (see
+ * `../shared/derive-views`'s `TEST_ROOT_DIRECTORY_NAMES`).
  */
 
 import path from "node:path";
@@ -99,18 +106,23 @@ function findDirectoryMirrorMatch(
 export function extractTestRelationships(
   sourceFiles: SourceFile[],
   rootDir: string,
-  packageEntryPointFilePaths: ReadonlySet<string> = new Set()
+  packageEntryPointFilePaths: ReadonlySet<string> = new Set(),
+  isUnderTestDirectory: (relativeFilePath: string) => boolean = () => false
 ): TestExtractionResult {
   const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
   const testRelationships: TestRelationship[] = [];
   const gaps: Gap[] = [];
+  const isImplementationFile = (sf: SourceFile) => {
+    const relativeFilePath = toRelative(rootDir, sf.getFilePath());
+    return (
+      !isTestFile(relativeFilePath) && !isUnderTestDirectory(relativeFilePath)
+    );
+  };
 
   const testFiles = sourceFiles.filter((sf) =>
     isTestFile(toRelative(rootDir, sf.getFilePath()))
   );
-  const implementationFiles = sourceFiles.filter(
-    (sf) => !isTestFile(toRelative(rootDir, sf.getFilePath()))
-  );
+  const implementationFiles = sourceFiles.filter(isImplementationFile);
 
   for (const testFile of testFiles) {
     const testPath = toRelative(rootDir, testFile.getFilePath());
@@ -124,7 +136,7 @@ export function extractTestRelationships(
       .map((specifier) => resolver.resolve(testFile.getFilePath(), specifier))
       .filter(
         (resolved): resolved is SourceFile =>
-          !!resolved && !isTestFile(toRelative(rootDir, resolved.getFilePath()))
+          !!resolved && isImplementationFile(resolved)
       );
 
     const pushImportMatch = (importedImplementation: SourceFile) => {
