@@ -20,7 +20,11 @@
  *   `nested-test-samples.spec.ts`. Local-only: unlike the other fixtures it
  *   has no GitHub repository, so it's keyed to a fixed placeholder commit.
  *   Its run is `'completed'` and indexable, so `/explore` and the sitemap
- *   list it alongside the other seeded runs.
+ *   list it alongside the other seeded runs. Its History cache is built by
+ *   the real classifier (`buildHistoryEntries`) from recorded GitHub
+ *   commit-detail payloads in `fixtures/history-commits` (a lockfile-only
+ *   bump and a `package.json` edit, for `history-dependencies.spec.ts`), so
+ *   its History page never calls GitHub either.
  *
  * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
  * an ADR-0013 background re-analysis. Idempotent per ADR-0005: re-running
@@ -44,6 +48,8 @@ import { saveAnalysisRun } from "../src/db/analysis-runs";
 import { getDbPool } from "../src/db/client";
 import { saveHistoryEntries } from "../src/db/history-entries";
 import { upsertRepo } from "../src/db/repos";
+import type { CommitDetail, CommitSummary } from "../src/github/commits";
+import { buildHistoryEntries } from "../src/history/classify";
 import { buildLore } from "../src/lore/build-lore";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -89,7 +95,51 @@ async function seedRun(params: {
   console.log(
     `✓ ${owner}/${repo}@${commitSha.slice(0, 7)} ${analyzerVersion}: ${run.status}`
   );
-  return repoRow;
+  return { repoRow, lore };
+}
+
+/** GitHub's `GET /repos/{owner}/{repo}/commits/{sha}` payload, plus how many days before seeding it was authored. */
+interface RecordedCommit {
+  sha: string;
+  commit: { message: string; author: { name: string } };
+  author?: { login: string };
+  daysAgo: number;
+  files: {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+  }[];
+}
+
+async function readRecordedCommits(
+  file: string
+): Promise<{ commit: CommitSummary; detail: CommitDetail }[]> {
+  const recorded = JSON.parse(
+    await fs.readFile(file, "utf-8")
+  ) as RecordedCommit[];
+  return recorded.map((c) => ({
+    commit: {
+      sha: c.sha,
+      message: c.commit.message,
+      authorName: c.commit.author.name,
+      authorLogin: c.author?.login,
+      authoredAt: new Date(
+        Date.now() - c.daysAgo * 24 * 60 * 60 * 1000
+      ).toISOString(),
+    },
+    detail: {
+      sha: c.sha,
+      files: c.files.map((f) => ({
+        filePath: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        patch: f.patch,
+      })),
+    },
+  }));
 }
 
 async function main() {
@@ -102,7 +152,7 @@ async function main() {
     );
   }
 
-  const fixtureRepo = await seedRun({
+  const { repoRow: fixtureRepo } = await seedRun({
     owner: "nielse63",
     repo: "repo-lore-ts-react-app-fixture",
     dir: path.join(process.cwd(), "fixtures/ts-react-app"),
@@ -114,11 +164,24 @@ async function main() {
     entries: [],
   });
 
-  await seedRun({
+  const nested = await seedRun({
     owner: "nielse63",
     repo: "repo-lore-ts-nested-test-samples-fixture",
     dir: path.join(process.cwd(), "fixtures/ts-nested-test-samples"),
     commitSha: TS_NESTED_TEST_SAMPLES_FIXTURE_SHA,
+  });
+  await saveHistoryEntries({
+    repoId: nested.repoRow.id,
+    computedThroughSha: TS_NESTED_TEST_SAMPLES_FIXTURE_SHA,
+    entries: buildHistoryEntries(
+      await readRecordedCommits(
+        path.join(
+          process.cwd(),
+          "fixtures/history-commits/dependency-commits.json"
+        )
+      ),
+      nested.lore
+    ),
   });
 
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "repolore-seed-e2e-"));

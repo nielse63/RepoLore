@@ -108,7 +108,8 @@ describe("classifyCommitFiles", () => {
       [
         file({
           filePath: "package.json",
-          patch: '@@ -1,3 +1,4 @@\n {\n+    "celery": "^5.3.0",\n }',
+          patch:
+            '@@ -10,3 +10,4 @@\n   "dependencies": {\n+    "celery": "^5.3.0",\n     "react": "^19.0.0"',
         }),
       ],
       lore
@@ -121,6 +122,225 @@ describe("classifyCommitFiles", () => {
       })
     );
   });
+
+  it("ignores string lines inside visible non-dependency objects of package.json", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package.json",
+          patch: [
+            "@@ -5,9 +5,9 @@",
+            '   "scripts": {',
+            '-    "build": "next build",',
+            '+    "build": "next build --turbo",',
+            '     "start": "next start"',
+            "   },",
+            '   "engines": {',
+            '-    "node": ">=18"',
+            '+    "node": ">=20"',
+            "   },",
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts).toEqual([]);
+  });
+
+  it("ignores scripts and top-level fields of package.json when no enclosing object is visible", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package.json",
+          patch: [
+            "@@ -8,6 +8,6 @@",
+            '     "dev": "next dev",',
+            '-    "build": "next build",',
+            '+    "build": "next build --turbo",',
+            '     "lint": "eslint"',
+            "@@ -40,3 +40,6 @@",
+            '     "react": "^19.0.0"',
+            "   },",
+            '+  "type": "module",',
+            '+  "packageManager": "pnpm@9.0.0",',
+            '+  "homepage": "https://example.test"',
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts).toEqual([]);
+  });
+
+  it("detects a package.json dependency only inside a dependency section", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package.json",
+          patch: [
+            "@@ -10,8 +10,10 @@",
+            '     "jest": "^29.0.0",',
+            '+    "vitest": "^2.0.0",',
+            "   },",
+            '   "scripts": {',
+            '+    "test": "vitest",',
+            "   },",
+            '   "dependencies": {',
+            '-    "lodash": "^4.17.0",',
+            '     "react": "^19.0.0"',
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts.map((f) => f.description)).toEqual([
+      "vitest added in package.json",
+      "lodash removed from package.json",
+    ]);
+  });
+
+  it("summarizes a package-lock.json diff as one fact counting changed package entries", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package-lock.json",
+          patch: [
+            "@@ -100,24 +100,22 @@",
+            '     "node_modules/express": {',
+            '-      "version": "5.2.1",',
+            '-      "resolved": "https://registry.npmjs.org/express/-/express-5.2.1.tgz",',
+            '-      "integrity": "sha512-old",',
+            '+      "version": "5.3.0",',
+            '+      "resolved": "https://registry.npmjs.org/express/-/express-5.3.0.tgz",',
+            '+      "integrity": "sha512-new",',
+            '       "dev": true,',
+            '       "license": "MIT",',
+            '       "dependencies": {',
+            '         "accepts": "^2.0.0",',
+            '-        "body-parser": "^2.2.1"',
+            '+        "body-parser": "^2.3.0"',
+            "       }",
+            "     },",
+            '-    "node_modules/express/node_modules/content-type": {',
+            '-      "version": "1.0.5",',
+            '-      "license": "MIT",',
+            '-      "engines": {',
+            '-        "node": ">= 0.6"',
+            "-      }",
+            "-    },",
+            '+    "node_modules/left-pad": {',
+            '+      "version": "1.3.0",',
+            '+      "license": "WTFPL"',
+            "+    },",
+            '     "node_modules/qs": {',
+            '       "version": "6.14.0",',
+            "@@ -300,6 +298,6 @@",
+            '       "optionalDependencies": {',
+            '-        "@rollup/rollup-android-arm64": "4.64.1"',
+            '+        "@rollup/rollup-android-arm64": "4.64.6"',
+            "       }",
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts).toEqual([
+      {
+        kind: "dependency",
+        certainty: "inferred",
+        description: "at least 3 packages changed in package-lock.json",
+        filePath: "package-lock.json",
+      },
+    ]);
+  });
+
+  it("keeps package-lock.json entries attributed across anonymous objects and the root entry", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package-lock.json",
+          patch: [
+            "@@ -10,30 +10,30 @@",
+            '     "": {',
+            '       "name": "app",',
+            '-      "version": "1.0.0"',
+            '+      "version": "1.1.0"',
+            "     },",
+            '     "node_modules/foo": {',
+            '       "version": "1.0.0",',
+            '       "funding": [',
+            "         {",
+            '           "type": "github",',
+            '           "url": "https://github.com/sponsors/foo"',
+            "         }",
+            "       ],",
+            '       "engines": {',
+            '-        "node": ">=16"',
+            '+        "node": ">=18"',
+            "       }",
+            "     },",
+            '     "node_modules/bar": {',
+            '-      "version": "2.0.0",',
+            '+      "version": "2.1.0",',
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts.map((f) => f.description)).toEqual([
+      "2 packages changed in package-lock.json",
+    ]);
+  });
+
+  it("marks a package-lock.json diff with no identifiable package entry as unknown", () => {
+    const facts = classifyCommitFiles(
+      [
+        file({
+          filePath: "package-lock.json",
+          patch: [
+            "@@ -1,6 +1,6 @@",
+            " {",
+            '   "name": "app",',
+            '-  "lockfileVersion": 1,',
+            '+  "lockfileVersion": 3,',
+            '   "requires": true,',
+          ].join("\n"),
+        }),
+      ],
+      lore
+    );
+    expect(facts).toEqual([
+      expect.objectContaining({
+        kind: "dependency",
+        certainty: "unknown",
+        description:
+          "package-lock.json changed (no package entries identified in the diff)",
+      }),
+    ]);
+  });
+
+  it.each(["yarn.lock", "pnpm-lock.yaml"])(
+    "marks a %s change as one unknown fact instead of parsing its lines",
+    (filePath) => {
+      const facts = classifyCommitFiles(
+        [
+          file({
+            filePath,
+            patch:
+              '@@ -1,3 +1,3 @@\n "accepts@^2.0.0":\n-  version "2.0.0"\n+  version "2.0.1"\n-  "resolved": "https://example.test/a.tgz"',
+          }),
+        ],
+        lore
+      );
+      expect(facts).toEqual([
+        expect.objectContaining({
+          kind: "dependency",
+          certainty: "unknown",
+          description: `${filePath} changed (lockfile contents not inspected)`,
+        }),
+      ]);
+    }
+  );
 
   it("marks a manifest change with no patch as unknown certainty", () => {
     const facts = classifyCommitFiles(
