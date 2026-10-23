@@ -1,0 +1,12 @@
+[project]
+name = "pyonly"
+version = "0.1.0"
+description = "Fixture: a Python-only repository, whose Lore has no callable signatures (Data Flow covers JavaScript and TypeScript only)."
+requires-python = ">=3.10"
+
+[project.scripts]
+pyonly = "pyonly.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

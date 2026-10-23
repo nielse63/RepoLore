@@ -35,8 +35,11 @@
  *   relationships, so its run falls short of the minimum value contract and
  *   is persisted as `'partial'` (and isn't indexable), for
  *   `at-a-glance.spec.ts`'s partial-run ordering.
+ * - `nielse63/repo-lore-python-only-fixture` — analyzed from
+ *   `fixtures/python-only` by the Python analyzer alone, so its Lore has no
+ *   callable signatures, for `data-flow-default.spec.ts`'s empty state.
  *
- * Both are local-only, keyed to placeholder commits, with empty History
+ * All three are local-only, keyed to placeholder commits, with empty History
  * caches so their History pages never call GitHub.
  *
  * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
@@ -77,9 +80,10 @@ const TS_REACT_APP_FIXTURE_SHA = "50857b9860ee568f54a6707098761857932ab02f";
 const TS_NESTED_TEST_SAMPLES_FIXTURE_SHA =
   "0000000000000000000000000000000000000050";
 
-/** Placeholders: `fixtures/mixed-ts-python` and `fixtures/js-partial` have no GitHub repositories. */
+/** Placeholders: `fixtures/mixed-ts-python`, `fixtures/js-partial`, and `fixtures/python-only` have no GitHub repositories. */
 const MIXED_TS_PYTHON_FIXTURE_SHA = "0000000000000000000000000000000000000059";
 const JS_PARTIAL_FIXTURE_SHA = "0000000000000000000000000000000000000159";
+const PYTHON_ONLY_FIXTURE_SHA = "0000000000000000000000000000000000000007";
 
 /** Mirrors `runAnalyzer` in `src/analysis/analyze-and-persist.ts`: one project per analyzer, keyed by the analyzer (ADR-0007). */
 async function runAnalyzer(
@@ -240,6 +244,12 @@ async function main() {
       repo: "repo-lore-js-partial-fixture",
       dir: "fixtures/js-partial",
       commitSha: JS_PARTIAL_FIXTURE_SHA,
+    },
+    {
+      repo: "repo-lore-python-only-fixture",
+      dir: "fixtures/python-only",
+      commitSha: PYTHON_ONLY_FIXTURE_SHA,
+      analyzers: ["python"] as SupportedAnalyzer[],
     },
   ]) {
     const { repoRow } = await seedRun({
