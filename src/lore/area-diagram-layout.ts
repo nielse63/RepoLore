@@ -91,12 +91,13 @@ export function deriveAreaDiagramLayout(
       [edge.fromAreaId, edge.toAreaId],
       [edge.toAreaId, edge.fromAreaId],
     ]) {
-      if (!neighbors.has(a)) neighbors.set(a, new Set());
-      neighbors.get(a)!.add(b);
+      const areaNeighbors = neighbors.get(a) ?? new Set<EntityId>();
+      areaNeighbors.add(b);
+      neighbors.set(a, areaNeighbors);
     }
   }
   const connectedAreas = areas.filter((area) => neighbors.has(area.id));
-  const degree = (area: StructuralArea) => neighbors.get(area.id)!.size;
+  const degree = (area: StructuralArea) => neighbors.get(area.id)?.size ?? 0;
   const selectedIds = new Set(
     [...connectedAreas]
       .sort(
