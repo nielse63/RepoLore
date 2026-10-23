@@ -35,11 +35,19 @@ export interface AreaDiagramEdge {
   points: { x: number; y: number }[];
 }
 
+/** An area with no edge to any other area in the diagram (GitHub issue #51). */
+export interface AreaDiagramUnconnectedArea {
+  id: EntityId;
+  name: string;
+  location: SourceLocation;
+}
+
 export interface AreaDiagramLayout {
   width: number;
   height: number;
   nodes: AreaDiagramNode[];
   edges: AreaDiagramEdge[];
+  unconnected: AreaDiagramUnconnectedArea[];
 }
 
 /**
@@ -47,9 +55,15 @@ export interface AreaDiagramLayout {
  * dependency diagram, using `@dagrejs/dagre` for position/edge-routing only
  * — no new relationship data, no analysis capability, presentation-layer
  * only (see ADR-0009, mirroring ADR-0008's `deriveAreaRelationships`).
+ * Areas with no edge to another given area are left out of the dagre graph
+ * and returned as `unconnected` instead: dagre would otherwise put every one
+ * of them in the top rank beside the real roots, widening the diagram until
+ * `fitView` can't fit it (GitHub issue #51).
+ *
  * Returns `null` when there's nothing meaningful to draw (fewer than two
- * areas) or when there are too many areas to stay readable
- * (`MAX_DIAGRAM_AREAS`) — callers should fall back to a table in that case.
+ * areas, or no edges between them) or when there are too many areas to stay
+ * readable (`MAX_DIAGRAM_AREAS`) — callers should fall back to a table in
+ * that case.
  */
 export function deriveAreaDiagramLayout(
   areas: StructuralArea[],
@@ -61,12 +75,18 @@ export function deriveAreaDiagramLayout(
   const relevantEdges = edges.filter(
     (edge) => areaIds.has(edge.fromAreaId) && areaIds.has(edge.toAreaId)
   );
+  if (relevantEdges.length === 0) return null;
+
+  const connectedIds = new Set(
+    relevantEdges.flatMap((edge) => [edge.fromAreaId, edge.toAreaId])
+  );
+  const connectedAreas = areas.filter((area) => connectedIds.has(area.id));
 
   const graph = new dagre.graphlib.Graph();
   graph.setGraph({ rankdir: "TB", nodesep: 32, ranksep: 56 });
   graph.setDefaultEdgeLabel(() => ({}));
 
-  for (const area of areas) {
+  for (const area of connectedAreas) {
     graph.setNode(area.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   }
   for (const edge of relevantEdges) {
@@ -78,7 +98,7 @@ export function deriveAreaDiagramLayout(
   const graphLabel = graph.graph();
   const areaById = new Map(areas.map((area) => [area.id, area]));
 
-  const nodes: AreaDiagramNode[] = areas.map((area) => {
+  const nodes: AreaDiagramNode[] = connectedAreas.map((area) => {
     const { x, y } = graph.node(area.id);
     return {
       id: area.id,
@@ -111,6 +131,13 @@ export function deriveAreaDiagramLayout(
     height: graphLabel.height ?? 0,
     nodes,
     edges: diagramEdges,
+    unconnected: areas
+      .filter((area) => !connectedIds.has(area.id))
+      .map((area) => ({
+        id: area.id,
+        name: area.name,
+        location: area.location,
+      })),
   };
 }
 

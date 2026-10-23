@@ -61,13 +61,68 @@ describe("deriveAreaDiagramLayout", () => {
   it("drops edges that touch an area outside the given set", () => {
     const api = area({ id: "area:api", name: "api" });
     const worker = area({ id: "area:worker", name: "worker" });
+    const cli = area({ id: "area:cli", name: "cli" });
     const layout = deriveAreaDiagramLayout(
-      [api, worker],
-      [edge({ fromAreaId: "area:api", toAreaId: "area:outside" })]
+      [api, worker, cli],
+      [
+        edge({ fromAreaId: "area:api", toAreaId: "area:outside" }),
+        edge({ fromAreaId: "area:cli", toAreaId: "area:worker" }),
+      ]
     );
 
     expect(layout).not.toBeNull();
-    expect(layout!.edges).toEqual([]);
+    expect(layout!.edges.map((e) => [e.fromId, e.toId])).toEqual([
+      ["area:cli", "area:worker"],
+    ]);
+  });
+
+  it("lists areas with no edges as unconnected instead of laying them out", () => {
+    const api = area({ id: "area:api", name: "api" });
+    const worker = area({ id: "area:worker", name: "worker" });
+    const examples = area({
+      id: "area:examples",
+      name: "examples",
+      location: { filePath: "examples" },
+    });
+    const scripts = area({
+      id: "area:scripts",
+      name: "scripts",
+      location: { filePath: "scripts" },
+    });
+    const layout = deriveAreaDiagramLayout(
+      [examples, api, scripts, worker],
+      [edge({ fromAreaId: "area:api", toAreaId: "area:worker" })]
+    );
+
+    expect(layout).not.toBeNull();
+    expect(layout!.nodes.map((n) => n.id)).toEqual(["area:api", "area:worker"]);
+    expect(layout!.unconnected).toEqual([
+      {
+        id: "area:examples",
+        name: "examples",
+        location: { filePath: "examples" },
+      },
+      {
+        id: "area:scripts",
+        name: "scripts",
+        location: { filePath: "scripts" },
+      },
+    ]);
+    // Two stacked ranks of one node each: unconnected areas no longer widen
+    // the top rank alongside the real root.
+    expect(layout!.width).toBe(200);
+  });
+
+  it("returns null when no area has an edge to another", () => {
+    const api = area({ id: "area:api", name: "api" });
+    const worker = area({ id: "area:worker", name: "worker" });
+    expect(deriveAreaDiagramLayout([api, worker], [])).toBeNull();
+    expect(
+      deriveAreaDiagramLayout(
+        [api, worker],
+        [edge({ fromAreaId: "area:api", toAreaId: "area:outside" })]
+      )
+    ).toBeNull();
   });
 
   it("returns null for fewer than two areas", () => {
@@ -79,7 +134,10 @@ describe("deriveAreaDiagramLayout", () => {
     const areas = Array.from({ length: MAX_DIAGRAM_AREAS + 1 }, (_, i) =>
       area({ id: `area:${i}`, name: `area-${i}` })
     );
-    expect(deriveAreaDiagramLayout(areas, [])).toBeNull();
+    const chain = areas
+      .slice(1)
+      .map((a, i) => edge({ fromAreaId: areas[i].id, toAreaId: a.id }));
+    expect(deriveAreaDiagramLayout(areas, chain)).toBeNull();
   });
 
   it("does not throw on a mutual (cyclic) dependency", () => {

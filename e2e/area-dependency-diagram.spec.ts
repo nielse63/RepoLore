@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./coverage";
 
 /**
@@ -166,4 +167,126 @@ test("the diagram also renders on a Systems subview, scoped to just that area's 
   await expect(nodes.filter({ hasText: "/src/components" })).toHaveCount(1);
   await expect(nodes.filter({ hasText: "/src/utils" })).toHaveCount(1);
   await expect(page.locator(".react-flow__edge")).toHaveCount(1);
+});
+
+/**
+ * GitHub issue #51 regressions, against the seeded `nielse63/RepoLore` run
+ * (this repository's own tree, see `scripts/seed-e2e.ts`): its production
+ * area graph is wide (20+ areas, dozens of edges) and has at least one area
+ * with no production edges, so it exercises both `fitView` actually fitting
+ * a large graph and unconnected areas being listed rather than drawn.
+ */
+test.describe("on a wide area graph", () => {
+  const wideRepoUrl = "/lore/nielse63/RepoLore";
+
+  async function waitForSettledViewport(page: Page) {
+    const viewport = page.locator(
+      "#area-dependency-diagram .react-flow__viewport"
+    );
+    let lastTransform: string | undefined;
+    await expect(async () => {
+      const transform = await viewport.evaluate((el) => el.style.transform);
+      const settled = transform === lastTransform;
+      lastTransform = transform;
+      expect(settled).toBe(true);
+    }).toPass();
+  }
+
+  async function clippedNodeLabels(page: Page) {
+    return page
+      .locator("#area-dependency-diagram .react-flow")
+      .evaluate((flow) => {
+        const c = flow.getBoundingClientRect();
+        return [...flow.querySelectorAll(".react-flow__node")]
+          .filter((n) => {
+            const r = n.getBoundingClientRect();
+            return (
+              r.left < c.left - 0.5 ||
+              r.right > c.right + 0.5 ||
+              r.top < c.top - 0.5 ||
+              r.bottom > c.bottom + 0.5
+            );
+          })
+          .map((n) => n.textContent);
+      });
+  }
+
+  test("every node is fully inside the canvas on load at 1440x900", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${wideRepoUrl}/architecture`);
+    await expect(
+      page.locator("#area-dependency-diagram .react-flow__node").first()
+    ).toBeVisible();
+    await waitForSettledViewport(page);
+
+    expect(await clippedNodeLabels(page)).toEqual([]);
+  });
+
+  test("every node is fully inside the Systems rail's System map on load", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${wideRepoUrl}/systems`);
+    await expect(
+      page.locator("#area-dependency-diagram .react-flow__node").first()
+    ).toBeVisible();
+    await waitForSettledViewport(page);
+
+    expect(await clippedNodeLabels(page)).toEqual([]);
+    await expect(
+      page.getByRole("link", { name: "View full diagram" })
+    ).toHaveAttribute(
+      "href",
+      `${wideRepoUrl}/architecture#area-dependency-diagram`
+    );
+  });
+
+  test("areas with no edges are listed under the diagram, not drawn as nodes", async ({
+    page,
+  }) => {
+    await page.goto(`${wideRepoUrl}/architecture`);
+    const unconnected = page.getByRole("list", {
+      name: "Not connected to other areas",
+    });
+    await expect(unconnected).toBeVisible();
+    const names = await unconnected.getByRole("listitem").allTextContents();
+    expect(names.length).toBeGreaterThan(0);
+
+    const nodeNames = await page
+      .locator("#area-dependency-diagram .react-flow__node")
+      .allTextContents();
+    for (const name of names) expect(nodeNames).not.toContain(name.trim());
+  });
+
+  test("edges are drawn in the muted foreground color, not the border color", async ({
+    page,
+  }) => {
+    await page.goto(`${wideRepoUrl}/architecture`);
+    const edgePath = page
+      .locator("#area-dependency-diagram .react-flow__edge-path")
+      .first();
+    await expect(edgePath).toBeAttached();
+
+    const { stroke, muted } = await edgePath.evaluate((el) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--muted)";
+      document.body.append(probe);
+      const muted = getComputedStyle(probe).color;
+      probe.remove();
+      return { stroke: getComputedStyle(el).stroke, muted };
+    });
+    expect(stroke).toBe(muted);
+  });
+});
+
+test("a fully connected diagram lists no unconnected areas", async ({
+  page,
+}) => {
+  await page.goto(`${repoUrl}/architecture`);
+  await expect(page.locator(".react-flow__node")).toHaveCount(3);
+  await expect(
+    page.getByRole("list", { name: "Not connected to other areas" })
+  ).toHaveCount(0);
 });

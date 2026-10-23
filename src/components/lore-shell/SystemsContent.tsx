@@ -30,7 +30,7 @@ import {
   type SystemClassification,
 } from "@/lore/system-classification";
 import { assignSystemSlugs } from "@/lore/system-slug";
-import { ChevronRight, Layers } from "lucide-react";
+import { ArrowRight, ChevronRight, Layers } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -177,10 +177,16 @@ export function SystemsContent({
                 repo={repo}
                 commitSha={commitSha}
               />
+              <Link
+                href={`/lore/${owner}/${repo}/architecture#area-dependency-diagram`}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                View full diagram <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted">
-              Not enough systems were detected to diagram.
+              Not enough connected systems were detected to diagram.
             </p>
           )}
         </RightRailShell>
