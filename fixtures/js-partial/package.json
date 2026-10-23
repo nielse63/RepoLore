@@ -1,0 +1,6 @@
+{
+  "name": "js-partial-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Fixture: a single-file JavaScript project with no internal relationships, so its analysis falls short of the minimum value contract and is persisted as 'partial'."
+}

@@ -25,6 +25,19 @@
  *   commit-detail payloads in `fixtures/history-commits` (a lockfile-only
  *   bump and a `package.json` edit, for `history-dependencies.spec.ts`), so
  *   its History page never calls GitHub either.
+ * - `nielse63/repo-lore-mixed-ts-python-fixture` — analyzed from
+ *   `fixtures/mixed-ts-python` by both the JS/TS and Python analyzers, as
+ *   real dispatch does for a mixed-language repository (ADR-0007): a
+ *   TypeScript library and a Python command-line tool sharing one root, for
+ *   `at-a-glance.spec.ts`'s per-language-project lines.
+ * - `nielse63/repo-lore-js-partial-fixture` — analyzed from
+ *   `fixtures/js-partial`, a single-file project with no internal
+ *   relationships, so its run falls short of the minimum value contract and
+ *   is persisted as `'partial'` (and isn't indexable), for
+ *   `at-a-glance.spec.ts`'s partial-run ordering.
+ *
+ * Both are local-only, keyed to placeholder commits, with empty History
+ * caches so their History pages never call GitHub.
  *
  * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
  * an ADR-0013 background re-analysis. Idempotent per ADR-0005: re-running
@@ -41,16 +54,19 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { SupportedAnalyzer } from "../src/analysis/dispatch/detect-languages";
 import { buildAnalyzerVersion } from "../src/analysis/dispatch/version";
 import { deriveJsTsViews } from "../src/analysis/js-ts/derive-views";
 import { extractJsTsProject } from "../src/analysis/js-ts/extract-project";
+import { derivePythonViews } from "../src/analysis/python/derive-views";
+import { extractPythonProject } from "../src/analysis/python/extract-project";
 import { saveAnalysisRun } from "../src/db/analysis-runs";
 import { getDbPool } from "../src/db/client";
 import { saveHistoryEntries } from "../src/db/history-entries";
 import { upsertRepo } from "../src/db/repos";
 import type { CommitDetail, CommitSummary } from "../src/github/commits";
 import { buildHistoryEntries } from "../src/history/classify";
-import { buildLore } from "../src/lore/build-lore";
+import { buildLore, type BuildLoreProjectInput } from "../src/lore/build-lore";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -61,17 +77,46 @@ const TS_REACT_APP_FIXTURE_SHA = "50857b9860ee568f54a6707098761857932ab02f";
 const TS_NESTED_TEST_SAMPLES_FIXTURE_SHA =
   "0000000000000000000000000000000000000050";
 
+/** Placeholders: `fixtures/mixed-ts-python` and `fixtures/js-partial` have no GitHub repositories. */
+const MIXED_TS_PYTHON_FIXTURE_SHA = "0000000000000000000000000000000000000059";
+const JS_PARTIAL_FIXTURE_SHA = "0000000000000000000000000000000000000159";
+
+/** Mirrors `runAnalyzer` in `src/analysis/analyze-and-persist.ts`: one project per analyzer, keyed by the analyzer (ADR-0007). */
+async function runAnalyzer(
+  analyzer: SupportedAnalyzer,
+  dir: string
+): Promise<BuildLoreProjectInput> {
+  if (analyzer === "python") {
+    const extraction = await extractPythonProject(dir, analyzer);
+    const views = derivePythonViews({ projectId: analyzer, ...extraction });
+    return { extraction, views };
+  }
+  const extraction = extractJsTsProject(dir, analyzer);
+  const views = deriveJsTsViews({ projectId: analyzer, ...extraction });
+  return { extraction, views };
+}
+
 async function seedRun(params: {
   owner: string;
   repo: string;
   dir: string;
   commitSha: string;
   description?: string;
+  analyzers?: SupportedAnalyzer[];
 }) {
-  const { owner, repo, dir, commitSha, description } = params;
-  const analyzerVersion = buildAnalyzerVersion(["js-ts"]);
-  const extraction = extractJsTsProject(dir, "js-ts");
-  const views = deriveJsTsViews({ projectId: "js-ts", ...extraction });
+  const {
+    owner,
+    repo,
+    dir,
+    commitSha,
+    description,
+    analyzers = ["js-ts"],
+  } = params;
+  const analyzerVersion = buildAnalyzerVersion(analyzers);
+  const extractions: BuildLoreProjectInput[] = [];
+  for (const analyzer of analyzers) {
+    extractions.push(await runAnalyzer(analyzer, dir));
+  }
   const lore = buildLore({
     owner,
     repo,
@@ -81,7 +126,7 @@ async function seedRun(params: {
     commitSha,
     analyzerVersion,
     analyzedAt: new Date().toISOString(),
-    extractions: [{ extraction, views }],
+    extractions,
   });
 
   const repoRow = await upsertRepo(owner, repo);
@@ -183,6 +228,31 @@ async function main() {
       nested.lore
     ),
   });
+
+  for (const fixture of [
+    {
+      repo: "repo-lore-mixed-ts-python-fixture",
+      dir: "fixtures/mixed-ts-python",
+      commitSha: MIXED_TS_PYTHON_FIXTURE_SHA,
+      analyzers: ["js-ts", "python"] as SupportedAnalyzer[],
+    },
+    {
+      repo: "repo-lore-js-partial-fixture",
+      dir: "fixtures/js-partial",
+      commitSha: JS_PARTIAL_FIXTURE_SHA,
+    },
+  ]) {
+    const { repoRow } = await seedRun({
+      owner: "nielse63",
+      ...fixture,
+      dir: path.join(process.cwd(), fixture.dir),
+    });
+    await saveHistoryEntries({
+      repoId: repoRow.id,
+      computedThroughSha: fixture.commitSha,
+      entries: [],
+    });
+  }
 
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "repolore-seed-e2e-"));
   try {
