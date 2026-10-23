@@ -2,6 +2,8 @@
 
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { MAX_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
+import { PaginationNav } from "@/components/lore-shell/PaginationNav";
 import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { RightRailShell } from "@/components/lore-shell/RightRailShell";
 import { TopBar } from "@/components/lore-shell/TopBar";
@@ -15,12 +17,15 @@ import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
+import { useFitPageSize } from "@/lib/use-fit-page-size";
+import { usePersistedPage } from "@/lib/use-persisted-page";
 import {
   buildCalleesIndex,
   deriveCallTreeRootIds,
   resolveUniqueSignatures,
 } from "@/lore/call-tree";
 import { describeImportanceReason } from "@/lore/describe-importance";
+import { rankByImportance } from "@/lore/function-ranking";
 import type {
   CallableSignature,
   EntityId,
@@ -38,7 +43,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const KIND_LABEL: Record<CallableSignature["kind"], string> = {
   function: "Function",
@@ -75,16 +80,15 @@ const VECTOR_LABEL: Record<keyof FunctionImportance["vector"], string> = {
 };
 
 const VIEWS = [
-  { value: "chain", label: "Chain" },
   { value: "list", label: "List" },
+  { value: "chain", label: "Chain" },
 ];
 
 const SORTS = [
-  { value: "name", label: "Name" },
   { value: "importance", label: "Importance" },
+  { value: "name", label: "Name" },
 ];
 
-const LIST_CAP = 200;
 const SEARCH_MATCH_CAP = 20;
 const MAX_CHAIN_INDENT_DEPTH = 4;
 
@@ -121,11 +125,17 @@ export function DataFlowContent({
 }: DataFlowContentProps) {
   const { callableSignatures, callEdges, functionImportance, behaviorNodes } =
     lore;
+  const importanceById = useMemo(
+    () => new Map(functionImportance.map((fi) => [fi.functionId, fi])),
+    [functionImportance]
+  );
+  // Open on the most informative state (GitHub issue #7): the List view
+  // ranked by importance, focused on its top-ranked function.
   const [query, setQuery] = useState("");
-  const [view, setView] = useState("chain");
-  const [sort, setSort] = useState("name");
+  const [view, setView] = useState("list");
+  const [sort, setSort] = useState("importance");
   const [focusId, setFocusId] = useState<EntityId | undefined>(
-    callableSignatures[0]?.id
+    () => rankByImportance(callableSignatures, importanceById)[0]?.id
   );
 
   const byId = useMemo(
@@ -134,10 +144,6 @@ export function DataFlowContent({
   );
   const focus = focusId ? byId.get(focusId) : undefined;
 
-  const importanceById = useMemo(
-    () => new Map(functionImportance.map((fi) => [fi.functionId, fi])),
-    [functionImportance]
-  );
   const focusImportance = focusId ? importanceById.get(focusId) : undefined;
   const stateNameById = useMemo(
     () =>
@@ -160,6 +166,9 @@ export function DataFlowContent({
   const referencesFor = (id: EntityId) => 1 + (edgeCountById.get(id) ?? 0);
 
   const totalReferences = callableSignatures.length + callEdges.length;
+  const displayTotalReferences = totalReferences.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
 
   const chainRootIds = useMemo(
     () =>
@@ -195,12 +204,9 @@ export function DataFlowContent({
     const filtered = q
       ? callableSignatures.filter((s) => s.name.toLowerCase().includes(q))
       : callableSignatures;
-    return [...filtered].sort((a, b) =>
-      sort === "importance"
-        ? (importanceById.get(b.id)?.score ?? 0) -
-          (importanceById.get(a.id)?.score ?? 0)
-        : a.name.localeCompare(b.name)
-    );
+    return sort === "importance"
+      ? rankByImportance(filtered, importanceById)
+      : [...filtered].sort((a, b) => a.name.localeCompare(b.name));
   }, [callableSignatures, query, sort, importanceById]);
 
   const callerEdges = useMemo(
@@ -306,7 +312,7 @@ export function DataFlowContent({
               )}
             </div>
             <span className="text-sm text-muted">
-              Derived from {totalReferences} references
+              Derived from {displayTotalReferences} references
             </span>
           </div>
         </div>
@@ -316,7 +322,7 @@ export function DataFlowContent({
           graphs than reading the code directly would suggest.
         </p>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <label htmlFor="function-search" className="sr-only">
             Search functions
           </label>
@@ -329,10 +335,17 @@ export function DataFlowContent({
           />
         </div>
 
-        {view === "list" ? (
+        {callableSignatures.length === 0 ? (
+          <Card className="mt-6 p-6 text-center text-sm text-muted">
+            No named functions were detected. Data Flow analysis currently
+            covers JavaScript and TypeScript projects only.
+          </Card>
+        ) : view === "list" ? (
           <FunctionListView
             items={listItems}
             query={query}
+            sort={sort}
+            storageKey={`data-flow-page:${owner}/${repo}:list`}
             focusId={focusId}
             importanceById={importanceById}
             referencesFor={referencesFor}
@@ -365,11 +378,6 @@ export function DataFlowContent({
               </ul>
             )}
           </Card>
-        ) : !focus ? (
-          <Card className="mt-6 p-6 text-center text-sm text-muted">
-            No named functions were detected. Data Flow analysis currently
-            covers JavaScript and TypeScript projects only.
-          </Card>
         ) : (
           <Card className="mt-4 p-0">
             <ul className="divide-y divide-border">
@@ -399,83 +407,119 @@ export function DataFlowContent({
 interface FunctionListViewProps {
   items: CallableSignature[];
   query: string;
+  sort: string;
+  storageKey: string;
   focusId: EntityId | undefined;
   importanceById: Map<EntityId, FunctionImportance>;
   referencesFor: (id: EntityId) => number;
   onSelect: (id: EntityId) => void;
 }
 
-/** The List tab: every matching function (capped at `LIST_CAP`) with its role, kind, importance, and reference count. */
+/**
+ * The List tab: every matching function with its role, kind, importance,
+ * and reference count, paginated like the Dependencies table — a page size
+ * that fits the screen at load (see `useFitPageSize`) and a page number
+ * persisted per `storageKey` (see `usePersistedPage`).
+ */
 function FunctionListView({
   items,
   query,
+  sort,
+  storageKey,
   focusId,
   importanceById,
   referencesFor,
   onSelect,
 }: FunctionListViewProps) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const pageSize = useFitPageSize(listRef, MAX_PAGE_SIZE);
+  const pageCount = Math.max(Math.ceil(items.length / pageSize), 1);
+  const [page, setPage] = usePersistedPage(storageKey, pageCount);
+  // Reset to page 1 whenever the search or sort actually changes — but not
+  // on mount, which would stomp the page restored from sessionStorage.
+  const skipNextReset = useRef(true);
+  useEffect(() => {
+    if (skipNextReset.current) {
+      skipNextReset.current = false;
+      return;
+    }
+    setPage(1);
+  }, [query, sort, setPage]);
+  const start = (page - 1) * pageSize;
+
   return (
-    <Card className="mt-4 p-0">
-      <ul className="divide-y divide-border">
-        {items.slice(0, LIST_CAP).map((s) => {
-          const Icon = KIND_ICON[s.kind];
-          const active = s.id === focusId;
-          const refs = referencesFor(s.id);
-          const importance = importanceById.get(s.id);
-          return (
-            <li key={s.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(s.id)}
-                className={
-                  "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
-                  (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
-                }
-              >
-                <IconTile
-                  icon={Icon}
-                  variant={active ? "core" : "neutral"}
-                  size="sm"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-foreground">
-                    {s.name}
-                  </p>
-                  <p className="truncate text-sm text-muted">
-                    {formatPath(s.location.filePath)}
-                  </p>
-                </div>
-                {importance && importance.roles[0] && (
-                  <Badge variant="primary">
-                    {ROLE_LABEL[importance.roles[0]]}
-                  </Badge>
-                )}
-                <Badge>{KIND_LABEL[s.kind]}</Badge>
-                {importance && (
-                  <span className="shrink-0 text-sm font-semibold text-foreground">
-                    {importance.score}
+    <>
+      {/* `p-0!`: `cn` doesn't resolve conflicts, so a plain `p-0` loses to
+          Card's own `p-6` — and every pixel here is a row `useFitPageSize`
+          can't fit. */}
+      <Card className="@container mt-4 p-0!">
+        <ul ref={listRef} className="divide-y divide-border">
+          {items.slice(start, start + pageSize).map((s) => {
+            const Icon = KIND_ICON[s.kind];
+            const active = s.id === focusId;
+            const refs = referencesFor(s.id);
+            const importance = importanceById.get(s.id);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(s.id)}
+                  className={
+                    "flex w-full items-center gap-4 px-6 py-2.5 text-left transition-colors " +
+                    (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
+                  }
+                >
+                  <IconTile
+                    icon={Icon}
+                    variant={active ? "core" : "neutral"}
+                    size="sm"
+                  />
+                  {/* Name and path share one line, so more rows fit the
+                      screen, once the list is wide enough for both beside
+                      the badges; narrower, they stack so the name isn't
+                      truncated away. */}
+                  <div className="flex min-w-0 flex-1 flex-col @2xl:flex-row @2xl:items-baseline @2xl:gap-2">
+                    <p className="text-sm font-semibold text-foreground @2xl:max-w-full @2xl:shrink-0 @2xl:truncate">
+                      {s.name}
+                    </p>
+                    <p className="min-w-0 truncate text-sm text-muted @2xl:flex-1">
+                      {formatPath(s.location.filePath)}
+                    </p>
+                  </div>
+                  {importance && importance.roles[0] && (
+                    <Badge variant="primary">
+                      {ROLE_LABEL[importance.roles[0]]}
+                    </Badge>
+                  )}
+                  <Badge>{KIND_LABEL[s.kind]}</Badge>
+                  {importance && (
+                    <span className="shrink-0 text-sm font-semibold text-foreground">
+                      {importance.score}
+                    </span>
+                  )}
+                  <span className="shrink-0 text-sm text-muted">
+                    {refs} reference{refs === 1 ? "" : "s"}
                   </span>
-                )}
-                <span className="shrink-0 text-sm text-muted">
-                  {refs} reference{refs === 1 ? "" : "s"}
-                </span>
-              </button>
+                </button>
+              </li>
+            );
+          })}
+          {items.length === 0 && (
+            <li className="px-6 py-4 text-sm text-muted">
+              No functions match &quot;{query}&quot;.
             </li>
-          );
-        })}
-        {items.length === 0 && (
-          <li className="px-6 py-4 text-sm text-muted">
-            No functions match &quot;{query}&quot;.
-          </li>
-        )}
-      </ul>
-      {items.length > LIST_CAP && (
-        <p className="border-t border-border px-6 py-3 text-center text-sm text-muted">
-          Showing the first {LIST_CAP} of {items.length} matching functions —
-          refine your search to narrow the list.
-        </p>
+          )}
+        </ul>
+      </Card>
+      {items.length > pageSize && (
+        <PaginationNav
+          className="mt-4"
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+        />
       )}
-    </Card>
+    </>
   );
 }
 

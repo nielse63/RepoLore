@@ -22,11 +22,13 @@ Closes #
 
 <!-- Anything a reviewer should manually verify, or commands run that aren't captured above. -->
 
-## UI changes
+## Screenshots
 
-<!-- Delete this section if there's no UI impact. -->
+<!-- Required (see CLAUDE.md § Git Workflow): visual evidence of the change — screenshots, a GIF, or a screen recording. Include before/after for changed UI. If the change has no visual surface (e.g. config/docs-only), say so explicitly instead of deleting this section. -->
 
-- Screenshots/recording:
+| Before | After |
+| ------ | ----- |
+|        |       |
 
 ## Scope / architecture
 

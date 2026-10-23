@@ -60,6 +60,9 @@ export default async function ArchitecturePage({
   const areaUrl = (location: SourceLocation) =>
     githubTreeUrl(owner, repo, lore.snapshot.commitSha, location);
   const evidenceCount = countEvidence(lore);
+  const displayEvidenceCount = evidenceCount.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
 
   return (
     <LorePageFrame
@@ -103,7 +106,8 @@ export default async function ArchitecturePage({
               Evidence coverage
             </div>
             <p className="mt-1 text-2xl font-semibold text-primary">
-              {evidenceCount} {evidenceCount === 1 ? "reference" : "references"}
+              {displayEvidenceCount}{" "}
+              {evidenceCount === 1 ? "reference" : "references"}
             </p>
             <p className="mt-1 text-xs text-muted">
               These references support the areas, relationships, and entry

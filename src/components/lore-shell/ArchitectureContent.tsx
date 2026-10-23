@@ -212,6 +212,7 @@ export function ArchitectureContent({
         <AreaRelationshipsTable
           relationships={areaRelationships}
           areaUrl={areaUrl}
+          storageKey={`area-relationships-page:${lore.snapshot.repository.owner}/${repo}:architecture`}
         />
       </section>
 
