@@ -62,9 +62,9 @@ export function extractTestRelationships(
     const testPath = testFile.relativePath;
     const testLocation = { filePath: testPath };
 
-    const resolvedImplementationTargets = (
-      resolvedDependenciesByFile.get(testPath) ?? []
-    ).filter(isImplementationFile);
+    const resolvedTargets = resolvedDependenciesByFile.get(testPath) ?? [];
+    const resolvedImplementationTargets =
+      resolvedTargets.filter(isImplementationFile);
 
     if (resolvedImplementationTargets.length > 0) {
       const implementationPath = resolvedImplementationTargets[0];
@@ -112,9 +112,12 @@ export function extractTestRelationships(
       continue;
     }
 
+    const testDirectoryImport = resolvedTargets.find(isUnderTestDirectory);
     gaps.push({
       certainty: "unknown",
-      description: `Could not determine which implementation file '${testPath}' tests.`,
+      description: testDirectoryImport
+        ? `Could not determine which implementation file '${testPath}' tests: its local imports resolve only to test-suite files (e.g. '${testDirectoryImport}', under a test directory), which aren't treated as the code under test, and no naming convention identifies one.`
+        : `Could not determine which implementation file '${testPath}' tests.`,
       location: testLocation,
     });
   }

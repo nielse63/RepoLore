@@ -21,6 +21,8 @@ import { expect, test } from "./coverage";
  * miss that they're under a test directory, so the harness became the
  * Lore's bootstrap entry point and Start Here's first step, and the helper
  * was reported as the implementation `compile.test.js` tests.
+ * `render.test.js` imports only that helper and has no same-named
+ * implementation, so its gap says why no subject was found.
  */
 
 const repoUrl = "/lore/nielse63/repo-lore-ts-nested-test-samples-fixture";
@@ -127,4 +129,14 @@ test("a test's helper in the nested test directory isn't reported as the impleme
     "Inferred"
   );
   await expect(testRelationships).not.toContainText("helpers.js");
+});
+
+test("a test that imports only a nested test helper gets a gap saying why it has no subject", async ({
+  page,
+}) => {
+  await page.goto(architectureUrl);
+
+  await expect(page.locator("#gaps")).toContainText(
+    "Could not determine which implementation file 'packages/core/tests/runtime/render.test.js' tests: its local imports resolve only to test-suite files (e.g. 'packages/core/tests/runtime/helpers.js', under a test directory)"
+  );
 });

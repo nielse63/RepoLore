@@ -76,6 +76,21 @@ function isE2eRootFile(relativeFilePath: string): boolean {
   return relativeFilePath.split("/")[0] === "e2e";
 }
 
+/**
+ * The unmatched-subject gap, saying so when the test's relative imports did
+ * resolve but only to test-suite files (e.g. a helper beside it under a
+ * nested `tests/`, GitHub issue #65), which are deliberately not taken as
+ * its subject — rather than implying nothing resolved at all.
+ */
+function describeUnmatchedTest(
+  testPath: string,
+  testDirectoryImport: string | undefined
+): string {
+  return testDirectoryImport
+    ? `Could not determine which implementation file '${testPath}' tests: its local imports resolve only to test-suite files (e.g. '${testDirectoryImport}', under a test directory), which aren't treated as the code under test, and no naming convention identifies one.`
+    : `Could not determine which implementation file '${testPath}' tests.`;
+}
+
 export interface TestExtractionResult {
   testRelationships: TestRelationship[];
   gaps: Gap[];
@@ -128,16 +143,15 @@ export function extractTestRelationships(
     const testPath = toRelative(rootDir, testFile.getFilePath());
     const testLocation = { filePath: testPath };
 
-    const resolvedImplementationImports = testFile
+    const resolvedImports = testFile
       .getImportDeclarations()
       .map((importDecl) => getModuleSpecifierValueSafe(importDecl))
       .filter((specifier): specifier is string => !!specifier)
       .filter(isRelativeSpecifier)
       .map((specifier) => resolver.resolve(testFile.getFilePath(), specifier))
-      .filter(
-        (resolved): resolved is SourceFile =>
-          !!resolved && isImplementationFile(resolved)
-      );
+      .filter((resolved): resolved is SourceFile => !!resolved);
+    const resolvedImplementationImports =
+      resolvedImports.filter(isImplementationFile);
 
     const pushImportMatch = (importedImplementation: SourceFile) => {
       const implementationPath = toRelative(
@@ -238,11 +252,14 @@ export function extractTestRelationships(
       continue;
     }
 
+    const testDirectoryImport = resolvedImports
+      .map((resolved) => toRelative(rootDir, resolved.getFilePath()))
+      .find((importPath) => isUnderTestDirectory(importPath));
     gaps.push({
       certainty: "unknown",
       description: isE2eRootFile(testPath)
         ? `No relative import or naming convention identifies a single implementation file for '${testPath}' — expected for a page/flow-level e2e spec, which doesn't test one importable module the way a unit test does.`
-        : `Could not determine which implementation file '${testPath}' tests.`,
+        : describeUnmatchedTest(testPath, testDirectoryImport),
       location: testLocation,
     });
   }

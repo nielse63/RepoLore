@@ -131,7 +131,8 @@ function callsReactDomRender(sourceFile: SourceFile): boolean {
 export function extractEntryPoints(
   sourceFiles: SourceFile[],
   rootDir: string,
-  relationships: Relationship[] = []
+  relationships: Relationship[] = [],
+  frameworkEntryPoints: EntryPoint[] = []
 ): EntryPoint[] {
   const entryPoints: EntryPoint[] = [];
   const pkg = readPackageJson(rootDir);
@@ -242,10 +243,11 @@ export function extractEntryPoints(
   // file is never the application's real bootstrap entry point. So are
   // files under a nested test directory (e.g. `packages/x/tests/`, GitHub
   // issue #65) unless detected structure contradicts its name — judged from
-  // the import relationships and the declared entry points found above, not
-  // this heuristic's own results.
+  // the import relationships, the declared entry points found above, and
+  // framework entry points (e.g. a Next.js route), not this heuristic's own
+  // results.
   const isUnderTestDirectory = isUnderUncontradictedTestRoot(
-    { entryPoints, relationships },
+    { entryPoints: [...entryPoints, ...frameworkEntryPoints], relationships },
     isTestFile
   );
   for (const sourceFile of sourceFiles) {

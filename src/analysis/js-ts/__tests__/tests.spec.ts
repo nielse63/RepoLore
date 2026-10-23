@@ -189,6 +189,33 @@ describe("extractTestRelationships", () => {
     ]);
   });
 
+  it("says so in the gap when a test's only local imports were under a nested test directory", () => {
+    const project = makeProject();
+    project.createSourceFile("/root/packages/x/tests/helpers.ts", "");
+    project.createSourceFile(
+      "/root/packages/x/tests/render.test.ts",
+      "import { setup } from './helpers';"
+    );
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      project.getSourceFiles(),
+      "/root",
+      new Set(),
+      (filePath) => filePath.startsWith("packages/x/tests/")
+    );
+
+    expect(testRelationships).toEqual([]);
+    expect(gaps).toEqual([
+      expect.objectContaining({
+        certainty: "unknown",
+        location: { filePath: "packages/x/tests/render.test.ts" },
+        description: expect.stringContaining(
+          "its local imports resolve only to test-suite files (e.g. 'packages/x/tests/helpers.ts', under a test directory)"
+        ),
+      }),
+    ]);
+  });
+
   it("records an unknown gap when no implementation can be matched", () => {
     const project = makeProject();
     project.createSourceFile("/root/src/orphan.test.ts", "");

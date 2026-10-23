@@ -222,27 +222,6 @@ export function extractJsTsProject(
     absoluteRoot,
     projectConfig.aliases
   );
-  const entryPoints = extractEntryPoints(
-    sourceFiles,
-    absoluteRoot,
-    importResult.relationships
-  );
-  const publicContracts = extractPublicSurface(
-    entryPoints,
-    sourceFiles,
-    absoluteRoot
-  );
-  const packageEntryPointFilePaths = new Set(
-    entryPoints
-      .filter((ep) => ep.kind === "library")
-      .map((ep) => ep.location.filePath)
-  );
-  const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
-  const externalDependencies = extractExternalDependencies(
-    pkg,
-    importResult.externalReferences,
-    projectId
-  );
 
   // Built once and shared across the call graph and every framework
   // detector (ADR-0013) so each doesn't independently re-walk every file's
@@ -261,9 +240,33 @@ export function extractJsTsProject(
     frameworkBehaviorEdges.push(...result.behaviorEdges);
   }
 
-  // After the framework detectors, so a framework route under a test-named
-  // directory (e.g. Next.js `app/test/page.tsx`) contradicts it here exactly
-  // as it does for area grouping.
+  // Entry points and test relationships are extracted after the framework
+  // detectors, so a framework route under a test-named directory (e.g.
+  // Next.js `app/test/page.tsx`) contradicts it for both exactly as it does
+  // for area grouping.
+  const entryPoints = extractEntryPoints(
+    sourceFiles,
+    absoluteRoot,
+    importResult.relationships,
+    frameworkEntryPoints
+  );
+  const publicContracts = extractPublicSurface(
+    entryPoints,
+    sourceFiles,
+    absoluteRoot
+  );
+  const packageEntryPointFilePaths = new Set(
+    entryPoints
+      .filter((ep) => ep.kind === "library")
+      .map((ep) => ep.location.filePath)
+  );
+  const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
+  const externalDependencies = extractExternalDependencies(
+    pkg,
+    importResult.externalReferences,
+    projectId
+  );
+
   const testResult = extractTestRelationships(
     sourceFiles,
     absoluteRoot,

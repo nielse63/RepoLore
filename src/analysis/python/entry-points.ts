@@ -198,7 +198,7 @@ export function extractEntryPoints(
             kind: "conventional-main-file",
             certainty: "inferred",
             location: { filePath: found.relativePath },
-            description: `No console-script or __main__.py entry was found; '${found.relativePath}' matches the conventional main-file location.`,
+            description: `No console-script or __main__.py entry outside a test suite was found; '${found.relativePath}' matches the conventional main-file location.`,
           },
         ],
       });

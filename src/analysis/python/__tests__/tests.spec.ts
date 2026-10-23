@@ -130,6 +130,33 @@ describe("extractTestRelationships", () => {
     expect(gaps.map((g) => g.location?.filePath)).toEqual(["pkg/test_core.py"]);
   });
 
+  it("says so in the gap when a test's only local imports were under a nested test directory", () => {
+    const files = [
+      file("pkg/tests/helpers.py"),
+      file("pkg/tests/test_render.py"),
+    ];
+    const resolvedDependenciesByFile = new Map([
+      ["pkg/tests/test_render.py", ["pkg/tests/helpers.py"]],
+    ]);
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      files,
+      resolvedDependenciesByFile,
+      (filePath) => filePath.startsWith("pkg/tests/")
+    );
+
+    expect(testRelationships).toEqual([]);
+    expect(gaps).toEqual([
+      expect.objectContaining({
+        certainty: "unknown",
+        location: { filePath: "pkg/tests/test_render.py" },
+        description: expect.stringContaining(
+          "its local imports resolve only to test-suite files (e.g. 'pkg/tests/helpers.py', under a test directory)"
+        ),
+      }),
+    ]);
+  });
+
   it("records an unknown gap when no implementation can be matched", () => {
     const files = [file("pkg/test_orphan.py")];
     const { testRelationships, gaps } = extractTestRelationships(

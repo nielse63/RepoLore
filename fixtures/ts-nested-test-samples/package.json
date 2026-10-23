@@ -2,7 +2,7 @@
   "name": "ts-nested-test-samples-fixture",
   "private": true,
   "version": "0.0.0",
-  "description": "Fixture: a monorepo package whose test suite nests many small sample-case directories under packages/core/tests (GitHub issue #50's Svelte-shaped layout), plus a shipped `packages/test` helper package imported by production code (a test-named directory that isn't a test suite), for JS/TS analyzer development. Its test suite also holds a runnable harness (`run-harness.js`) and a test helper (`helpers.js`) imported by `compile.test.js` (GitHub issue #65).",
+  "description": "Fixture: a monorepo package whose test suite nests many small sample-case directories under packages/core/tests (GitHub issue #50's Svelte-shaped layout), plus a shipped `packages/test` helper package imported by production code (a test-named directory that isn't a test suite), for JS/TS analyzer development. Its test suite also holds a runnable harness (`run-harness.js`) and a test helper (`helpers.js`) imported by `compile.test.js` and `render.test.js` (GitHub issue #65).",
   "main": "packages/core/src/index.ts",
   "devDependencies": {
     "typescript": "^5"

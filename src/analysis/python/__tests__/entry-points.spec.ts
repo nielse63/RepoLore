@@ -183,6 +183,21 @@ describe("extractEntryPoints", () => {
     });
   });
 
+  it("words the main.py fallback's evidence so an excluded test-suite __main__.py isn't denied", () => {
+    const files = [
+      file("main.py", ""),
+      file("pkg/tests/__main__.py", "run_tests()\n"),
+    ];
+    const entryPoints = extractEntryPoints(files, "/root", emptyConfig());
+
+    expect(entryPoints).toEqual([
+      expect.objectContaining({ location: { filePath: "main.py" } }),
+    ]);
+    expect(entryPoints[0].evidence[0].description).toBe(
+      "No console-script or __main__.py entry outside a test suite was found; 'main.py' matches the conventional main-file location."
+    );
+  });
+
   it("returns no entry points when nothing matches any heuristic", () => {
     const files = [file("util.py", "def helper():\n    pass\n")];
     const entryPoints = extractEntryPoints(files, "/root", emptyConfig());
