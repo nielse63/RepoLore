@@ -165,3 +165,6 @@ vite.config.ts.timestamp-*
 
 # lighthouse performance regression report
 /perf-report/
+
+# codecov
+/codecov
