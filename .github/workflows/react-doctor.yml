@@ -1,12 +1,13 @@
 name: React Doctor
 
+# No trigger-level `paths` filter: react-doctor is a required status check
+# (see verify.yml). Runs on main too so the nightly dev → main PR gets it.
 on:
   pull_request:
     branches:
+      - main
       - dev
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/**"
 
 permissions:
   contents: read
@@ -19,7 +20,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+    steps:
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            --paginate --jq '.[].filename')
+          if grep -qE '^src/|^\.github/workflows/react-doctor\.yml$' <<<"$files"; then
+            echo "src=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No src changes; skipping react-doctor."
+            echo "src=false" >> "$GITHUB_OUTPUT"
+          fi
+
   react-doctor:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -66,8 +66,9 @@ jobs:
           echo "head=$(gh pr view "$pr" --json headRefOid --jq .headRefOid)" >> "$GITHUB_OUTPUT"
           echo "Using PR #$pr"
 
-      # A just-opened PR has no checks for a few seconds; one whose diff
-      # misses every workflow's paths filter (e.g. docs only) never gets any.
+      # A just-opened PR has no checks for a few seconds. Verify and React
+      # Doctor always report (skipped jobs count as passing), so "no checks"
+      # only means no workflow ran at all.
       - name: Wait for checks
         if: steps.diff.outputs.changed == 'true'
         env:
