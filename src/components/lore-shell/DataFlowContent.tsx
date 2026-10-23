@@ -166,6 +166,9 @@ export function DataFlowContent({
   const referencesFor = (id: EntityId) => 1 + (edgeCountById.get(id) ?? 0);
 
   const totalReferences = callableSignatures.length + callEdges.length;
+  const displayTotalReferences = totalReferences.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
 
   const chainRootIds = useMemo(
     () =>
@@ -309,7 +312,7 @@ export function DataFlowContent({
               )}
             </div>
             <span className="text-sm text-muted">
-              Derived from {totalReferences} references
+              Derived from {displayTotalReferences} references
             </span>
           </div>
         </div>
@@ -319,7 +322,7 @@ export function DataFlowContent({
           graphs than reading the code directly would suggest.
         </p>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <label htmlFor="function-search" className="sr-only">
             Search functions
           </label>
@@ -446,7 +449,10 @@ function FunctionListView({
 
   return (
     <>
-      <Card className="mt-4 p-0">
+      {/* `p-0!`: `cn` doesn't resolve conflicts, so a plain `p-0` loses to
+          Card's own `p-6` — and every pixel here is a row `useFitPageSize`
+          can't fit. */}
+      <Card className="@container mt-4 p-0!">
         <ul ref={listRef} className="divide-y divide-border">
           {items.slice(start, start + pageSize).map((s) => {
             const Icon = KIND_ICON[s.kind];
@@ -459,7 +465,7 @@ function FunctionListView({
                   type="button"
                   onClick={() => onSelect(s.id)}
                   className={
-                    "flex w-full items-center gap-4 px-6 py-4 text-left transition-colors " +
+                    "flex w-full items-center gap-4 px-6 py-2.5 text-left transition-colors " +
                     (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
                   }
                 >
@@ -468,11 +474,15 @@ function FunctionListView({
                     variant={active ? "core" : "neutral"}
                     size="sm"
                   />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">
+                  {/* Name and path share one line, so more rows fit the
+                      screen, once the list is wide enough for both beside
+                      the badges; narrower, they stack so the name isn't
+                      truncated away. */}
+                  <div className="flex min-w-0 flex-1 flex-col @2xl:flex-row @2xl:items-baseline @2xl:gap-2">
+                    <p className="text-sm font-semibold text-foreground @2xl:max-w-full @2xl:shrink-0 @2xl:truncate">
                       {s.name}
                     </p>
-                    <p className="truncate text-sm text-muted">
+                    <p className="min-w-0 truncate text-sm text-muted @2xl:flex-1">
                       {formatPath(s.location.filePath)}
                     </p>
                   </div>

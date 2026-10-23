@@ -168,3 +168,34 @@ test("a repository with no named functions shows the empty state, not an empty s
   await expect(page.getByText(/No functions match/)).toBeHidden();
   await expect(page.locator("#right-rail")).toBeHidden();
 });
+
+test.describe("at a 1440×800 viewport", () => {
+  test.use({ viewport: { width: 1440, height: 800 } });
+
+  test("the first page fills the screen below the header with compact, one-line rows", async ({
+    page,
+  }) => {
+    await page.goto(dataFlowUrl);
+    const rows = page
+      .getByRole("main")
+      .getByRole("listitem")
+      .getByRole("button")
+      .filter({ has: page.locator("p") });
+    await expect(rows.first()).toBeVisible();
+
+    const boxes = await rows.evaluateAll((buttons) =>
+      buttons.map((b) => {
+        const { top, bottom, height } = b.getBoundingClientRect();
+        return { top, bottom, height };
+      })
+    );
+    expect(boxes.length).toBeGreaterThanOrEqual(7);
+    for (const box of boxes) expect(box.height).toBeLessThan(60);
+
+    // Every row is on screen without scrolling, and another wouldn't fit.
+    const last = boxes[boxes.length - 1];
+    const viewportHeight = page.viewportSize()!.height;
+    expect(last.bottom).toBeLessThanOrEqual(viewportHeight);
+    expect(viewportHeight - last.bottom).toBeLessThan(last.height + 1);
+  });
+});
