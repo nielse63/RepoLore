@@ -1,11 +1,18 @@
 import type {
   EntryPoint,
   Evidence,
+  Gap,
+  PublicContract,
   Relationship,
   TestRelationship,
 } from "@/lore/model";
+import { START_HERE_MAX_ITEMS } from "@/lore/model";
 import {
   deriveViews,
+  findContradictedTestRoots,
+  isUnderTestRoot,
+  isUnderUncontradictedTestRoot,
+  testRootPath,
   type DeriveViewsConfig,
   type DeriveViewsInput,
 } from "../derive-views";
@@ -368,6 +375,99 @@ describe("deriveViews structural areas", () => {
     expect(rootArea?.directDependencyIds).toEqual([utilsArea?.id]);
     expect(utilsArea?.directDependentIds).toEqual([rootArea?.id]);
   });
+
+  it("links each pair of areas once, ignoring intra-area and unknown-file relationships", () => {
+    const rel = (id: string, fromId: string, toId: string): Relationship => ({
+      id,
+      kind: "depends-on",
+      fromId,
+      toId,
+      certainty: "detected",
+      evidence: [evidence],
+    });
+    const input = baseInput({
+      sourceFilePaths: ["src/a.ts", "src/b.ts", "src/utils/math.ts"],
+      relationships: [
+        rel("rel-1", "src/a.ts", "src/utils/math.ts"),
+        rel("rel-2", "src/b.ts", "src/utils/math.ts"),
+        rel("rel-3", "src/a.ts", "src/b.ts"),
+        rel("rel-4", "src/a.ts", "vendor/missing.ts"),
+        rel("rel-5", "vendor/missing.ts", "src/a.ts"),
+      ],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const srcArea = structuralAreas.find((a) => a.name === "src");
+    const utilsArea = structuralAreas.find((a) => a.name === "src/utils");
+    expect(srcArea?.directDependencyIds).toEqual([utilsArea?.id]);
+    expect(srcArea?.directDependentIds).toEqual([]);
+    expect(utilsArea?.directDependentIds).toEqual([srcArea?.id]);
+  });
+
+  it("attaches each area's entry points, public contracts, tests, and located gaps", () => {
+    const contract: PublicContract = {
+      id: "contract-1",
+      areaId: "area:proj:src/api",
+      name: "handler",
+      kind: "export",
+      location: { filePath: "src/api/handler.ts" },
+      evidence: [evidence],
+    };
+    const testRelationship: TestRelationship = {
+      id: "test-1",
+      testLocation: { filePath: "tests/handler.test.ts" },
+      implementationLocation: { filePath: "src/api/handler.ts" },
+      certainty: "detected",
+      evidence: [evidence],
+    };
+    const locatedGap: Gap = {
+      certainty: "unknown",
+      description: "unresolved import",
+      location: { filePath: "src/api/handler.ts" },
+    };
+    const unlocatedGap: Gap = {
+      certainty: "unsupported",
+      description: "repository-wide gap",
+    };
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/main.ts",
+        "src/api/handler.ts",
+        "tests/handler.test.ts",
+      ],
+      entryPoints: [
+        {
+          id: "entry-main",
+          kind: "bootstrap",
+          location: { filePath: "src/main.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+      publicContracts: [contract],
+      testRelationships: [testRelationship],
+      gaps: [locatedGap, unlocatedGap],
+    });
+
+    const { structuralAreas } = deriveViews(input, noopConfig);
+    const apiArea = structuralAreas.find((a) => a.name === "src/api");
+    const srcArea = structuralAreas.find((a) => a.name === "src");
+    const testsArea = structuralAreas.find((a) => a.name === "tests");
+
+    expect(apiArea?.importantLocations).toEqual([
+      { filePath: "src/api/handler.ts" },
+    ]);
+    expect(apiArea?.entryPointIds).toEqual([]);
+    expect(apiArea?.gaps).toEqual([locatedGap]);
+    // A test relationship belongs to both its test's and its subject's area.
+    expect(apiArea?.testRelationshipIds).toEqual(["test-1"]);
+    expect(testsArea?.testRelationshipIds).toEqual(["test-1"]);
+
+    expect(srcArea?.entryPointIds).toEqual(["entry-main"]);
+    expect(srcArea?.importantLocations).toEqual([{ filePath: "src/main.ts" }]);
+    expect(srcArea?.gaps).toEqual([]);
+    expect(srcArea?.testRelationshipIds).toEqual([]);
+  });
 });
 
 describe("deriveViews start here", () => {
@@ -472,5 +572,400 @@ describe("deriveViews start here", () => {
     const { startHere } = deriveViews(input, noopConfig);
     const last = startHere[startHere.length - 1];
     expect(last.location.filePath).toBe("src/main.test.ts");
+  });
+
+  const dependsOn = (
+    fromId: string,
+    toId: string,
+    certainty: Relationship["certainty"] = "detected",
+    relEvidence: Evidence[] = [evidence]
+  ): Relationship => ({
+    id: `${fromId}->${toId}`,
+    kind: "depends-on",
+    fromId,
+    toId,
+    certainty,
+    evidence: relEvidence,
+  });
+
+  it("caps many bootstrap entry points at the Start Here maximum", () => {
+    const scripts = Array.from(
+      { length: START_HERE_MAX_ITEMS + 3 },
+      (_, i) => `scripts/s${i}.py`
+    );
+    const input = baseInput({
+      sourceFilePaths: scripts,
+      entryPoints: scripts.map(bootstrapEntry),
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual(
+      scripts.slice(0, START_HERE_MAX_ITEMS)
+    );
+  });
+
+  it("seeds with a library's declared public entry point when nothing starts the system", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/index.ts", "src/cli-helpers.ts"],
+      entryPoints: [
+        {
+          id: "entry-library",
+          kind: "library",
+          location: { filePath: "src/index.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+        {
+          id: "entry-route",
+          kind: "route",
+          location: { filePath: "src/cli-helpers.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere).toHaveLength(1);
+    expect(startHere[0]).toMatchObject({
+      location: { filePath: "src/index.ts" },
+      whatItRepresents: "Package's declared public entry point",
+      rationale:
+        "This is the system's declared public entry point for consumers.",
+    });
+  });
+
+  it("follows detected dependencies before inferred ones, breadth-first, without repeating a file", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/main.ts", "src/a.ts", "src/b.ts", "src/c.ts"],
+      entryPoints: [bootstrapEntry("src/main.ts")],
+      relationships: [
+        dependsOn("src/main.ts", "src/a.ts", "inferred"),
+        dependsOn("src/main.ts", "src/b.ts"),
+        dependsOn("src/a.ts", "src/c.ts"),
+        // Already reached from main; not added a second time.
+        dependsOn("src/b.ts", "src/a.ts"),
+        dependsOn("src/c.ts", "src/main.ts"),
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "src/main.ts",
+      "src/b.ts",
+      "src/a.ts",
+      "src/c.ts",
+    ]);
+    expect(startHere[1]).toMatchObject({
+      whatItRepresents: "A module directly depended on by 'src/main.ts'",
+      rationale: "test evidence",
+      certainty: "detected",
+    });
+    expect(startHere[2].certainty).toBe("inferred");
+  });
+
+  it("adds a file once when the same entry imports it through two relationships", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/main.ts", "src/a.ts"],
+      entryPoints: [bootstrapEntry("src/main.ts")],
+      relationships: [
+        { ...dependsOn("src/main.ts", "src/a.ts"), id: "import" },
+        { ...dependsOn("src/main.ts", "src/a.ts"), id: "re-export" },
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "src/main.ts",
+      "src/a.ts",
+    ]);
+  });
+
+  it("describes a dependency from the relationship itself when it carries no evidence", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/main.ts", "src/a.ts"],
+      entryPoints: [bootstrapEntry("src/main.ts")],
+      relationships: [dependsOn("src/main.ts", "src/a.ts", "detected", [])],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere[1].rationale).toBe("'src/main.ts' depends on 'src/a.ts'.");
+  });
+
+  it("stops following the dependency chain at the cap, leaving room for a test", () => {
+    const modules = Array.from({ length: 10 }, (_, i) => `src/m${i}.ts`);
+    const input = baseInput({
+      sourceFilePaths: ["src/main.ts", ...modules, "src/main.test.ts"],
+      entryPoints: [bootstrapEntry("src/main.ts")],
+      relationships: modules.map((m) => dependsOn("src/main.ts", m)),
+      testRelationships: [
+        {
+          id: "test-1",
+          testLocation: { filePath: "src/main.test.ts" },
+          implementationLocation: { filePath: "src/main.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere).toHaveLength(START_HERE_MAX_ITEMS);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "src/main.ts",
+      ...modules.slice(0, START_HERE_MAX_ITEMS - 2),
+      "src/main.test.ts",
+    ]);
+  });
+
+  it("pads with larger unrepresented areas first, breaking ties by name", () => {
+    const input = baseInput({
+      sourceFilePaths: [
+        "src/main.ts",
+        "src/b/one.ts",
+        "src/a/one.ts",
+        "src/c/one.ts",
+        "src/c/two.ts",
+      ],
+      entryPoints: [bootstrapEntry("src/main.ts")],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "src/main.ts",
+      "src/c",
+      "src/a",
+      "src/b",
+    ]);
+    expect(startHere[1]).toMatchObject({
+      whatItRepresents: "Primary structural area: 'src/c'",
+      certainty: "inferred",
+    });
+  });
+
+  it("closes with the first test not already on the path, with a fallback rationale when it has no evidence", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/main.test.ts", "src/util.test.ts", "src/main.ts"],
+      entryPoints: [bootstrapEntry("src/main.test.ts")],
+      testRelationships: [
+        {
+          id: "test-1",
+          testLocation: { filePath: "src/main.test.ts" },
+          implementationLocation: { filePath: "src/main.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+        {
+          id: "test-2",
+          testLocation: { filePath: "src/util.test.ts" },
+          implementationLocation: { filePath: "src/util.ts" },
+          certainty: "inferred",
+          evidence: [],
+        },
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere[startHere.length - 1]).toMatchObject({
+      location: { filePath: "src/util.test.ts" },
+      whatItRepresents: "Test for 'src/util.ts'",
+      rationale:
+        "Exercises the implementation directly; a good place to observe representative behavior.",
+      certainty: "inferred",
+    });
+  });
+
+  it("doesn't repeat a test that's already on the path", () => {
+    const input = baseInput({
+      sourceFilePaths: ["src/main.test.ts", "src/main.ts"],
+      entryPoints: [bootstrapEntry("src/main.test.ts")],
+      testRelationships: [
+        {
+          id: "test-1",
+          testLocation: { filePath: "src/main.test.ts" },
+          implementationLocation: { filePath: "src/main.ts" },
+          certainty: "detected",
+          evidence: [evidence],
+        },
+      ],
+    });
+
+    const { startHere } = deriveViews(input, noopConfig);
+    expect(startHere.map((item) => item.location.filePath)).toEqual([
+      "src/main.test.ts",
+    ]);
+  });
+});
+
+describe("isUnderTestRoot and testRootPath", () => {
+  it.each([
+    ["tests/a.ts", "tests"],
+    ["packages/x/tests/runtime/a.ts", "packages/x/tests"],
+    ["src/__tests__/a.ts", "src/__tests__"],
+    ["e2e/home.spec.ts", "e2e"],
+    // The outermost test root wins.
+    ["pkg/test/sub/tests/a.py", "pkg/test"],
+  ])("%s is under test root '%s'", (filePath, root) => {
+    expect(isUnderTestRoot(filePath)).toBe(true);
+    expect(testRootPath(filePath)).toBe(root);
+  });
+
+  it.each(["src/testing/a.ts", "src/test", "test.ts"])(
+    "%s is not under a test root",
+    (filePath) => {
+      expect(isUnderTestRoot(filePath)).toBe(false);
+    }
+  );
+});
+
+describe("findContradictedTestRoots", () => {
+  const entry = (kind: EntryPoint["kind"], filePath: string): EntryPoint => ({
+    id: `${kind}-${filePath}`,
+    kind,
+    location: { filePath },
+    certainty: "detected",
+    evidence: [evidence],
+  });
+
+  it.each<[EntryPoint["kind"], string]>([
+    ["bootstrap", "application bootstrap entry point"],
+    ["cli", "command-line entry point"],
+    ["runtime", "conventional runtime entry point"],
+    ["library", "package's declared public entry point"],
+    ["public-export", "public export entry point"],
+    ["framework", "framework entry point"],
+    ["route", "next.js route entry point"],
+    ["http-handler", "http route handler entry point"],
+    ["server-action", "server action entry point"],
+    ["middleware", "middleware entry point"],
+    ["ui-event", "ui event entry point"],
+  ])("cites a %s entry point inside a test root", (kind, description) => {
+    const contradictions = findContradictedTestRoots(
+      { entryPoints: [entry(kind, "pkg/tests/x.ts")], relationships: [] },
+      () => false
+    );
+    expect(contradictions).toEqual(
+      new Map([
+        ["pkg/tests", `'pkg/tests/x.ts' is detected as a ${description}`],
+      ])
+    );
+  });
+
+  it("ignores test entry points and entry points outside any test root", () => {
+    const contradictions = findContradictedTestRoots(
+      {
+        entryPoints: [
+          entry("test", "pkg/tests/x.test.ts"),
+          entry("bootstrap", "src/main.ts"),
+        ],
+        relationships: [],
+      },
+      () => false
+    );
+    expect(contradictions.size).toBe(0);
+  });
+
+  it("keeps the first contradiction found for each root", () => {
+    const dependsOn = (fromId: string, toId: string): Relationship => ({
+      id: `${fromId}->${toId}`,
+      kind: "depends-on",
+      fromId,
+      toId,
+      certainty: "detected",
+      evidence: [evidence],
+    });
+    const contradictions = findContradictedTestRoots(
+      {
+        entryPoints: [
+          entry("route", "app/test/page.tsx"),
+          entry("route", "app/test/other/page.tsx"),
+        ],
+        relationships: [
+          dependsOn("src/a.ts", "app/test/page.tsx"),
+          dependsOn("src/a.ts", "django/test/utils.py"),
+          dependsOn("src/b.ts", "django/test/client.py"),
+        ],
+      },
+      () => false
+    );
+    expect(contradictions).toEqual(
+      new Map([
+        [
+          "app/test",
+          "'app/test/page.tsx' is detected as a next.js route entry point",
+        ],
+        [
+          "django/test",
+          "'src/a.ts', outside any test directory, depends on 'django/test/utils.py'",
+        ],
+      ])
+    );
+  });
+});
+
+describe("isUnderUncontradictedTestRoot", () => {
+  const dependsOn = (fromId: string, toId: string): Relationship => ({
+    id: `${fromId}->${toId}`,
+    kind: "depends-on",
+    fromId,
+    toId,
+    certainty: "detected",
+    evidence: [evidence],
+  });
+
+  it("is true for a file under a test directory at any depth", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      { entryPoints: [], relationships: [] },
+      () => false
+    );
+    expect(isUnder("packages/x/tests/helpers.ts")).toBe(true);
+    expect(isUnder("pkg/tests/run_all.py")).toBe(true);
+    expect(isUnder("tests/foo.js")).toBe(true);
+    expect(isUnder("packages/x/src/index.ts")).toBe(false);
+    // The file name alone isn't a test root; only a directory is.
+    expect(isUnder("src/test")).toBe(false);
+  });
+
+  it("is false under a test directory that production code imports", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [],
+        relationships: [
+          dependsOn("packages/core/src/compile.ts", "packages/test/assert.ts"),
+        ],
+      },
+      () => false
+    );
+    expect(isUnder("packages/test/assert.ts")).toBe(false);
+    expect(isUnder("packages/core/tests/run.ts")).toBe(true);
+  });
+
+  it("ignores imports from other test files or test directories", () => {
+    const isUnder = isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [],
+        relationships: [
+          dependsOn("src/app.test.ts", "packages/x/tests/helpers.ts"),
+          dependsOn("e2e/home.ts", "packages/x/tests/helpers.ts"),
+        ],
+      },
+      (f) => f.endsWith(".test.ts")
+    );
+    expect(isUnder("packages/x/tests/helpers.ts")).toBe(true);
+  });
+
+  it("is false under a test directory holding a non-test entry point", () => {
+    const route: EntryPoint = {
+      id: "route",
+      kind: "framework",
+      location: { filePath: "app/test/page.tsx" },
+      certainty: "detected",
+      evidence: [evidence],
+    };
+    const isUnder = isUnderUncontradictedTestRoot(
+      { entryPoints: [route], relationships: [] },
+      () => false
+    );
+    expect(isUnder("app/test/helpers.ts")).toBe(false);
   });
 });

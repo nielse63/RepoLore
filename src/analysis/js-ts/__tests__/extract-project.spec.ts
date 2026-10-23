@@ -70,6 +70,51 @@ describe("extractJsTsProject", () => {
     expect(result.project.kind).toBe("library");
   });
 
+  it("treats a nested test directory's harness and helpers as neither entry points nor test subjects (GitHub issue #65)", async () => {
+    rootDir = await makeFixture({
+      "package.json": JSON.stringify({ main: "packages/x/src/index.ts" }),
+      "packages/x/src/index.ts": "export const add = (a, b) => a + b;",
+      "packages/x/tests/helpers.ts": "export const setup = () => 1;",
+      "packages/x/tests/foo.test.ts":
+        "import { setup } from './helpers';\nimport { add } from '../src/index';",
+      "packages/x/tests/run-harness.ts":
+        "import ReactDOM from 'react-dom';\nReactDOM.render(null, document.body);",
+    });
+
+    const result = extractJsTsProject(rootDir);
+
+    expect(result.entryPoints.map((ep) => ep.location.filePath)).toEqual([
+      "packages/x/src/index.ts",
+    ]);
+    expect(result.project.kind).toBe("library");
+    expect(
+      result.testRelationships.map((t) => [
+        t.testLocation.filePath,
+        t.implementationLocation.filePath,
+      ])
+    ).toEqual([["packages/x/tests/foo.test.ts", "packages/x/src/index.ts"]]);
+  });
+
+  it("keeps a test-named directory that production code imports as implementation", async () => {
+    rootDir = await makeFixture({
+      "package.json": JSON.stringify({ main: "packages/core/src/index.ts" }),
+      "packages/core/src/index.ts":
+        "import { assert } from '../../test/assert';\nexport const x = assert;",
+      "packages/test/assert.ts": "export const assert = () => true;",
+      "packages/core/src/index.test.ts":
+        "import { assert } from '../../test/assert';",
+    });
+
+    const result = extractJsTsProject(rootDir);
+
+    expect(result.testRelationships).toEqual([
+      expect.objectContaining({
+        testLocation: { filePath: "packages/core/src/index.test.ts" },
+        implementationLocation: { filePath: "packages/test/assert.ts" },
+      }),
+    ]);
+  });
+
   it("detects React components and adds the react framework tag", async () => {
     rootDir = await makeFixture({
       "src/Header.tsx": "export function Header() { return <div>hi</div>; }",
