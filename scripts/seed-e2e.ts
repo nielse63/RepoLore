@@ -38,8 +38,13 @@
  * - `nielse63/repo-lore-python-only-fixture` — analyzed from
  *   `fixtures/python-only` by the Python analyzer alone, so its Lore has no
  *   callable signatures, for `data-flow-default.spec.ts`'s empty state.
+ * - `nielse63/repo-lore-ts-many-areas-fixture` — analyzed from
+ *   `fixtures/ts-many-areas`, a hub area importing 33 one-file module areas
+ *   plus one standalone area, so its area diagram has more connected areas
+ *   than `MAX_DIAGRAM_AREAS`, for `area-dependency-diagram.spec.ts`'s
+ *   truncated-diagram coverage.
  *
- * All three are local-only, keyed to placeholder commits, with empty History
+ * The local-only fixtures are keyed to placeholder commits, with empty History
  * caches so their History pages never call GitHub.
  *
  * Every run is stamped `analyzedAt: now`, so viewing them doesn't schedule
@@ -84,6 +89,8 @@ const TS_NESTED_TEST_SAMPLES_FIXTURE_SHA =
 const MIXED_TS_PYTHON_FIXTURE_SHA = "0000000000000000000000000000000000000059";
 const JS_PARTIAL_FIXTURE_SHA = "0000000000000000000000000000000000000159";
 const PYTHON_ONLY_FIXTURE_SHA = "0000000000000000000000000000000000000007";
+/** Placeholder: `fixtures/ts-many-areas` has no GitHub repository. */
+const TS_MANY_AREAS_FIXTURE_SHA = "0000000000000000000000000000000000000030";
 
 /** Mirrors `runAnalyzer` in `src/analysis/analyze-and-persist.ts`: one project per analyzer, keyed by the analyzer (ADR-0007). */
 async function runAnalyzer(
@@ -250,6 +257,11 @@ async function main() {
       dir: "fixtures/python-only",
       commitSha: PYTHON_ONLY_FIXTURE_SHA,
       analyzers: ["python"] as SupportedAnalyzer[],
+    },
+    {
+      repo: "repo-lore-ts-many-areas-fixture",
+      dir: "fixtures/ts-many-areas",
+      commitSha: TS_MANY_AREAS_FIXTURE_SHA,
     },
   ]) {
     const { repoRow } = await seedRun({

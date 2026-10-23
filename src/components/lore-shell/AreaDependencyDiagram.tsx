@@ -3,7 +3,7 @@
 import { githubTreeUrl } from "@/github/urls";
 import { formatPath } from "@/lib/format-path";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import type { Relationship, StructuralArea } from "@/lore/model";
+import type { EntityId, Relationship, StructuralArea } from "@/lore/model";
 import {
   Background,
   Controls,
@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import Link from "next/link";
 import { useMemo } from "react";
 
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
@@ -102,12 +103,16 @@ function AreaNode({ data }: NodeProps<Node<AreaNodeData>>) {
           href={data.href}
           target="_blank"
           rel="noopener noreferrer"
-          className={`w-full truncate text-xs font-medium hover:underline ${style.fg}`}
+          title={formatPath(data.name)}
+          className={`w-full truncate text-sm font-medium hover:underline ${style.fg}`}
         >
           {formatPath(data.name)}
         </a>
       ) : (
-        <span className={`w-full truncate text-xs font-medium ${style.fg}`}>
+        <span
+          title={formatPath(data.name)}
+          className={`w-full truncate text-sm font-medium ${style.fg}`}
+        >
           {formatPath(data.name)}
         </span>
       )}
@@ -135,6 +140,9 @@ export interface AreaDependencyDiagramProps {
   owner: string;
   repo: string;
   commitSha: string;
+  // A System subview's own area: always shown when the diagram is
+  // truncated to `MAX_DIAGRAM_AREAS`, with the caption counting neighbors.
+  pinnedAreaId?: EntityId;
 }
 
 /**
@@ -160,8 +168,13 @@ export function AreaDependencyDiagram({
   owner,
   repo,
   commitSha,
+  pinnedAreaId,
 }: AreaDependencyDiagramProps) {
-  const layout = deriveProductionAreaDiagramLayout(areas, relationships);
+  const layout = deriveProductionAreaDiagramLayout(
+    areas,
+    relationships,
+    pinnedAreaId
+  );
 
   const nodes: Node<AreaNodeData>[] = useMemo(
     () =>
@@ -186,16 +199,20 @@ export function AreaDependencyDiagram({
         source: edge.fromId,
         target: edge.toId,
         type: "smoothstep",
+        // `--muted`, not `--border`: the border token is nearly the canvas
+        // color, so edges and arrowheads all but vanished (GitHub issue #51).
         style: {
-          stroke: "var(--border)",
-          strokeWidth: 1.5,
+          stroke: "var(--muted)",
+          strokeWidth: 1.25,
         },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--border)" },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)" },
       })),
     [layout]
   );
 
   if (!layout) return null;
+
+  const truncated = layout.connectedAreaCount > layout.nodes.length;
 
   const legendEntries = Array.from(
     new Map(
@@ -224,6 +241,11 @@ export function AreaDependencyDiagram({
           edges={edges}
           nodeTypes={NODE_TYPES}
           fitView
+          // react-flow's default `minZoom` (0.5) also clamps `fitView`, so a
+          // wide graph stayed at 0.5 with its outer nodes clipped (GitHub
+          // issue #51). 0.05 fits even a `MAX_DIAGRAM_AREAS`-wide single rank
+          // in the Systems rail; Zoom In stays available for reading labels.
+          minZoom={0.05}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
@@ -240,6 +262,55 @@ export function AreaDependencyDiagram({
           <Controls showInteractive={false} />
         </ReactFlow>
       </figure>
+      {/* Wording per `product-scope-guardian`: the selection is a count of
+          the edges drawn here, never an importance judgment (ADR-0014). */}
+      {truncated && (
+        <p className="mt-3 text-xs text-muted">
+          {pinnedAreaId
+            ? `Showing this system and the ${layout.nodes.length - 1} neighbors with the most detected relationships, of ${layout.connectedAreaCount - 1} connected neighbors.`
+            : `Showing the ${layout.nodes.length} areas with the most detected relationships, of ${layout.connectedAreaCount} connected areas.`}{" "}
+          Counts include only imports resolved to a file in this repository;
+          unresolved or dynamic imports are Unknown. Full list:{" "}
+          <Link
+            href={`/lore/${owner}/${repo}/architecture#component-connections`}
+            className="font-medium text-primary hover:underline"
+          >
+            Component Connections
+          </Link>
+          .
+        </p>
+      )}
+      {truncated && layout.unconnected.length > 0 && (
+        <p className="mt-1 text-xs text-muted">
+          {layout.unconnected.length}{" "}
+          {layout.unconnected.length === 1 ? "area has" : "areas have"} no
+          detected production relationships.
+        </p>
+      )}
+      {!truncated && layout.unconnected.length > 0 && (
+        <div className="mt-3 text-xs text-muted">
+          <p id="area-dependency-diagram-unconnected">
+            Not connected to other areas:
+          </p>
+          <ul
+            aria-labelledby="area-dependency-diagram-unconnected"
+            className="mt-1 flex flex-wrap gap-x-3 gap-y-1"
+          >
+            {layout.unconnected.map((area) => (
+              <li key={area.id}>
+                <a
+                  href={githubTreeUrl(owner, repo, commitSha, area.location)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:underline"
+                >
+                  {formatPath(area.name)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {legendEntries.length > 1 && (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
           {legendEntries.map((entry) => (
