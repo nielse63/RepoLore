@@ -456,6 +456,7 @@ export function DependenciesContent({
             <AreaRelationshipsTable
               relationships={areaRelationships}
               areaUrl={areaUrl}
+              storageKey={`area-relationships-page:${owner}/${repo}:dependencies`}
             />
           </TabsContent>
         </Tabs>
