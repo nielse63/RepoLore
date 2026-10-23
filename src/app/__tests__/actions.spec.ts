@@ -105,7 +105,11 @@ describe("resolveRepository", () => {
   });
 
   it("analyzes and redirects to the Lore page on success", async () => {
-    mockAnalyzeAndPersistRepository.mockResolvedValue({} as never);
+    mockAnalyzeAndPersistRepository.mockResolvedValue({
+      run: {} as never,
+      owner: "acme",
+      repo: "widgets",
+    });
 
     await resolveRepository(
       { status: "idle" },
@@ -117,6 +121,25 @@ describe("resolveRepository", () => {
       "widgets"
     );
     expect(mockRedirect).toHaveBeenCalledWith("/lore/acme/widgets?submitted=1");
+  });
+
+  it("redirects to GitHub's canonical owner/name, not the submitted spelling (issue #43)", async () => {
+    mockAnalyzeAndPersistRepository.mockResolvedValue({
+      run: {} as never,
+      owner: "react",
+      repo: "react",
+    });
+
+    await resolveRepository(
+      { status: "idle" },
+      formDataWithUrl("https://github.com/Facebook/React")
+    );
+
+    expect(mockAnalyzeAndPersistRepository).toHaveBeenCalledWith(
+      "Facebook",
+      "React"
+    );
+    expect(mockRedirect).toHaveBeenCalledWith("/lore/react/react?submitted=1");
   });
 
   it("returns the GitHubApiError message inline instead of redirecting", async () => {
@@ -199,6 +222,8 @@ describe("reanalyzeRepository", () => {
   it("revalidates the Lore page, and History only when it was actually refreshed", async () => {
     mockReanalyzeAndRefreshHistory.mockResolvedValue({
       run: { id: 2 } as never,
+      owner: "acme",
+      repo: "widgets",
       changed: true,
       historyRefreshed: true,
     });
@@ -217,9 +242,50 @@ describe("reanalyzeRepository", () => {
     );
   });
 
+  it("redirects to the canonical Lore when the repository was renamed since this Lore was created (issue #43)", async () => {
+    mockReanalyzeAndRefreshHistory.mockResolvedValue({
+      run: { id: 2 } as never,
+      owner: "react",
+      repo: "react",
+      changed: true,
+      historyRefreshed: false,
+    });
+
+    await reanalyzeRepository(
+      "facebook",
+      "react",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/lore/react/react");
+    expect(mockRedirect).toHaveBeenCalledWith("/lore/react/react");
+  });
+
+  it("does not redirect when the canonical owner/name matches the page", async () => {
+    mockReanalyzeAndRefreshHistory.mockResolvedValue({
+      run: { id: 2 } as never,
+      owner: "acme",
+      repo: "widgets",
+      changed: true,
+      historyRefreshed: false,
+    });
+
+    await reanalyzeRepository(
+      "acme",
+      "widgets",
+      { status: "idle" },
+      new FormData()
+    );
+
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
   it("does not revalidate History when changed but the history refresh itself failed", async () => {
     mockReanalyzeAndRefreshHistory.mockResolvedValue({
       run: { id: 2 } as never,
+      owner: "acme",
+      repo: "widgets",
       changed: true,
       historyRefreshed: false,
     });
@@ -241,6 +307,8 @@ describe("reanalyzeRepository", () => {
   it("reports changed: false and does not revalidate History when the run short-circuited to the same id", async () => {
     mockReanalyzeAndRefreshHistory.mockResolvedValue({
       run: { id: 1 } as never,
+      owner: "acme",
+      repo: "widgets",
       changed: false,
       historyRefreshed: false,
     });

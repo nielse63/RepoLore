@@ -80,6 +80,14 @@ export async function throwForResponse(
 }
 
 export interface RepositoryHead {
+  /**
+   * GitHub's canonical owner and name for the repository — which can differ
+   * from the requested spelling when it was renamed or transferred (GitHub
+   * redirects the old name) or typed with different letter case (GitHub
+   * matches case-insensitively). GitHub issue #43.
+   */
+  owner: string;
+  repo: string;
   defaultBranch: string;
   headSha: string;
   /** GitHub's own repository description, when set — surfaced as-is, not inferred. */
@@ -102,6 +110,8 @@ export async function resolveRepositoryHead(
     await throwForResponse(repoRes, `Repository ${owner}/${repo} not found`);
   }
   const repoData = (await repoRes.json()) as {
+    name?: string;
+    owner?: { login?: string };
     default_branch?: string;
     description?: string | null;
     private?: boolean;
@@ -136,8 +146,11 @@ export async function resolveRepositoryHead(
     );
   }
 
+  const canonicalOwner = repoData.owner?.login ?? owner;
+  const canonicalRepo = repoData.name ?? repo;
+
   const commitRes = await githubApiFetch(
-    `/repos/${owner}/${repo}/commits/${encodeURIComponent(defaultBranch)}`
+    `/repos/${canonicalOwner}/${canonicalRepo}/commits/${encodeURIComponent(defaultBranch)}`
   );
   if (!commitRes.ok) {
     await throwForResponse(
@@ -154,6 +167,8 @@ export async function resolveRepositoryHead(
   }
 
   return {
+    owner: canonicalOwner,
+    repo: canonicalRepo,
     defaultBranch,
     headSha: commitData.sha,
     description: repoData.description ?? undefined,

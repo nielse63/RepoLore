@@ -26,7 +26,9 @@ export type ResolveRepositoryState =
 /**
  * Server Action backing the home page's URL form: validates/normalizes the
  * pasted URL, analyzes and persists the repository (MVP core user journey
- * steps 1–6), and redirects to the stable `/lore/{owner}/{repo}` page. A
+ * steps 1–6), and redirects to the stable `/lore/{owner}/{repo}` page —
+ * under GitHub's canonical owner/name, which can differ from what was
+ * pasted (a renamed repository, or different letter case; GitHub issue #43). A
  * failed/partial analysis still redirects — it has a persisted run to render
  * honestly; only pre-analysis failures (bad URL, repo doesn't exist) stay on
  * this page as an inline error, since there's no run to redirect to yet.
@@ -43,9 +45,10 @@ export async function resolveRepository(
   }
 
   const { owner, repo } = parsed.value;
+  let canonical;
   try {
     await claimSubmissionAttempt(await requestIdentifier());
-    await analyzeAndPersistRepository(owner, repo);
+    canonical = await analyzeAndPersistRepository(owner, repo);
   } catch (error) {
     if (
       error instanceof GitHubApiError ||
@@ -64,7 +67,7 @@ export async function resolveRepository(
   // `?submitted=1` lets the Overview report the run's outcome to analytics
   // (`SubmissionOutcomeEvent`); it's stripped client-side and the canonical
   // URL omits it.
-  redirect(`/lore/${owner}/${repo}?submitted=1`);
+  redirect(`/lore/${canonical.owner}/${canonical.repo}?submitted=1`);
 }
 
 export type ReanalyzeState =
@@ -78,7 +81,9 @@ export type ReanalyzeState =
  * `.bind()` since the button isn't a plain form with those as field values.
  * Reports honestly whether the re-run actually produced a new analysis or
  * short-circuited on an unchanged commit (ADR-0005), rather than a generic
- * "done" that could look like a no-op silently succeeded.
+ * "done" that could look like a no-op silently succeeded. If the analysis
+ * landed under a different canonical owner/name (the repository was
+ * renamed since this Lore was created), redirects there instead.
  */
 // Required by useActionState's action signature; owner/repo (bound ahead of
 // these two) are what this action actually needs.
@@ -104,9 +109,12 @@ export async function reanalyzeRepository(
     };
   }
 
-  revalidatePath(`/lore/${owner}/${repo}`);
+  revalidatePath(`/lore/${result.owner}/${result.repo}`);
   if (result.historyRefreshed) {
-    revalidatePath(`/lore/${owner}/${repo}/history`);
+    revalidatePath(`/lore/${result.owner}/${result.repo}/history`);
+  }
+  if (result.owner !== owner || result.repo !== repo) {
+    redirect(`/lore/${result.owner}/${result.repo}`);
   }
 
   return { status: "done", changed: result.changed };

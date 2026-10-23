@@ -49,6 +49,8 @@ describe("github/client", () => {
       fetchMock
         .mockResolvedValueOnce(
           jsonResponse(200, {
+            name: "repo",
+            owner: { login: "owner" },
             default_branch: "main",
             description: "A repo",
             private: false,
@@ -59,6 +61,8 @@ describe("github/client", () => {
       const result = await resolveRepositoryHead("owner", "repo");
 
       expect(result).toEqual({
+        owner: "owner",
+        repo: "repo",
         defaultBranch: "main",
         headSha: "deadbeef",
         description: "A repo",
@@ -78,6 +82,42 @@ describe("github/client", () => {
         "https://api.github.com/repos/owner/repo/commits/main",
         expect.anything()
       );
+    });
+
+    it("returns GitHub's canonical owner/name for a renamed or differently-cased request (issue #43)", async () => {
+      // GitHub answers `/repos/facebook/react` with the renamed repository's
+      // own record, and matches letter case loosely, so the response body —
+      // not the request — carries the canonical identity.
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse(200, {
+            name: "react",
+            owner: { login: "react" },
+            default_branch: "main",
+            private: false,
+          })
+        )
+        .mockResolvedValueOnce(jsonResponse(200, { sha: "deadbeef" }));
+
+      const result = await resolveRepositoryHead("Facebook", "React");
+
+      expect(result).toMatchObject({ owner: "react", repo: "react" });
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        "https://api.github.com/repos/react/react/commits/main",
+        expect.anything()
+      );
+    });
+
+    it("falls back to the requested owner/name when GitHub omits them", async () => {
+      fetchMock
+        .mockResolvedValueOnce(
+          jsonResponse(200, { default_branch: "main", private: false })
+        )
+        .mockResolvedValueOnce(jsonResponse(200, { sha: "deadbeef" }));
+
+      const result = await resolveRepositoryHead("owner", "repo");
+      expect(result).toMatchObject({ owner: "owner", repo: "repo" });
     });
 
     it("throws not-found (indistinguishable from a nonexistent repo) when the repo is private", async () => {

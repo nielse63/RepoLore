@@ -21,6 +21,8 @@ const mockAcquireTarballSource = acquireTarballSource as jest.MockedFunction<
 describe("acquireRepositorySource", () => {
   beforeEach(() => {
     mockResolveRepositoryHead.mockResolvedValue({
+      owner: "acme",
+      repo: "widgets",
       defaultBranch: "main",
       headSha: "sha123",
       isPrivate: false,

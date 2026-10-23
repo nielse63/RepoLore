@@ -4,11 +4,13 @@ import {
   type AnalysisRunRow,
 } from "@/db/analysis-runs";
 import { saveHistoryEntries } from "@/db/history-entries";
-import { upsertRepo } from "@/db/repos";
 import { computeHistory } from "@/history/compute-history";
 
 export interface ReanalyzeResult {
   run: AnalysisRunRow;
+  /** GitHub's canonical owner/name the run was persisted under — can differ from the requested one after a rename (GitHub issue #43). */
+  owner: string;
+  repo: string;
   /** Whether analysis produced a new run (not ADR-0005's idempotent short-circuit on an unchanged commit). */
   changed: boolean;
   /** Whether History's cache was actually recomputed and saved — `false` when `changed` is `false`, or when a recompute was attempted but failed. */
@@ -35,16 +37,19 @@ export async function reanalyzeAndRefreshHistory(
   repo: string
 ): Promise<ReanalyzeResult> {
   const previousRun = await getLatestAnalysisRunForRepo(owner, repo);
-  const run = await analyzeAndPersistRepository(owner, repo);
+  const canonical = await analyzeAndPersistRepository(owner, repo);
+  const { run } = canonical;
   const changed = run.id !== previousRun?.id;
   let historyRefreshed = false;
 
   if (changed) {
     try {
-      const repoRow = await upsertRepo(owner, repo);
-      const { entries, computedThroughSha } = await computeHistory(owner, repo);
+      const { entries, computedThroughSha } = await computeHistory(
+        canonical.owner,
+        canonical.repo
+      );
       await saveHistoryEntries({
-        repoId: repoRow.id,
+        repoId: run.repoId,
         computedThroughSha,
         entries,
       });
@@ -57,5 +62,11 @@ export async function reanalyzeAndRefreshHistory(
     }
   }
 
-  return { run, changed, historyRefreshed };
+  return {
+    run,
+    owner: canonical.owner,
+    repo: canonical.repo,
+    changed,
+    historyRefreshed,
+  };
 }

@@ -15,7 +15,14 @@
  *
  * Every call (the initial home-page submission and session 11's manual
  * re-analyze action both go through this one function) is rate-limited per
- * repo before anything else happens — see `claimReanalysisAttempt`.
+ * repo — see `claimReanalysisAttempt`. A repository Repo Lore already knows
+ * (under any letter case) is claimed before any GitHub call; one it doesn't
+ * is claimed as soon as resolution gives its canonical identity.
+ *
+ * Runs are persisted under GitHub's canonical `owner/repo`, not the
+ * requested spelling, so a renamed repository's old name or a differently
+ * cased URL doesn't become a separate, duplicate Lore (GitHub issue #43).
+ * The canonical identity is returned so callers can send the visitor there.
  */
 
 import { acquireRepositorySource } from "@/acquisition/fetch-repo-source";
@@ -35,10 +42,15 @@ import {
   saveAnalysisRun,
   type AnalysisRunRow,
 } from "@/db/analysis-runs";
-import { upsertRepo } from "@/db/repos";
+import {
+  findRepoIgnoringCase,
+  upsertCanonicalRepo,
+  type RepoRow,
+} from "@/db/repos";
 import {
   fetchRepositoryLanguages,
   resolveRepositoryHead,
+  type RepositoryHead,
 } from "@/github/client";
 import { buildLore, type BuildLoreProjectInput } from "@/lore/build-lore";
 import type { Gap } from "@/lore/model";
@@ -112,21 +124,52 @@ function skippedEntryGaps(
   ];
 }
 
+export interface AnalyzedRepository {
+  run: AnalysisRunRow;
+  /** GitHub's canonical owner, which the run is persisted under. */
+  owner: string;
+  /** GitHub's canonical repository name, which the run is persisted under. */
+  repo: string;
+}
+
 export async function analyzeAndPersistRepository(
-  owner: string,
-  repo: string
-): Promise<AnalysisRunRow> {
-  const repoRow = await upsertRepo(owner, repo);
-  await claimReanalysisAttempt(repoRow.id);
+  requestedOwner: string,
+  requestedRepo: string
+): Promise<AnalyzedRepository> {
+  const requestedRow = await findRepoIgnoringCase(
+    requestedOwner,
+    requestedRepo
+  );
+  if (requestedRow) await claimReanalysisAttempt(requestedRow.id);
 
   // Resolution failures (repo doesn't exist, bad token, ...) have no commit
   // to key a run on, so they're left to the caller rather than persisted.
-  const [{ defaultBranch, headSha, description, isPrivate }, languageBytes] =
-    await Promise.all([
-      resolveRepositoryHead(owner, repo),
-      fetchRepositoryLanguages(owner, repo),
-    ]);
+  const [head, languageBytes] = await Promise.all([
+    resolveRepositoryHead(requestedOwner, requestedRepo),
+    fetchRepositoryLanguages(requestedOwner, requestedRepo),
+  ]);
 
+  const repoRow = await upsertCanonicalRepo(head.owner, head.repo);
+  if (repoRow.id !== requestedRow?.id) {
+    await claimReanalysisAttempt(repoRow.id);
+  }
+  const run = await analyzeResolvedRepository(repoRow, head, languageBytes);
+  return { run, owner: head.owner, repo: head.repo };
+}
+
+/** Everything after resolution, keyed on the canonical repo row. */
+async function analyzeResolvedRepository(
+  repoRow: RepoRow,
+  {
+    owner,
+    repo,
+    defaultBranch,
+    headSha,
+    description,
+    isPrivate,
+  }: RepositoryHead,
+  languageBytes: Record<string, number>
+): Promise<AnalysisRunRow> {
   const detection = detectLanguages(languageBytes);
   const analyzerVersion = buildAnalyzerVersion(
     detection.selectedAnalyzers.map((a) => a.analyzer)

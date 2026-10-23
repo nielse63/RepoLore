@@ -43,3 +43,60 @@ export async function upsertRepo(
   );
   return mapRow(rows[0]);
 }
+
+/**
+ * Like `upsertRepo`, but for GitHub's canonical spelling of a repository
+ * (`resolveRepositoryHead`'s `owner`/`repo`), so a repository analyzed under
+ * different letter case keeps one row (GitHub issue #43): an existing row
+ * that matches case-insensitively is adopted and re-spelled to the
+ * canonical case — keeping its runs, history, and rate-limit state — rather
+ * than a second row inserted beside it. An exact match is preferred, then a
+ * row that has runs, so pre-existing case duplicates resolve to one row
+ * without violating `UNIQUE (owner, name)`.
+ */
+export async function upsertCanonicalRepo(
+  owner: string,
+  name: string
+): Promise<RepoRow> {
+  const pool = getDbPool();
+  const { rows: adopted } = await pool.query<RepoRawRow>(
+    `UPDATE repos
+     SET owner = $1, name = $2
+     WHERE id = (
+       SELECT r.id FROM repos r
+       WHERE lower(r.owner) = lower($1) AND lower(r.name) = lower($2)
+       ORDER BY (r.owner = $1 AND r.name = $2) DESC,
+                EXISTS (SELECT 1 FROM analysis_runs ar WHERE ar.repo_id = r.id) DESC,
+                r.id
+       LIMIT 1
+     )
+     RETURNING id, owner, name, created_at`,
+    [owner, name]
+  );
+  if (adopted[0]) return mapRow(adopted[0]);
+  return upsertRepo(owner, name);
+}
+
+/**
+ * DB-only, case-insensitive lookup of the stored spelling of a repository
+ * — no GitHub call, so it's safe on every page view (ADR-0017). Prefers a
+ * row that has been analyzed, then an exact match, so a URL spelled
+ * differently from the analyzed row finds that row.
+ */
+export async function findRepoIgnoringCase(
+  owner: string,
+  name: string
+): Promise<RepoRow | null> {
+  const pool = getDbPool();
+  const { rows } = await pool.query<RepoRawRow>(
+    `SELECT r.id, r.owner, r.name, r.created_at
+     FROM repos r
+     WHERE lower(r.owner) = lower($1) AND lower(r.name) = lower($2)
+     ORDER BY EXISTS (SELECT 1 FROM analysis_runs ar WHERE ar.repo_id = r.id) DESC,
+              (r.owner = $1 AND r.name = $2) DESC,
+              r.id
+     LIMIT 1`,
+    [owner, name]
+  );
+  return rows[0] ? mapRow(rows[0]) : null;
+}
