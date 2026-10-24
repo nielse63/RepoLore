@@ -30,6 +30,7 @@ describe("indexableLores", () => {
       row("Beta/lib"),
       row("acme/empty", { entryPointCount: 0 }),
       row("acme/widgets"),
+      row("nielse63/repo-lore-ts-react-app-fixture"),
     ];
     expect(slugs(indexableLores(rows))).toEqual([
       "acme/widgets",
@@ -74,6 +75,16 @@ describe("selectFeaturedLores", () => {
       "facebook/react",
       "acme/newer",
     ]);
+  });
+
+  it("never fills the gap with Repo Lore's own test fixtures (issue #44)", () => {
+    const rows = [
+      row("nielse63/repo-lore-ts-library-fixture", {
+        createdAt: new Date("2026-10-10T00:00:00Z"),
+      }),
+      row("acme/app"),
+    ];
+    expect(slugs(selectFeaturedLores(rows))).toEqual(["acme/app"]);
   });
 
   it("returns at most `limit` Lores", () => {

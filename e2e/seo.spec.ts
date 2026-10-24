@@ -10,16 +10,20 @@ import { expect, test } from "./coverage";
  *
  * The Overview-specific title/description wording, robots.txt, and the Open
  * Graph image route are covered in `marketing.spec.ts`. The Lore pages read
- * the already-persisted `completed` run for the pinned fixture
- * `nielse63/repo-lore-ts-react-app-fixture` (needs `DATABASE_URL`, not
- * `GITHUB_TOKEN`), whose latest run `isIndexableLore` accepts.
+ * already-persisted `completed` runs (needs `DATABASE_URL`, not
+ * `GITHUB_TOKEN`): the seeded `nielse63/RepoLore`, whose latest run
+ * `isIndexableLore` accepts, and the pinned fixture
+ * `nielse63/repo-lore-ts-react-app-fixture`, which it rejects as one of Repo
+ * Lore's own test fixtures (GitHub issue #44).
  */
 
+const indexableUrl = "/lore/nielse63/RepoLore";
 const repoUrl = "/lore/nielse63/repo-lore-ts-react-app-fixture";
 
-const PUBLIC_PAGES = ["/", "/explore", "/manifesto", repoUrl];
+const PUBLIC_PAGES = ["/", "/explore", "/manifesto", indexableUrl];
 
 const NOINDEX_PAGES = [
+  repoUrl,
   `${repoUrl}/architecture`,
   `${repoUrl}/dependencies`,
   `${repoUrl}/data-flow`,
@@ -120,5 +124,6 @@ test("sitemap.xml lists only public pages", async ({ request }) => {
     expect(new URL(loc).pathname).toMatch(
       /^\/(explore|manifesto|lore\/[^/]+\/[^/]+)?$/
     );
+    expect(new URL(loc).pathname).not.toMatch(/\/repo-lore-[^/]*-fixture$/);
   }
 });
