@@ -3,17 +3,22 @@ import { expect, test } from "./coverage";
 /**
  * Search/sharing surface functional coverage: `robots.txt`, `sitemap.xml`, the per-repository Open Graph image, and
  * the Overview's README badge card. Like `systems.spec.ts`, needs
- * `DATABASE_URL` for the already-persisted run of the pinned fixture
- * `nielse63/repo-lore-ts-react-app-fixture` but not `GITHUB_TOKEN`. That
- * fixture's latest run is `completed`, public, and has entry points and
- * areas, so it's the positive case for `isIndexableLore`: indexed and listed
- * in the sitemap. The negative cases are unit-tested
+ * `DATABASE_URL` for already-persisted runs but not `GITHUB_TOKEN`. The
+ * seeded `nielse63/RepoLore` Lore's latest run is `completed`, public, and
+ * has entry points and areas, so it's the positive case for
+ * `isIndexableLore`: indexed, and listed in the sitemap and on `/explore`.
+ * The pinned fixture `nielse63/repo-lore-ts-react-app-fixture` passes every
+ * quality check too, but is one of Repo Lore's own test fixtures, so it
+ * still renders yet is neither indexed nor listed (GitHub issue #44). The
+ * other negative cases are unit-tested
  * (`src/lib/__tests__/lore-indexability.spec.ts`).
  */
 
 const owner = "nielse63";
 const repo = "repo-lore-ts-react-app-fixture";
 const repoUrl = `/lore/${owner}/${repo}`;
+const indexableRepo = "RepoLore";
+const indexableUrl = `/lore/${owner}/${indexableRepo}`;
 
 test("robots.txt allows crawling except the API and points at the sitemap", async ({
   request,
@@ -35,35 +40,56 @@ test("sitemap.xml lists the static pages and an indexable repository", async ({
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/<\/loc>/);
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/explore<\/loc>/);
   expect(body).toMatch(/<loc>https?:\/\/[^<]+\/manifesto<\/loc>/);
-  expect(body).toMatch(new RegExp(`<loc>https?://[^<]+${repoUrl}</loc>`));
+  expect(body).toMatch(new RegExp(`<loc>https?://[^<]+${indexableUrl}</loc>`));
+  expect(body).not.toContain(`/lore/${owner}/repo-lore-`);
 });
 
 test("an indexable Overview is index, follow; its subviews stay noindex", async ({
   page,
 }) => {
-  await page.goto(repoUrl);
+  await page.goto(indexableUrl);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     "index, follow"
   );
   await expect(page).toHaveTitle(
-    `${owner}/${repo}: codebase architecture & entry points — Repo Lore`
+    `${owner}/${indexableRepo}: codebase architecture & entry points — Repo Lore`
   );
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
     new RegExp(
-      `How ${owner}/${repo} is structured: \\d+ probable entry points?`
+      `How ${owner}/${indexableRepo} is structured: \\d+ probable entry points?`
     )
   );
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    new RegExp(`${repoUrl}/opengraph-image`)
+    new RegExp(`${indexableUrl}/opengraph-image`)
   );
 
-  await page.goto(`${repoUrl}/architecture`);
+  await page.goto(`${indexableUrl}/architecture`);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
     "content",
     "noindex, follow"
+  );
+});
+
+test("Repo Lore's own test fixture renders but is noindex and unlisted (issue #44)", async ({
+  page,
+}) => {
+  await page.goto(repoUrl);
+  await expect(page.locator("#major-areas h3").first()).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+    "content",
+    "noindex, follow"
+  );
+
+  await page.goto("/explore");
+  const lores = page.getByRole("main").getByRole("listitem").getByRole("link");
+  await expect(
+    lores.filter({ hasText: `${owner}/${indexableRepo}` })
+  ).toHaveCount(1);
+  await expect(lores.filter({ hasText: /repo-lore-.*-fixture/ })).toHaveCount(
+    0
   );
 });
 
@@ -149,9 +175,9 @@ test("/explore is indexable and links to each indexable Lore", async ({
   );
 
   await page
-    .getByRole("link", { name: new RegExp(`${owner}/${repo}`) })
+    .getByRole("link", { name: new RegExp(`${owner}/${indexableRepo}`) })
     .click();
-  await expect(page).toHaveURL(new RegExp(`${repoUrl}$`));
+  await expect(page).toHaveURL(new RegExp(`${indexableUrl}$`));
 });
 
 test("the home page shows example Lores and links to /explore", async ({
@@ -169,10 +195,23 @@ test("/explore's Major Area count matches the areas the Overview lists", async (
   page,
 }) => {
   await page.goto("/explore");
-  const card = page.getByRole("link", { name: new RegExp(`${owner}/${repo}`) });
+  const card = page.getByRole("link", {
+    name: new RegExp(`${owner}/${indexableRepo}`),
+  });
   const match = (await card.textContent())?.match(/(\d+) major areas?/);
   expect(match).not.toBeNull();
+  const listed = Number(match![1]);
 
-  await page.goto(repoUrl);
-  await expect(page.locator("#major-areas h3")).toHaveCount(Number(match![1]));
+  // The Overview paginates its Major Areas 6 per page, and an out-of-range
+  // `?page=` shows the last page, so the total is every full page plus that one.
+  await page.goto(`${indexableUrl}?page=9999`);
+  const lastPage = Number(
+    await page
+      .locator("#major-areas")
+      .getByRole("navigation", { name: "Pagination" })
+      .locator('[aria-current="page"]')
+      .textContent()
+  );
+  const onLastPage = await page.locator("#major-areas h3").count();
+  expect((lastPage - 1) * 6 + onLastPage).toBe(listed);
 });
