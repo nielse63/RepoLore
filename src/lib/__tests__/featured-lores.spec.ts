@@ -30,6 +30,7 @@ describe("indexableLores", () => {
       row("Beta/lib"),
       row("acme/empty", { entryPointCount: 0 }),
       row("acme/widgets"),
+      row("nielse63/repo-lore-ts-react-app-fixture"),
     ];
     expect(slugs(indexableLores(rows))).toEqual([
       "acme/widgets",
@@ -58,9 +59,32 @@ describe("selectFeaturedLores", () => {
   it("skips featured repositories whose Lore isn't indexable", () => {
     const rows = [
       row("sveltejs/svelte", { runStatus: "partial" }),
-      row("facebook/react"),
+      row("react/react"),
     ];
-    expect(slugs(selectFeaturedLores(rows))).toEqual(["facebook/react"]);
+    expect(slugs(selectFeaturedLores(rows))).toEqual(["react/react"]);
+  });
+
+  it("features React under GitHub's canonical react/react, not its pre-rename facebook/react (issue #43)", () => {
+    const rows = [
+      row("facebook/react", { createdAt: new Date("2026-10-10T00:00:00Z") }),
+      row("acme/newer", { createdAt: new Date("2026-10-09T00:00:00Z") }),
+      row("react/react", { createdAt: new Date("2026-01-01T00:00:00Z") }),
+    ];
+    expect(slugs(selectFeaturedLores(rows))).toEqual([
+      "react/react",
+      "facebook/react",
+      "acme/newer",
+    ]);
+  });
+
+  it("never fills the gap with Repo Lore's own test fixtures (issue #44)", () => {
+    const rows = [
+      row("nielse63/repo-lore-ts-library-fixture", {
+        createdAt: new Date("2026-10-10T00:00:00Z"),
+      }),
+      row("acme/app"),
+    ];
+    expect(slugs(selectFeaturedLores(rows))).toEqual(["acme/app"]);
   });
 
   it("returns at most `limit` Lores", () => {

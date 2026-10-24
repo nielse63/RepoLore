@@ -25,8 +25,31 @@ import type {
 const DEPENDENCY_MANIFEST_RE =
   /(^|\/)(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|requirements[\w.-]*\.txt|pyproject\.toml|poetry\.lock|go\.mod|go\.sum)$/;
 
-const PACKAGE_JSON_RE =
-  /(^|\/)(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$/;
+const PACKAGE_JSON_RE = /(^|\/)package\.json$/;
+
+const NPM_LOCKFILE_RE = /(^|\/)package-lock\.json$/;
+
+/** JS lockfiles whose line formats this module doesn't parse. */
+const UNPARSED_LOCKFILE_RE = /(^|\/)(pnpm-lock\.yaml|yarn\.lock)$/;
+
+const PACKAGE_JSON_DEPENDENCY_SECTIONS = new Set([
+  "dependencies",
+  "devDependencies",
+  "peerDependencies",
+  "optionalDependencies",
+]);
+
+/** An object opening line: keyed (`"name": {`, `""` for npm's root entry) or anonymous (`{`, as in a `funding` array). */
+const JSON_OBJECT_OPEN_RE = /^\s*(?:"([^"]*)":\s*)?\{\s*$/;
+const JSON_OBJECT_CLOSE_RE = /^\s*\},?\s*$/;
+
+/**
+ * Shapes of a `package.json` dependency value (semver range, dist-tag,
+ * protocol). Only consulted when no enclosing object is visible, to keep
+ * `scripts` commands and top-level fields out.
+ */
+const DEPENDENCY_SPEC_RE =
+  /^(?:[\^~<>=*]|\d|v\d|x(?:\.|$)|latest$|next$|workspace:|npm:|file:|link:|git[+:]|github:)/;
 
 const DATA_LAYER_PATH_RE =
   /(^|\/)(models?|migrations?|schema\w*|db|database)(\/|$)/i;
@@ -75,26 +98,139 @@ function patchLines(patch: string): { sign: "+" | "-"; body: string }[] {
     .map((line) => ({ sign: line[0] as "+" | "-", body: line.slice(1) }));
 }
 
+/**
+ * Changed lines of a JSON file's patch, each with the keys of the JSON
+ * objects enclosing it, outermost first, as far as the hunk's context shows
+ * them. The old (`-`) and new (`+`) sides are tracked separately, both
+ * reading context lines. Anonymous objects are `null`. An empty `enclosing`
+ * means no enclosing object was visible in the hunk, not that the line is
+ * at the top level.
+ */
+function jsonPatchLines(
+  patch: string
+): { sign: "+" | "-"; body: string; enclosing: (string | null)[] }[] {
+  const results: {
+    sign: "+" | "-";
+    body: string;
+    enclosing: (string | null)[];
+  }[] = [];
+  let oldStack: (string | null)[] = [];
+  let newStack: (string | null)[] = [];
+  for (const line of patch.split("\n")) {
+    if (line.startsWith("@@")) {
+      oldStack = [];
+      newStack = [];
+      continue;
+    }
+    if (line.startsWith("\\")) continue;
+    const sign = line[0];
+    const body = line.slice(1);
+    const stacks =
+      sign === "+"
+        ? [newStack]
+        : sign === "-"
+          ? [oldStack]
+          : [oldStack, newStack];
+    if (sign === "+" || sign === "-") {
+      results.push({ sign, body, enclosing: [...stacks[0]] });
+    }
+    const open = body.match(JSON_OBJECT_OPEN_RE);
+    for (const stack of stacks) {
+      if (open) stack.push(open[1] ?? null);
+      else if (JSON_OBJECT_CLOSE_RE.test(body)) stack.pop();
+    }
+  }
+  return results;
+}
+
+function unknownDependencyFact(
+  file: CommitFileChange,
+  reason: string
+): HistoryChangeFact {
+  return {
+    kind: "dependency",
+    certainty: "unknown",
+    description: `${file.filePath} changed (${reason})`,
+    filePath: file.filePath,
+  };
+}
+
+/**
+ * One summary fact per `package-lock.json` diff: the number of distinct
+ * `node_modules/…` package entries containing a changed line. Every other
+ * line (`resolved`, `integrity`, nested `engines`/`dependencies` ranges) is
+ * lockfile detail, not a dependency change in its own right. A changed line
+ * whose entry header falls outside its hunk can't be attributed, so the
+ * count is then a lower bound ("at least N"); lines inside the root `""`
+ * entry are the project's own, not a package's.
+ */
+function scanNpmLockfileFacts(
+  file: CommitFileChange,
+  patch: string
+): HistoryChangeFact[] {
+  const entries = new Set<string>();
+  let unattributed = false;
+  for (const { body, enclosing } of jsonPatchLines(patch)) {
+    const open = body.match(JSON_OBJECT_OPEN_RE);
+    const entry = [...enclosing, open?.[1] ?? null]
+      .reverse()
+      .find((key) => key?.startsWith("node_modules/"));
+    if (entry) entries.add(entry);
+    else if (!enclosing.includes("")) unattributed = true;
+  }
+  if (entries.size === 0) {
+    return [
+      unknownDependencyFact(file, "no package entries identified in the diff"),
+    ];
+  }
+  return [
+    {
+      kind: "dependency",
+      certainty: "inferred",
+      description: `${unattributed ? "at least " : ""}${entries.size} package${
+        entries.size === 1 ? "" : "s"
+      } changed in ${file.filePath}`,
+      filePath: file.filePath,
+    },
+  ];
+}
+
 function scanDependencyFacts(file: CommitFileChange): HistoryChangeFact[] {
   if (!file.patch) {
-    return [
-      {
-        kind: "dependency",
-        certainty: "unknown",
-        description: `${file.filePath} changed (diff too large to inspect)`,
-        filePath: file.filePath,
-      },
-    ];
+    return [unknownDependencyFact(file, "diff too large to inspect")];
+  }
+  if (UNPARSED_LOCKFILE_RE.test(file.filePath)) {
+    return [unknownDependencyFact(file, "lockfile contents not inspected")];
+  }
+  if (NPM_LOCKFILE_RE.test(file.filePath)) {
+    return scanNpmLockfileFacts(file, file.patch);
   }
 
   const isPackageJson = PACKAGE_JSON_RE.test(file.filePath);
   const isPoetryLock = /(^|\/)poetry\.lock$/.test(file.filePath);
   const facts: HistoryChangeFact[] = [];
-  for (const { sign, body } of patchLines(file.patch)) {
+  const lines = isPackageJson
+    ? jsonPatchLines(file.patch)
+    : patchLines(file.patch).map((line) => ({ ...line, enclosing: [] }));
+  for (const { sign, body, enclosing } of lines) {
     let name: string | undefined;
     if (isPackageJson) {
-      const m = body.match(/^\s*"([^"]+)":\s*"[^"]+"\s*,?\s*$/);
-      if (m && !PACKAGE_JSON_IGNORED_KEYS.has(m[1])) name = m[1];
+      // A visible enclosing object must be a dependency section; with none
+      // visible (a hunk starting mid-section), fall back to the key list
+      // and a dependency-shaped value.
+      const sectionVisible = enclosing.length > 0;
+      const inDependencySection =
+        enclosing.length === 1 &&
+        PACKAGE_JSON_DEPENDENCY_SECTIONS.has(enclosing[0] ?? "");
+      if (sectionVisible && !inDependencySection) continue;
+      const m = body.match(/^\s*"([^"]+)":\s*"([^"]+)"\s*,?\s*$/);
+      if (
+        m &&
+        !PACKAGE_JSON_IGNORED_KEYS.has(m[1]) &&
+        (sectionVisible || DEPENDENCY_SPEC_RE.test(m[2]))
+      ) {
+        name = m[1];
+      }
     } else if (isPoetryLock) {
       const m = body.match(/^\s*name\s*=\s*"([^"]+)"/);
       if (m) name = m[1];

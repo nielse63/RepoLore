@@ -49,7 +49,7 @@ async function main() {
 
     const startedAt = Date.now();
     try {
-      const run = await analyzeAndPersistRepository(owner, repo);
+      const { run } = await analyzeAndPersistRepository(owner, repo);
       const seconds = Math.round((Date.now() - startedAt) / 1000);
       const detail = run.errorMessage ? ` — ${run.errorMessage}` : "";
       console.log(`✓ ${owner}/${repo}: ${run.status} (${seconds}s)${detail}`);

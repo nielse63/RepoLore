@@ -39,7 +39,8 @@ import {
   type DetectedReactComponent,
 } from "./react-components";
 import { readJsTsProjectConfig } from "./project-config";
-import { extractTestRelationships } from "./tests";
+import { isUnderUncontradictedTestRoot } from "../shared/derive-views";
+import { extractTestRelationships, isTestFile } from "./tests";
 
 export interface JsTsExtraction {
   project: LoreProject;
@@ -221,28 +222,6 @@ export function extractJsTsProject(
     absoluteRoot,
     projectConfig.aliases
   );
-  const entryPoints = extractEntryPoints(sourceFiles, absoluteRoot);
-  const publicContracts = extractPublicSurface(
-    entryPoints,
-    sourceFiles,
-    absoluteRoot
-  );
-  const packageEntryPointFilePaths = new Set(
-    entryPoints
-      .filter((ep) => ep.kind === "library")
-      .map((ep) => ep.location.filePath)
-  );
-  const testResult = extractTestRelationships(
-    sourceFiles,
-    absoluteRoot,
-    packageEntryPointFilePaths
-  );
-  const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
-  const externalDependencies = extractExternalDependencies(
-    pkg,
-    importResult.externalReferences,
-    projectId
-  );
 
   // Built once and shared across the call graph and every framework
   // detector (ADR-0013) so each doesn't independently re-walk every file's
@@ -260,6 +239,46 @@ export function extractJsTsProject(
     frameworkBehaviorNodes.push(...result.behaviorNodes);
     frameworkBehaviorEdges.push(...result.behaviorEdges);
   }
+
+  // Entry points and test relationships are extracted after the framework
+  // detectors, so a framework route under a test-named directory (e.g.
+  // Next.js `app/test/page.tsx`) contradicts it for both exactly as it does
+  // for area grouping.
+  const entryPoints = extractEntryPoints(
+    sourceFiles,
+    absoluteRoot,
+    importResult.relationships,
+    frameworkEntryPoints
+  );
+  const publicContracts = extractPublicSurface(
+    entryPoints,
+    sourceFiles,
+    absoluteRoot
+  );
+  const packageEntryPointFilePaths = new Set(
+    entryPoints
+      .filter((ep) => ep.kind === "library")
+      .map((ep) => ep.location.filePath)
+  );
+  const reactComponents = detectReactComponents(sourceFiles, absoluteRoot);
+  const externalDependencies = extractExternalDependencies(
+    pkg,
+    importResult.externalReferences,
+    projectId
+  );
+
+  const testResult = extractTestRelationships(
+    sourceFiles,
+    absoluteRoot,
+    packageEntryPointFilePaths,
+    isUnderUncontradictedTestRoot(
+      {
+        entryPoints: [...entryPoints, ...frameworkEntryPoints],
+        relationships: importResult.relationships,
+      },
+      isTestFile
+    )
+  );
 
   const callBehaviorEdges: BehaviorEdge[] = callGraph.callEdges.map((edge) => ({
     id: `js-ts-behavior-call-${edge.id}`,

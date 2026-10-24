@@ -2,6 +2,7 @@ import { DependenciesContent } from "@/components/lore-shell/DependenciesContent
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { getAnalysisStatus } from "@/helpers";
+import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
 import { relativeTime } from "@/lib/relative-time";
 import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import type { Metadata } from "next";
@@ -33,7 +34,10 @@ export default async function DependenciesPage({
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) notFound();
+  if (!run) {
+    await redirectToStoredSpelling(owner, repo, "/dependencies");
+    notFound();
+  }
 
   if (run.status === "failed" || !run.result) {
     return <FailedRunPanel owner={owner} repo={repo} run={run} />;

@@ -39,7 +39,13 @@ export function RightRailShell({
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+          {/* `relative` makes this scroller the containing block for
+              absolutely-positioned descendants (e.g. `SourceLink`'s
+              `sr-only` text) so they're clipped here instead of overflowing
+              the sticky aside and stretching the whole document. */}
+          <div className="relative flex-1 overflow-y-auto px-6 py-4">
+            {children}
+          </div>
         </aside>
       ) : (
         <div className="hidden shrink-0 border-l border-border px-2 py-6 lg:block">
@@ -81,7 +87,9 @@ export function RightRailShell({
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+          <div className="relative flex-1 overflow-y-auto px-6 py-4">
+            {children}
+          </div>
         </DrawerContent>
       </Drawer>
     </>

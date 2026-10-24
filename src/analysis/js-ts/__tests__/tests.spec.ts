@@ -145,6 +145,77 @@ describe("extractTestRelationships", () => {
     ).toBe(true);
   });
 
+  it("does not report a helper under a nested test directory as a test's implementation (GitHub issue #65)", () => {
+    const project = makeProject();
+    project.createSourceFile("/root/packages/x/src/index.ts", "");
+    project.createSourceFile("/root/packages/x/tests/helpers.ts", "");
+    project.createSourceFile(
+      "/root/packages/x/tests/foo.test.ts",
+      "import { setup } from './helpers';\nimport { x } from '../src/index';"
+    );
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      project.getSourceFiles(),
+      "/root",
+      new Set(),
+      (filePath) => filePath.startsWith("packages/x/tests/")
+    );
+
+    expect(gaps).toEqual([]);
+    expect(testRelationships).toEqual([
+      expect.objectContaining({
+        testLocation: { filePath: "packages/x/tests/foo.test.ts" },
+        implementationLocation: { filePath: "packages/x/src/index.ts" },
+        certainty: "detected",
+      }),
+    ]);
+  });
+
+  it("does not match a nested test directory's file by filename convention either", () => {
+    const project = makeProject();
+    project.createSourceFile("/root/packages/x/tests/foo.ts", "");
+    project.createSourceFile("/root/packages/x/src/foo.test.ts", "");
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      project.getSourceFiles(),
+      "/root",
+      new Set(),
+      (filePath) => filePath.startsWith("packages/x/tests/")
+    );
+
+    expect(testRelationships).toEqual([]);
+    expect(gaps.map((g) => g.location?.filePath)).toEqual([
+      "packages/x/src/foo.test.ts",
+    ]);
+  });
+
+  it("says so in the gap when a test's only local imports were under a nested test directory", () => {
+    const project = makeProject();
+    project.createSourceFile("/root/packages/x/tests/helpers.ts", "");
+    project.createSourceFile(
+      "/root/packages/x/tests/render.test.ts",
+      "import { setup } from './helpers';"
+    );
+
+    const { testRelationships, gaps } = extractTestRelationships(
+      project.getSourceFiles(),
+      "/root",
+      new Set(),
+      (filePath) => filePath.startsWith("packages/x/tests/")
+    );
+
+    expect(testRelationships).toEqual([]);
+    expect(gaps).toEqual([
+      expect.objectContaining({
+        certainty: "unknown",
+        location: { filePath: "packages/x/tests/render.test.ts" },
+        description: expect.stringContaining(
+          "its local imports resolve only to test-suite files (e.g. 'packages/x/tests/helpers.ts', under a test directory)"
+        ),
+      }),
+    ]);
+  });
+
   it("records an unknown gap when no implementation can be matched", () => {
     const project = makeProject();
     project.createSourceFile("/root/src/orphan.test.ts", "");

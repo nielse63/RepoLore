@@ -8,6 +8,7 @@ import { TopBar } from "@/components/lore-shell/TopBar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { getAnalysisStatus } from "@/helpers";
+import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
 import { relativeTime } from "@/lib/relative-time";
 import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import { countEvidence, type SourceLocation } from "@/lore/model";
@@ -41,7 +42,10 @@ export default async function ArchitecturePage({
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) notFound();
+  if (!run) {
+    await redirectToStoredSpelling(owner, repo, "/architecture");
+    notFound();
+  }
 
   if (run.status === "failed" || !run.result) {
     return <FailedRunPanel owner={owner} repo={repo} run={run} />;
@@ -56,6 +60,9 @@ export default async function ArchitecturePage({
   const areaUrl = (location: SourceLocation) =>
     githubTreeUrl(owner, repo, lore.snapshot.commitSha, location);
   const evidenceCount = countEvidence(lore);
+  const displayEvidenceCount = evidenceCount.toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+  });
 
   return (
     <LorePageFrame
@@ -99,7 +106,8 @@ export default async function ArchitecturePage({
               Evidence coverage
             </div>
             <p className="mt-1 text-2xl font-semibold text-primary">
-              {evidenceCount} {evidenceCount === 1 ? "reference" : "references"}
+              {displayEvidenceCount}{" "}
+              {evidenceCount === 1 ? "reference" : "references"}
             </p>
             <p className="mt-1 text-xs text-muted">
               These references support the areas, relationships, and entry

@@ -8,6 +8,7 @@ import {
 import { upsertRepo } from "@/db/repos";
 import { getAnalysisStatus } from "@/helpers";
 import { computeHistory } from "@/history/compute-history";
+import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
 import { relativeTime } from "@/lib/relative-time";
 import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import type { Metadata } from "next";
@@ -44,7 +45,10 @@ export default async function HistoryPage({
 }) {
   const { owner, repo } = await params;
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) notFound();
+  if (!run) {
+    await redirectToStoredSpelling(owner, repo, "/history");
+    notFound();
+  }
 
   if (run.status === "failed" || !run.result) {
     return <FailedRunPanel owner={owner} repo={repo} run={run} />;

@@ -10,7 +10,7 @@
 # tailwindlabs/tailwindcss, and sveltejs/svelte.
 # Keep in sync with FEATURED_REPOS (src/lib/featured-lores.ts).
 
-facebook/react
+react/react
 axios/axios
 sveltejs/svelte
 excalidraw/excalidraw

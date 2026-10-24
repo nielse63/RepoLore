@@ -16,7 +16,12 @@ import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { parsePageParam } from "@/lib/page-param";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { majorAreasOf } from "@/lore/major-areas";
+import { type AtAGlancePart, buildAtAGlance } from "@/lore/at-a-glance";
+import {
+  majorAreasOf,
+  majorAreasOrderNote,
+  rankMajorAreas,
+} from "@/lore/major-areas";
 import type { CertaintyCategory, Lore, SourceLocation } from "@/lore/model";
 import {
   ArrowRight,
@@ -47,6 +52,56 @@ function getCertaintyColor(certainty: CertaintyCategory): string {
   return "";
 }
 
+function AtAGlancePartView({
+  part,
+  sourceUrl,
+  areaUrl,
+}: {
+  part: AtAGlancePart;
+  sourceUrl?: (location: SourceLocation) => string;
+  areaUrl?: (location: SourceLocation) => string;
+}) {
+  switch (part.type) {
+    case "text":
+      return <span>{part.text}</span>;
+    case "strong":
+      return <strong className="font-semibold">{part.text}</strong>;
+    case "certainty":
+      return <CertaintyBadge certainty={part.certainty} />;
+    case "location":
+      return (
+        <span className="inline-flex align-middle">
+          <SourceLink
+            location={part.location}
+            sourceUrl={part.kind === "area" ? areaUrl : sourceUrl}
+          />
+        </span>
+      );
+    case "group":
+      return (
+        <span data-project-clause className="block">
+          {part.parts.map((child, i) => (
+            <AtAGlancePartView
+              key={listItemKey(i)}
+              part={child}
+              sourceUrl={sourceUrl}
+              areaUrl={areaUrl}
+            />
+          ))}
+        </span>
+      );
+    case "anchor":
+      return (
+        <Link
+          href={part.href}
+          className="font-medium text-primary hover:underline"
+        >
+          {part.text}
+        </Link>
+      );
+  }
+}
+
 export function OverviewContent({
   lore,
   sourceUrl,
@@ -69,7 +124,7 @@ export function OverviewContent({
     majorAreasPageCount
   );
   const majorAreasStart = (majorAreasCurrentPage - 1) * MAJOR_AREAS_PAGE_SIZE;
-  const majorAreasOnPage = majorAreas.slice(
+  const majorAreasOnPage = rankMajorAreas(majorAreas).slice(
     majorAreasStart,
     majorAreasStart + MAJOR_AREAS_PAGE_SIZE
   );
@@ -90,11 +145,40 @@ export function OverviewContent({
             {snapshot.repository.description}
           </p>
         )}
+        {/* A partial run's warning comes before the summary it qualifies. */}
+        {snapshot.status !== "completed" && (
+          <div className="mt-4">
+            <PartialUnderstandingCard gapsCount={lore.gaps.length} />
+          </div>
+        )}
+        <Card
+          id="at-a-glance"
+          role="region"
+          aria-labelledby="at-a-glance-heading"
+          className="mt-4 py-4"
+        >
+          <h2
+            id="at-a-glance-heading"
+            className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted"
+          >
+            At a glance
+          </h2>
+          <ul className="space-y-1.5 text-sm text-foreground">
+            {buildAtAGlance(lore).map((line) => (
+              <li key={line.id} data-line={line.id} className="leading-7">
+                {line.parts.map((part, i) => (
+                  <AtAGlancePartView
+                    key={listItemKey(i)}
+                    part={part}
+                    sourceUrl={sourceUrl}
+                    areaUrl={areaUrl}
+                  />
+                ))}
+              </li>
+            ))}
+          </ul>
+        </Card>
       </section>
-
-      {snapshot.status !== "completed" && (
-        <PartialUnderstandingCard gapsCount={lore.gaps.length} />
-      )}
 
       {isAnalysisStale(snapshot.analyzedAt) && (
         <StaleAnalysisCard analyzedAt={snapshot.analyzedAt} />
@@ -154,6 +238,11 @@ export function OverviewContent({
         <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-foreground">
           <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
         </h2>
+        {majorAreas.length > 1 && (
+          <p className="-mt-1 mb-3 text-sm text-muted">
+            {majorAreasOrderNote(majorAreas)}
+          </p>
+        )}
         <PaginatedCardGrid
           items={majorAreasOnPage.map((area) => (
             <Card key={area.id}>

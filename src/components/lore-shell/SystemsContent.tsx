@@ -19,14 +19,18 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { formatPath } from "@/lib/format-path";
 import { usePersistedPage } from "@/lib/use-persisted-page";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
-import { majorAreasOf } from "@/lore/major-areas";
+import {
+  compareMajorAreas,
+  majorAreasOf,
+  majorAreasOrderNote,
+} from "@/lore/major-areas";
 import type { Lore, StructuralArea } from "@/lore/model";
 import {
   classifySystem,
   type SystemClassification,
 } from "@/lore/system-classification";
 import { assignSystemSlugs } from "@/lore/system-slug";
-import { ChevronRight, Layers } from "lucide-react";
+import { ArrowRight, ChevronRight, Layers } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -93,8 +97,13 @@ export function SystemsContent({
     () => deriveProductionAreaDiagramLayout(majorAreas, lore.relationships),
     [majorAreas, lore.relationships]
   );
+  // Slugs come from the persisted order (their collision suffixes depend
+  // on it); only the list's presentation order is ranked.
   const slugEntries = useMemo(
-    () => assignSystemSlugs(majorAreas),
+    () =>
+      assignSystemSlugs(majorAreas).sort((a, b) =>
+        compareMajorAreas(a.area, b.area)
+      ),
     [majorAreas]
   );
   const totalEvidence = majorAreas.reduce(
@@ -168,10 +177,16 @@ export function SystemsContent({
                 repo={repo}
                 commitSha={commitSha}
               />
+              <Link
+                href={`/lore/${owner}/${repo}/architecture#area-dependency-diagram`}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                View full diagram <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           ) : (
             <p className="mt-4 text-sm text-muted">
-              Not enough systems were detected to diagram.
+              Not enough connected systems were detected to diagram.
             </p>
           )}
         </RightRailShell>
@@ -192,6 +207,11 @@ export function SystemsContent({
             {totalEvidence} supporting references
           </span>
         </p>
+        {majorAreas.length > 1 && (
+          <p className="mt-1 text-sm text-muted">
+            {majorAreasOrderNote(majorAreas)}
+          </p>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <label htmlFor="systems-search" className="sr-only">

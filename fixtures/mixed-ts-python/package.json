@@ -1,0 +1,10 @@
+{
+  "name": "mixed-ts-python-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Fixture: a TypeScript library and a Python command-line tool sharing one repository root, for mixed-language (ADR-0007) Overview coverage.",
+  "main": "src/index.ts",
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

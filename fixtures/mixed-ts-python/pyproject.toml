@@ -1,0 +1,12 @@
+[project]
+name = "mixedtool"
+version = "0.1.0"
+description = "Fixture: the Python command-line half of a mixed TypeScript/Python repository."
+requires-python = ">=3.10"
+
+[project.scripts]
+mixedtool = "tool.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

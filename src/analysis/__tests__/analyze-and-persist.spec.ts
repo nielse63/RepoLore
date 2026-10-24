@@ -10,7 +10,7 @@ import {
   saveAnalysisRun,
   type AnalysisRunRow,
 } from "@/db/analysis-runs";
-import { upsertRepo } from "@/db/repos";
+import { findRepoIgnoringCase, upsertCanonicalRepo } from "@/db/repos";
 import {
   fetchRepositoryLanguages,
   resolveRepositoryHead,
@@ -51,7 +51,12 @@ const mockGetAnalysisRunByKey = getAnalysisRunByKey as jest.MockedFunction<
 const mockSaveAnalysisRun = saveAnalysisRun as jest.MockedFunction<
   typeof saveAnalysisRun
 >;
-const mockUpsertRepo = upsertRepo as jest.MockedFunction<typeof upsertRepo>;
+const mockFindRepoIgnoringCase = findRepoIgnoringCase as jest.MockedFunction<
+  typeof findRepoIgnoringCase
+>;
+const mockUpsertCanonicalRepo = upsertCanonicalRepo as jest.MockedFunction<
+  typeof upsertCanonicalRepo
+>;
 const mockResolveRepositoryHead = resolveRepositoryHead as jest.MockedFunction<
   typeof resolveRepositoryHead
 >;
@@ -118,9 +123,12 @@ function minimalPythonExtraction() {
 
 describe("analyzeAndPersistRepository", () => {
   beforeEach(() => {
-    mockUpsertRepo.mockResolvedValue(repoRow);
+    mockFindRepoIgnoringCase.mockResolvedValue(repoRow);
+    mockUpsertCanonicalRepo.mockResolvedValue(repoRow);
     mockClaimReanalysisAttempt.mockResolvedValue(undefined);
     mockResolveRepositoryHead.mockResolvedValue({
+      owner: "acme",
+      repo: "widgets",
       defaultBranch: "main",
       headSha: "sha123",
       isPrivate: false,
@@ -140,7 +148,7 @@ describe("analyzeAndPersistRepository", () => {
 
     const result = await analyzeAndPersistRepository("acme", "widgets");
 
-    expect(result).toBe(existing);
+    expect(result.run).toBe(existing);
     expect(mockGetAnalysisRunByKey).toHaveBeenCalledWith(
       1,
       "sha123",
@@ -149,7 +157,7 @@ describe("analyzeAndPersistRepository", () => {
     expect(mockAcquireRepositorySource).not.toHaveBeenCalled();
   });
 
-  it("rate-limits before resolving the repository head", async () => {
+  it("rate-limits an already-known repository before resolving the repository head", async () => {
     const rateLimitError = new Error("rate limited");
     mockClaimReanalysisAttempt.mockRejectedValue(rateLimitError);
 
@@ -158,6 +166,102 @@ describe("analyzeAndPersistRepository", () => {
     ).rejects.toThrow("rate limited");
     expect(mockResolveRepositoryHead).not.toHaveBeenCalled();
     expect(mockFetchRepositoryLanguages).not.toHaveBeenCalled();
+  });
+
+  it("claims a never-seen repository's canonical row once resolution names it", async () => {
+    mockFindRepoIgnoringCase.mockResolvedValue(null);
+    mockGetAnalysisRunByKey.mockResolvedValue({
+      id: 5,
+    } as unknown as AnalysisRunRow);
+
+    await analyzeAndPersistRepository("acme", "widgets");
+
+    expect(mockUpsertCanonicalRepo).toHaveBeenCalledWith("acme", "widgets");
+    expect(mockClaimReanalysisAttempt).toHaveBeenCalledTimes(1);
+    expect(mockClaimReanalysisAttempt).toHaveBeenCalledWith(repoRow.id);
+  });
+
+  it("persists a renamed repository's run under GitHub's canonical owner/name, not the requested one (issue #43)", async () => {
+    // `facebook/react` was renamed to `react/react`: GitHub resolves the old
+    // name to the new repository, which Repo Lore already has a row for.
+    const oldRow = {
+      id: 1175,
+      owner: "facebook",
+      name: "react",
+      createdAt: "now",
+    };
+    const canonicalRow = {
+      id: 9,
+      owner: "react",
+      name: "react",
+      createdAt: "now",
+    };
+    mockFindRepoIgnoringCase.mockResolvedValue(oldRow);
+    mockUpsertCanonicalRepo.mockResolvedValue(canonicalRow);
+    mockResolveRepositoryHead.mockResolvedValue({
+      owner: "react",
+      repo: "react",
+      defaultBranch: "main",
+      headSha: "sha123",
+      isPrivate: false,
+    });
+    const cleanup = jest.fn().mockResolvedValue(undefined);
+    mockAcquireRepositorySource.mockResolvedValue({
+      dir: "/tmp/extracted",
+      owner: "react",
+      repo: "react",
+      defaultBranch: "main",
+      headSha: "sha123",
+      fileCount: 3,
+      skippedEntries: [],
+      cleanup,
+    });
+    mockExtractJsTsProject.mockReturnValue(minimalJsTsExtraction());
+    mockDeriveJsTsViews.mockReturnValue({ structuralAreas: [], startHere: [] });
+    const savedRun = { id: 10, status: "partial" } as unknown as AnalysisRunRow;
+    mockSaveAnalysisRun.mockResolvedValue(savedRun);
+
+    const result = await analyzeAndPersistRepository("facebook", "react");
+
+    expect(result).toEqual({ run: savedRun, owner: "react", repo: "react" });
+    expect(mockResolveRepositoryHead).toHaveBeenCalledWith("facebook", "react");
+    expect(mockUpsertCanonicalRepo).toHaveBeenCalledWith("react", "react");
+    expect(mockGetAnalysisRunByKey).toHaveBeenCalledWith(
+      canonicalRow.id,
+      "sha123",
+      jsTsAnalyzerVersion
+    );
+    expect(mockAcquireRepositorySource).toHaveBeenCalledWith("react", "react");
+    expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoId: canonicalRow.id,
+        result: expect.objectContaining({
+          snapshot: expect.objectContaining({
+            repository: expect.objectContaining({
+              owner: "react",
+              name: "react",
+            }),
+          }),
+        }),
+      })
+    );
+    // Both the requested spelling's row (before any GitHub call) and the
+    // canonical row the run attaches to are rate-limited.
+    expect(mockClaimReanalysisAttempt).toHaveBeenCalledWith(oldRow.id);
+    expect(mockClaimReanalysisAttempt).toHaveBeenCalledWith(canonicalRow.id);
+  });
+
+  it("returns the canonical spelling for a differently-cased request, reusing the same row", async () => {
+    mockGetAnalysisRunByKey.mockResolvedValue({
+      id: 5,
+    } as unknown as AnalysisRunRow);
+
+    const result = await analyzeAndPersistRepository("ACME", "Widgets");
+
+    expect(mockFindRepoIgnoringCase).toHaveBeenCalledWith("ACME", "Widgets");
+    expect(mockUpsertCanonicalRepo).toHaveBeenCalledWith("acme", "widgets");
+    expect(result).toMatchObject({ owner: "acme", repo: "widgets" });
+    expect(mockClaimReanalysisAttempt).toHaveBeenCalledTimes(1);
   });
 
   it("propagates a head-resolution failure without persisting a run", async () => {
@@ -176,7 +280,7 @@ describe("analyzeAndPersistRepository", () => {
 
     const result = await analyzeAndPersistRepository("acme", "widgets");
 
-    expect(result).toBe(failedRun);
+    expect(result.run).toBe(failedRun);
     expect(mockAcquireRepositorySource).not.toHaveBeenCalled();
     expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -196,7 +300,7 @@ describe("analyzeAndPersistRepository", () => {
 
     const result = await analyzeAndPersistRepository("acme", "widgets");
 
-    expect(result).toBe(failedRun);
+    expect(result.run).toBe(failedRun);
     expect(mockAcquireRepositorySource).not.toHaveBeenCalled();
     expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -216,7 +320,7 @@ describe("analyzeAndPersistRepository", () => {
 
     const result = await analyzeAndPersistRepository("acme", "widgets");
 
-    expect(result).toBe(failedRun);
+    expect(result.run).toBe(failedRun);
     expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
       expect.objectContaining({
         repoId: 1,
@@ -247,7 +351,7 @@ describe("analyzeAndPersistRepository", () => {
 
     const result = await analyzeAndPersistRepository("acme", "widgets");
 
-    expect(result).toBe(failedRun);
+    expect(result.run).toBe(failedRun);
     expect(cleanup).toHaveBeenCalledTimes(1);
     expect(mockSaveAnalysisRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -291,7 +395,7 @@ describe("analyzeAndPersistRepository", () => {
       })
     );
     expect(cleanup).toHaveBeenCalledTimes(1);
-    expect(result).toBe(savedRun);
+    expect(result.run).toBe(savedRun);
   });
 
   it("records tarball entries skipped during extraction as an unsupported gap on the persisted Lore", async () => {
@@ -364,7 +468,7 @@ describe("analyzeAndPersistRepository", () => {
         }),
       })
     );
-    expect(result).toBe(savedRun);
+    expect(result.run).toBe(savedRun);
   });
 
   it("runs both extractors for a mixed-language repository above the threshold (code2flow-shaped)", async () => {
@@ -418,6 +522,6 @@ describe("analyzeAndPersistRepository", () => {
         }),
       })
     );
-    expect(result).toBe(savedRun);
+    expect(result.run).toBe(savedRun);
   });
 });

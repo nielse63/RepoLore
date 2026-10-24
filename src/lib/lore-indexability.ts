@@ -8,6 +8,8 @@ import { majorAreasOf } from "@/lore/major-areas";
  * one rule rather than each re-deriving it.
  */
 export interface LoreIndexabilityFacts {
+  owner: string;
+  repo: string;
   runStatus: AnalysisRunRow["status"];
   entryPointCount: number;
   /** Major Areas (`majorAreasOf`), as the Overview lists them. */
@@ -19,12 +21,26 @@ export function indexabilityFactsFromRun(
   run: AnalysisRunRow | null
 ): LoreIndexabilityFacts | null {
   if (!run?.result) return null;
+  const { owner, name, isPrivate } = run.result.snapshot.repository;
   return {
+    owner,
+    repo: name,
     runStatus: run.status,
     entryPointCount: run.result.entryPoints.length,
     majorAreaCount: majorAreasOf(run.result.structuralAreas).length,
-    isPrivate: run.result.snapshot.repository.isPrivate,
+    isPrivate,
   };
+}
+
+/**
+ * Repo Lore's own test fixture repositories (`nielse63/repo-lore-…-fixture`,
+ * e.g. the ones `scripts/seed-e2e.ts` persists): real, renderable Lores, but
+ * thin examples that aren't meant to be advertised (GitHub issue #44).
+ */
+function isRepoLoreFixture({ owner, repo }: LoreIndexabilityFacts): boolean {
+  return (
+    owner.toLowerCase() === "nielse63" && /^repo-lore-.+-fixture$/i.test(repo)
+  );
 }
 
 /**
@@ -35,7 +51,8 @@ export function indexabilityFactsFromRun(
  * section empty, so it doesn't count). A `'partial'` run is excluded because its gaps are
  * material to what it shows, and a `'failed'` or empty run would be a thin
  * page. Private repositories are rejected at submission already; checked
- * here too so one can never be advertised by the sitemap.
+ * here too so one can never be advertised by the sitemap. Repo Lore's own
+ * test fixtures are excluded too, so they still render but aren't listed.
  */
 export function isIndexableLore(facts: LoreIndexabilityFacts | null): boolean {
   return (
@@ -43,6 +60,7 @@ export function isIndexableLore(facts: LoreIndexabilityFacts | null): boolean {
     facts.runStatus === "completed" &&
     !facts.isPrivate &&
     facts.entryPointCount > 0 &&
-    facts.majorAreaCount > 0
+    facts.majorAreaCount > 0 &&
+    !isRepoLoreFixture(facts)
   );
 }

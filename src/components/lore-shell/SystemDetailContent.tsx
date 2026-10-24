@@ -75,7 +75,8 @@ export function SystemDetailContent({
   const neighborAreas = majorAreas.filter((a) => neighborIds.has(a.id));
   const diagramLayout = deriveProductionAreaDiagramLayout(
     neighborAreas,
-    lore.relationships
+    lore.relationships,
+    area.id
   );
 
   const entryPointIds = new Set(area.entryPointIds);
@@ -207,6 +208,7 @@ export function SystemDetailContent({
                   owner={owner}
                   repo={repo}
                   commitSha={commitSha}
+                  pinnedAreaId={area.id}
                 />
               </div>
             ) : (

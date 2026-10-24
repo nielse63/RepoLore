@@ -12,7 +12,11 @@ import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
 import { deriveAreaRelationships } from "@/lore/area-relationships";
-import { majorAreasOf } from "@/lore/major-areas";
+import {
+  majorAreasOf,
+  majorAreasOrderNote,
+  rankMajorAreas,
+} from "@/lore/major-areas";
 import type { Lore, SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
 import { Compass, GapHorizontal, Layers, Link2, TestTube2 } from "lucide-react";
@@ -60,8 +64,8 @@ export function ArchitectureContent({
       </div>
 
       {lore.projects.map((project) => {
-        const projectAreas = majorAreas.filter(
-          (area) => area.projectId === project.id
+        const projectAreas = rankMajorAreas(
+          majorAreas.filter((area) => area.projectId === project.id)
         );
         // A single-project repo's `project.name` falls back to the
         // extraction directory's basename when `package.json` has no
@@ -125,6 +129,11 @@ export function ArchitectureContent({
               <h3 className="mb-3 flex items-center gap-2 text-base font-semibold text-foreground">
                 <Layers className="h-4 w-4" aria-hidden="true" /> Major Areas
               </h3>
+              {projectAreas.length > 1 && (
+                <p className="-mt-1 mb-3 text-sm text-muted">
+                  {majorAreasOrderNote(projectAreas)}
+                </p>
+              )}
               <PaginatedList
                 items={projectAreas.map((area) => (
                   <li
@@ -203,6 +212,7 @@ export function ArchitectureContent({
         <AreaRelationshipsTable
           relationships={areaRelationships}
           areaUrl={areaUrl}
+          storageKey={`area-relationships-page:${lore.snapshot.repository.owner}/${repo}:architecture`}
         />
       </section>
 

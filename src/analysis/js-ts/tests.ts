@@ -31,6 +31,13 @@
  * of 215 test relationships resolved to that single entry file instead of
  * the directories they actually exercise (e.g. `test/arguments/cwd.js`
  * exercises `lib/arguments/cwd.js`, not `index.js`).
+ *
+ * Files under a nested test directory (`isUnderTestDirectory`, e.g.
+ * `packages/x/tests/helpers.ts`) are never an implementation subject either
+ * — the same false-subject bug `e2e/` had above, at any depth (GitHub issue
+ * #65) — but aren't test files themselves: treating every one as a test
+ * would flood the Lore with subject-less tests (see
+ * `../shared/derive-views`'s `TEST_ROOT_DIRECTORY_NAMES`).
  */
 
 import path from "node:path";
@@ -69,6 +76,21 @@ function isE2eRootFile(relativeFilePath: string): boolean {
   return relativeFilePath.split("/")[0] === "e2e";
 }
 
+/**
+ * The unmatched-subject gap, saying so when the test's relative imports did
+ * resolve but only to test-suite files (e.g. a helper beside it under a
+ * nested `tests/`, GitHub issue #65), which are deliberately not taken as
+ * its subject — rather than implying nothing resolved at all.
+ */
+function describeUnmatchedTest(
+  testPath: string,
+  testDirectoryImport: string | undefined
+): string {
+  return testDirectoryImport
+    ? `Could not determine which implementation file '${testPath}' tests: its local imports resolve only to test-suite files (e.g. '${testDirectoryImport}', under a test directory), which aren't treated as the code under test, and no naming convention identifies one.`
+    : `Could not determine which implementation file '${testPath}' tests.`;
+}
+
 export interface TestExtractionResult {
   testRelationships: TestRelationship[];
   gaps: Gap[];
@@ -99,33 +121,37 @@ function findDirectoryMirrorMatch(
 export function extractTestRelationships(
   sourceFiles: SourceFile[],
   rootDir: string,
-  packageEntryPointFilePaths: ReadonlySet<string> = new Set()
+  packageEntryPointFilePaths: ReadonlySet<string> = new Set(),
+  isUnderTestDirectory: (relativeFilePath: string) => boolean = () => false
 ): TestExtractionResult {
   const resolver = buildModuleResolutionIndex(sourceFiles, rootDir);
   const testRelationships: TestRelationship[] = [];
   const gaps: Gap[] = [];
+  const isImplementationFile = (sf: SourceFile) => {
+    const relativeFilePath = toRelative(rootDir, sf.getFilePath());
+    return (
+      !isTestFile(relativeFilePath) && !isUnderTestDirectory(relativeFilePath)
+    );
+  };
 
   const testFiles = sourceFiles.filter((sf) =>
     isTestFile(toRelative(rootDir, sf.getFilePath()))
   );
-  const implementationFiles = sourceFiles.filter(
-    (sf) => !isTestFile(toRelative(rootDir, sf.getFilePath()))
-  );
+  const implementationFiles = sourceFiles.filter(isImplementationFile);
 
   for (const testFile of testFiles) {
     const testPath = toRelative(rootDir, testFile.getFilePath());
     const testLocation = { filePath: testPath };
 
-    const resolvedImplementationImports = testFile
+    const resolvedImports = testFile
       .getImportDeclarations()
       .map((importDecl) => getModuleSpecifierValueSafe(importDecl))
       .filter((specifier): specifier is string => !!specifier)
       .filter(isRelativeSpecifier)
       .map((specifier) => resolver.resolve(testFile.getFilePath(), specifier))
-      .filter(
-        (resolved): resolved is SourceFile =>
-          !!resolved && !isTestFile(toRelative(rootDir, resolved.getFilePath()))
-      );
+      .filter((resolved): resolved is SourceFile => !!resolved);
+    const resolvedImplementationImports =
+      resolvedImports.filter(isImplementationFile);
 
     const pushImportMatch = (importedImplementation: SourceFile) => {
       const implementationPath = toRelative(
@@ -226,11 +252,14 @@ export function extractTestRelationships(
       continue;
     }
 
+    const testDirectoryImport = resolvedImports
+      .map((resolved) => toRelative(rootDir, resolved.getFilePath()))
+      .find((importPath) => isUnderTestDirectory(importPath));
     gaps.push({
       certainty: "unknown",
       description: isE2eRootFile(testPath)
         ? `No relative import or naming convention identifies a single implementation file for '${testPath}' — expected for a page/flow-level e2e spec, which doesn't test one importable module the way a unit test does.`
-        : `Could not determine which implementation file '${testPath}' tests.`,
+        : describeUnmatchedTest(testPath, testDirectoryImport),
       location: testLocation,
     });
   }

@@ -59,6 +59,8 @@ When committing (only if explicitly asked to), follow the [Conventional Commits 
 
 All pull requests are opened against the `dev` branch, not `main`.
 
+Every pull request must include visual evidence of the change (screenshots, a GIF, or a screen recording — before/after for changed UI) in the PR template's **Screenshots** section. If a change genuinely has no visual surface (e.g. config or docs-only), state that explicitly in that section rather than omitting it.
+
 ## Workflow
 
 With each new update, make sure to update the `README.md` file to include information regarding features, development lifecycle, deployment, and any other pertinent changes.

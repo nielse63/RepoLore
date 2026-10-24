@@ -2,6 +2,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { Project, ScriptTarget, ts } from "ts-morph";
+import type { EntryPoint, Relationship } from "@/lore/model";
 import { extractEntryPoints } from "../entry-points";
 
 async function makeRootDir(pkg?: Record<string, unknown>): Promise<string> {
@@ -134,6 +135,97 @@ describe("extractEntryPoints", () => {
     const entryPoints = extractEntryPoints(project.getSourceFiles(), rootDir);
 
     expect(entryPoints).toEqual([]);
+  });
+
+  describe("under a nested test directory (GitHub issue #65)", () => {
+    const harness =
+      "import ReactDOM from 'react-dom';\nReactDOM.render(<Harness />, document.body);";
+
+    it("does not treat a test harness's render call as a bootstrap entry point", async () => {
+      rootDir = await makeRootDir({ main: "packages/x/src/index.ts" });
+      const project = makeProject();
+      project.createSourceFile(
+        path.join(rootDir, "packages/x/src/index.ts"),
+        "export const x = 1;"
+      );
+      project.createSourceFile(
+        path.join(rootDir, "packages/x/tests/run-harness.tsx"),
+        harness
+      );
+
+      const entryPoints = extractEntryPoints(project.getSourceFiles(), rootDir);
+
+      expect(entryPoints).toEqual([
+        expect.objectContaining({
+          kind: "library",
+          location: { filePath: "packages/x/src/index.ts" },
+        }),
+      ]);
+    });
+
+    it("still detects it when production code imports from that directory", async () => {
+      // A test-named directory imported by production code isn't a test
+      // suite (e.g. a shipped `packages/test` helper package).
+      rootDir = await makeRootDir();
+      const project = makeProject();
+      project.createSourceFile(
+        path.join(rootDir, "packages/test/main.tsx"),
+        harness
+      );
+      const productionImport: Relationship = {
+        id: "rel",
+        kind: "depends-on",
+        fromId: "packages/core/src/compile.ts",
+        toId: "packages/test/main.tsx",
+        certainty: "detected",
+        evidence: [],
+      };
+
+      const entryPoints = extractEntryPoints(
+        project.getSourceFiles(),
+        rootDir,
+        [productionImport]
+      );
+
+      expect(entryPoints).toEqual([
+        expect.objectContaining({
+          kind: "bootstrap",
+          location: { filePath: "packages/test/main.tsx" },
+        }),
+      ]);
+    });
+  });
+
+  it("still detects it when a framework route sits in that directory", async () => {
+    // Matches area grouping, where a non-test entry point (e.g. a Next.js
+    // `app/test/page.tsx` route) means `app/test` isn't a test suite.
+    rootDir = await makeRootDir();
+    const project = makeProject();
+    project.createSourceFile(
+      path.join(rootDir, "app/test/main.tsx"),
+      "import { createRoot } from 'react-dom/client';\ncreateRoot(el).render(<App />);"
+    );
+    const route: EntryPoint = {
+      id: "route",
+      kind: "framework",
+      location: { filePath: "app/test/page.tsx" },
+      certainty: "detected",
+      evidence: [],
+    };
+
+    const entryPoints = extractEntryPoints(
+      project.getSourceFiles(),
+      rootDir,
+      [],
+      [route]
+    );
+
+    expect(entryPoints).toEqual([
+      expect.objectContaining({
+        kind: "bootstrap",
+        location: { filePath: "app/test/main.tsx" },
+      }),
+    ]);
   });
 
   it("falls back to a conventional index file when nothing else is found", async () => {

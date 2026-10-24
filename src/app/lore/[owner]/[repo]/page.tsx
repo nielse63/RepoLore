@@ -14,6 +14,7 @@ import {
   indexabilityFactsFromRun,
   isIndexableLore,
 } from "@/lib/lore-indexability";
+import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
 import { relativeTime } from "@/lib/relative-time";
 import { readmeBadgeMarkdown } from "@/lib/readme-badge";
 import {
@@ -68,7 +69,10 @@ export default async function LorePage({
     searchParams,
   ]);
   const run = await getLatestAnalysisRunForRepo(owner, repo);
-  if (!run) return <NotAnalyzedPanel owner={owner} repo={repo} />;
+  if (!run) {
+    await redirectToStoredSpelling(owner, repo);
+    return <NotAnalyzedPanel owner={owner} repo={repo} />;
+  }
 
   // Set by the home page's Server Action redirect, whose run is this latest one.
   const outcomeEvent = submitted ? (
