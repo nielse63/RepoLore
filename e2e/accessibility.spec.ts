@@ -71,6 +71,20 @@ const OPEN_STATES: {
         .first()
         .click(),
   },
+  {
+    // Also scans the map's dimmed nodes (issue #79) for contrast.
+    name: "Area map inspector, focused",
+    path: `${repoUrl}/architecture`,
+    open: async (page) => {
+      await page
+        .locator("#area-dependency-diagram")
+        .getByRole("button", { name: "utils /src/utils", exact: true })
+        .click();
+      await page
+        .getByRole("checkbox", { name: "Focus on selected area" })
+        .check();
+    },
+  },
 ];
 
 /**

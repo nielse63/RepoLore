@@ -1,7 +1,7 @@
 "use client";
 
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { AreaMapFrame } from "@/components/lore-shell/AreaMapFrame";
 import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
@@ -128,7 +128,7 @@ export function SystemsContent({ owner, repo, lore }: SystemsContentProps) {
   const pageFiltered = filtered.slice(start, start + MAJOR_AREAS_PAGE_SIZE);
 
   return (
-    <LorePageFrame>
+    <AreaMapFrame>
       <div className="max-w-4xl">
         <h1 className="font-serif text-4xl font-semibold text-foreground">
           Systems
@@ -239,7 +239,7 @@ export function SystemsContent({ owner, repo, lore }: SystemsContentProps) {
           )}
         </section>
       </div>
-    </LorePageFrame>
+    </AreaMapFrame>
   );
 }
 

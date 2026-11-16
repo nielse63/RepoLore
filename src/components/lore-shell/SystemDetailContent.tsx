@@ -1,5 +1,5 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { AreaMapFrame } from "@/components/lore-shell/AreaMapFrame";
 import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
@@ -40,8 +40,8 @@ export interface SystemDetailContentProps {
 
 /**
  * Real Systems subview (ADR-0014): responsibilities, ownership,
- * relationships (filtered to this area's direct neighborhood via the
- * existing, unmodified `AreaDependencyDiagram`), entry points, and evidence
+ * relationships (`AreaDependencyDiagram`, scoped to this area's direct
+ * neighborhood by its `pinnedAreaId`), entry points, and evidence
  * for one Major Area — all already-computed data, no new analyzer
  * capability. The mockup's separate Responsibilities/Relationships tabs are
  * collapsed into this one Overview view rather than separate routes; its
@@ -64,14 +64,9 @@ export function SystemDetailContent({
   const areaUrl = (location: SourceLocation) =>
     githubTreeUrl(owner, repo, commitSha, location);
 
-  const neighborIds = new Set([
-    area.id,
-    ...area.directDependencyIds,
-    ...area.directDependentIds,
-  ]);
-  const neighborAreas = majorAreas.filter((a) => neighborIds.has(a.id));
+  // Scoped to this area's direct neighborhood (`systemNeighborhoodAreas`).
   const diagramLayout = deriveProductionAreaDiagramLayout(
-    neighborAreas,
+    majorAreas,
     lore.relationships,
     area.id
   );
@@ -83,7 +78,7 @@ export function SystemDetailContent({
   const classification = classifySystem(area);
 
   return (
-    <LorePageFrame>
+    <AreaMapFrame>
       <div className="max-w-4xl">
         <Breadcrumbs
           items={[
@@ -161,7 +156,7 @@ export function SystemDetailContent({
             {diagramLayout ? (
               <div className="mt-4">
                 <AreaDependencyDiagram
-                  areas={neighborAreas}
+                  areas={majorAreas}
                   relationships={lore.relationships}
                   owner={owner}
                   repo={repo}
@@ -241,6 +236,6 @@ export function SystemDetailContent({
           </ul>
         </section>
       </div>
-    </LorePageFrame>
+    </AreaMapFrame>
   );
 }

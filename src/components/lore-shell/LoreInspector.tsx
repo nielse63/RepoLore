@@ -13,6 +13,7 @@ import {
   useEffect,
   useEffectEvent,
   useId,
+  useMemo,
   useReducer,
   useRef,
   type RefObject,
@@ -59,7 +60,11 @@ export function useInspector<Id>(initialSelectedId?: Id): Inspector<Id> {
   }, []);
   const close = useCallback(() => dispatch({ type: "close" }), []);
 
-  return { ...state, select, close, openerRef, panelRef };
+  // Stable while nothing changes, so it can be passed through context.
+  return useMemo(
+    () => ({ ...state, select, close, openerRef, panelRef }),
+    [state, select, close]
+  );
 }
 
 function restoreFocus(openerRef: RefObject<HTMLElement | null>) {

@@ -1,7 +1,7 @@
 import { NotAnalyzedPanel } from "@/components/NotAnalyzedPanel";
 import { SubmissionOutcomeEvent } from "@/components/SubmissionOutcomeEvent";
+import { AreaMapFrame } from "@/components/lore-shell/AreaMapFrame";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { OverviewContent } from "@/components/lore-shell/OverviewContent";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
@@ -89,14 +89,14 @@ export default async function LorePage({
   return (
     <>
       {outcomeEvent}
-      <LorePageFrame>
+      <AreaMapFrame>
         <OverviewContent
           lore={lore}
           sourceUrl={sourceUrl}
           areaUrl={areaUrl}
           majorAreasPage={page}
         />
-      </LorePageFrame>
+      </AreaMapFrame>
     </>
   );
 }

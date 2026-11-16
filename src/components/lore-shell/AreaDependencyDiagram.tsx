@@ -1,23 +1,45 @@
 "use client";
 
+import { AreaInspector } from "@/components/lore-shell/AreaInspector";
+import { useAreaMapInspector } from "@/components/lore-shell/AreaMapFrame";
+import {
+  MAX_ZOOM,
+  useAreaMapZoom,
+} from "@/components/lore-shell/use-area-map-zoom";
+import { Button } from "@/components/ui/Button";
 import { githubTreeUrl } from "@/github/urls";
+import { cn } from "@/lib/cn";
 import { formatPath } from "@/lib/format-path";
-import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
+import {
+  areaEdgeId,
+  areaNeighborhood,
+  DEFAULT_DIAGRAM_AREAS,
+  deriveProductionAreaDiagramLayout,
+  deriveProductionAreaGraph,
+  MAX_DIAGRAM_AREAS,
+  smoothEdgePath,
+  type AreaDiagramLayout,
+} from "@/lore/area-diagram-layout";
 import type { EntityId, Relationship, StructuralArea } from "@/lore/model";
 import {
   Background,
+  BaseEdge,
   Controls,
+  getBezierPath,
   Handle,
   MarkerType,
   Position,
   ReactFlow,
   type Edge,
+  type EdgeProps,
   type Node,
   type NodeProps,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
 
@@ -87,43 +109,110 @@ function responsibilityStyle(responsibility?: string) {
 interface AreaNodeData extends Record<string, unknown> {
   name: string;
   responsibility?: string;
-  href?: string;
+  selected: boolean;
+  dimmed: boolean;
+  onSelect: (id: EntityId, trigger: HTMLElement) => void;
 }
 
-function AreaNode({ data }: NodeProps<Node<AreaNodeData>>) {
+/** An area's own directory name, e.g. "utils" for "src/utils". */
+function areaLabel(name: string) {
+  return formatPath(name).split("/").filter(Boolean).at(-1) ?? "/";
+}
+
+function AreaNode({ id, data }: NodeProps<Node<AreaNodeData>>) {
   const style =
     VARIANT_CLASSES[responsibilityStyle(data.responsibility).variant];
+  // Dimmed nodes change color rather than opacity, so their labels keep
+  // AA contrast.
+  const fg = data.dimmed ? "text-muted" : style.fg;
   return (
-    <div
-      className={`flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-border px-3 py-2 text-center ${style.bg}`}
-    >
-      <Handle type="target" position={Position.Top} className="!bg-border" />
-      {data.href ? (
-        <a
-          href={data.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={formatPath(data.name)}
-          className={`w-full truncate text-sm font-medium hover:underline ${style.fg}`}
-        >
-          {formatPath(data.name)}
-        </a>
-      ) : (
-        <span
-          title={formatPath(data.name)}
-          className={`w-full truncate text-sm font-medium ${style.fg}`}
-        >
+    <>
+      <Handle type="target" position={Position.Top} className="!opacity-0" />
+      <button
+        type="button"
+        aria-pressed={data.selected}
+        title={formatPath(data.name)}
+        onClick={(event) => data.onSelect(id, event.currentTarget)}
+        // react-flow turns pointer events off on a node that's neither
+        // selectable nor draggable (ADR-0016), so the button opts back in;
+        // `nopan` keeps a press on it from panning the canvas instead.
+        className={cn(
+          "nopan pointer-events-auto flex h-full w-full cursor-pointer flex-col items-start justify-center gap-1 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          data.dimmed
+            ? "border-border/60 bg-surface"
+            : `border-border hover:border-primary ${style.bg}`,
+          data.selected && "border-primary ring-2 ring-primary"
+        )}
+      >
+        <span className={cn("w-full truncate text-sm font-semibold", fg)}>
+          {areaLabel(data.name)}
+        </span>
+        <span className={cn("w-full truncate font-mono text-xs", fg)}>
           {formatPath(data.name)}
         </span>
-      )}
-      <Handle type="source" position={Position.Bottom} className="!bg-border" />
-    </div>
+      </button>
+      <Handle type="source" position={Position.Bottom} className="!opacity-0" />
+    </>
   );
 }
 
+interface AreaEdgeData extends Record<string, unknown> {
+  points: { x: number; y: number }[];
+}
+
+/**
+ * Draws an edge along dagre's routed points (`smoothEdgePath`), falling
+ * back to react-flow's own bezier only when dagre gave no route.
+ */
+function AreaEdge({
+  data,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  markerEnd,
+  style,
+}: EdgeProps<Edge<AreaEdgeData>>) {
+  const path =
+    data && data.points.length >= 2
+      ? smoothEdgePath(data.points)
+      : getBezierPath({
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+          sourcePosition,
+          targetPosition,
+        })[0];
+  return <BaseEdge path={path} markerEnd={markerEnd} style={style} />;
+}
+
 const NODE_TYPES = { areaNode: AreaNode };
+const EDGE_TYPES = { areaEdge: AreaEdge };
+
+// `--muted`, not `--border`: the border token is nearly the canvas color, so
+// edges and arrowheads all but vanished (GitHub issue #51).
+const EDGE_COLOR = "var(--muted)";
+const FOCUSED_EDGE_COLOR = "var(--primary)";
+
+// react-flow's zoom controls ship a fixed near-white palette that only
+// switches with its own `colorMode`, so they stayed light in the app's dark
+// scheme. Its override variables take the app's theme tokens instead, so
+// the controls follow `prefers-color-scheme` like the rest of the page.
+const CONTROLS_THEME = {
+  "--xy-controls-button-background-color": "var(--surface)",
+  "--xy-controls-button-background-color-hover": "var(--teal-wash)",
+  "--xy-controls-button-color": "var(--foreground)",
+  "--xy-controls-button-color-hover": "var(--foreground)",
+  "--xy-controls-button-border-color": "var(--border)",
+} as React.CSSProperties;
 
 export interface AreaDependencyDiagramProps {
+  // Every Major Area, even on a System subview (`pinnedAreaId`): the map
+  // scopes itself to that area's neighborhood, while the inspector lists a
+  // selected neighbor's relationships across all of them.
   areas: StructuralArea[];
   // Raw file-level relationships (`lore.relationships`), not the already
   // area-rolled-up `AreaRelationship[]` — this diagram derives its own
@@ -134,48 +223,27 @@ export interface AreaDependencyDiagramProps {
   relationships: Relationship[];
   // A client component can't accept a function prop from a server
   // component (RSC serialization boundary), so this takes plain data and
-  // builds each node's GitHub URL itself via `githubTreeUrl`, rather than
-  // the callback-style `areaUrl?: (location) => string` other lore-shell
+  // builds GitHub URLs itself via `githubTreeUrl`, rather than the
+  // callback-style `areaUrl?: (location) => string` other lore-shell
   // components use.
   owner: string;
   repo: string;
   commitSha: string;
-  // A System subview's own area: always shown when the diagram is
-  // truncated to `MAX_DIAGRAM_AREAS`, with the caption counting neighbors.
+  // A System subview's own area: the map shows it and its direct
+  // neighbors, always including it, with the caption counting neighbors.
   pinnedAreaId?: EntityId;
 }
 
 /**
- * Renders the area dependency diagram client-side with `@xyflow/react`
- * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
- * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
- * product owner found larger diagrams didn't fit the fixed viewport. Node
- * positions still come exclusively from `deriveProductionAreaDiagramLayout`
- * (dagre) — react-flow is a renderer here, never a second layout engine.
- *
- * Deliberately NOT enabled, per ADR-0016's guardrails against the "since
- * it's already there" interactivity creep ADR-0009 originally warned
- * about: node dragging, node/edge connecting, element selection, a
- * minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
- * `elementsSelectable` below are explicitly set to `false` rather than left
- * at react-flow's defaults. Any future request to enable one of these
- * needs its own ADR and `product-scope-guardian` review, same as ADR-0009's
- * own item 7 already required.
+ * react-flow nodes and edges for a layout, styled for the current
+ * selection and, with focus on, its one-hop `neighborhood`.
  */
-export function AreaDependencyDiagram({
-  areas,
-  relationships,
-  owner,
-  repo,
-  commitSha,
-  pinnedAreaId,
-}: AreaDependencyDiagramProps) {
-  const layout = deriveProductionAreaDiagramLayout(
-    areas,
-    relationships,
-    pinnedAreaId
-  );
-
+function useAreaMapElements(
+  layout: AreaDiagramLayout | null,
+  selectedId: EntityId | undefined,
+  neighborhood: ReturnType<typeof areaNeighborhood> | null,
+  onSelect: AreaNodeData["onSelect"]
+) {
   const nodes: Node<AreaNodeData>[] = useMemo(
     () =>
       (layout?.nodes ?? []).map((node) => ({
@@ -186,34 +254,124 @@ export function AreaDependencyDiagram({
         data: {
           name: node.name,
           responsibility: node.responsibility,
-          href: githubTreeUrl(owner, repo, commitSha, node.location),
+          selected: node.id === selectedId,
+          dimmed: !!neighborhood && !neighborhood.nodeIds.has(node.id),
+          onSelect,
         },
       })),
-    [layout, owner, repo, commitSha]
+    [layout, selectedId, neighborhood, onSelect]
   );
 
-  const edges: Edge[] = useMemo(
+  const edges: Edge<AreaEdgeData>[] = useMemo(
     () =>
-      (layout?.edges ?? []).map((edge) => ({
-        id: `${edge.fromId}->${edge.toId}`,
-        source: edge.fromId,
-        target: edge.toId,
-        type: "smoothstep",
-        // `--muted`, not `--border`: the border token is nearly the canvas
-        // color, so edges and arrowheads all but vanished (GitHub issue #51).
-        style: {
-          stroke: "var(--muted)",
-          strokeWidth: 1.25,
-        },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "var(--muted)" },
-      })),
-    [layout]
+      (layout?.edges ?? []).map((edge) => {
+        const id = areaEdgeId(edge);
+        const focused = !!neighborhood?.edgeIds.has(id);
+        const color = focused ? FOCUSED_EDGE_COLOR : EDGE_COLOR;
+        return {
+          id,
+          source: edge.fromId,
+          target: edge.toId,
+          type: "areaEdge",
+          data: { points: edge.points },
+          style: {
+            stroke: color,
+            strokeWidth: focused ? 2 : 1.25,
+            opacity: neighborhood && !focused ? 0.15 : 1,
+          },
+          markerEnd: { type: MarkerType.ArrowClosed, color },
+        };
+      }),
+    [layout, neighborhood]
   );
 
-  if (!layout) return null;
+  return { nodes, edges };
+}
 
+/** The bar above the map: focus, show all/fewer areas, and expand. */
+function AreaMapControls({
+  connectedAreaCount,
+  hasSelection,
+  focus,
+  onFocusChange,
+  showAll,
+  onShowAllChange,
+  expanded,
+  onExpandedChange,
+}: {
+  connectedAreaCount: number;
+  hasSelection: boolean;
+  focus: boolean;
+  onFocusChange: (focus: boolean) => void;
+  showAll: boolean;
+  onShowAllChange: (showAll: boolean) => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+}) {
+  const focusHintId = useId();
+  const canShowMore = connectedAreaCount > DEFAULT_DIAGRAM_AREAS || showAll;
+  const showMoreLabel =
+    connectedAreaCount > MAX_DIAGRAM_AREAS
+      ? `Show ${MAX_DIAGRAM_AREAS} areas`
+      : "Show all areas";
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          checked={focus}
+          onChange={(event) => onFocusChange(event.target.checked)}
+          aria-describedby={focusHintId}
+          className="h-4 w-4 accent-primary"
+        />
+        Focus on selected area
+      </label>
+      <span id={focusHintId} className="text-xs text-muted">
+        {hasSelection
+          ? "Dims areas not directly connected to the selection"
+          : "Select an area to focus on it"}
+      </span>
+      <div className="ml-auto flex flex-wrap gap-2">
+        {canShowMore && (
+          <Button
+            variant="secondary"
+            className="px-3 py-1.5"
+            onClick={() => onShowAllChange(!showAll)}
+          >
+            {showAll ? "Show fewer areas" : showMoreLabel}
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          className="px-3 py-1.5"
+          aria-expanded={expanded}
+          onClick={() => onExpandedChange(!expanded)}
+        >
+          {expanded ? "Return to normal view" : "Expand map"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Everything under the map: the arrow legend and selection hint, the
+ * subset caption, unconnected areas, and the responsibility legend.
+ */
+function AreaMapNotes({
+  layout,
+  pinned,
+  owner,
+  repo,
+  commitSha,
+}: {
+  layout: AreaDiagramLayout;
+  pinned: boolean;
+  owner: string;
+  repo: string;
+  commitSha: string;
+}) {
   const truncated = layout.connectedAreaCount > layout.nodes.length;
-
   const legendEntries = Array.from(
     new Map(
       layout.nodes.map((node) => {
@@ -230,46 +388,20 @@ export function AreaDependencyDiagram({
   );
 
   return (
-    <div id="area-dependency-diagram">
-      <figure
-        className="w-full overflow-hidden rounded-lg border border-border"
-        style={{ height: Math.min(Math.max(layout.height + 80, 320), 600) }}
-        aria-label="Diagram of how major areas depend on each other"
-      >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={NODE_TYPES}
-          fitView
-          // react-flow's default `minZoom` (0.5) also clamps `fitView`, so a
-          // wide graph stayed at 0.5 with its outer nodes clipped (GitHub
-          // issue #51). 0.05 fits even a `MAX_DIAGRAM_AREAS`-wide single rank
-          // in the Systems rail; Zoom In stays available for reading labels.
-          minZoom={0.05}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background />
-          {/* `showInteractive={false}` hides react-flow's default "Toggle
-              Interactivity" button, whose only purpose is to re-enable
-              nodesDraggable/nodesConnectable/elementsSelectable — the exact
-              capabilities ADR-0016 disables above. The explicit props above
-              already win even if it were clicked, but a control whose sole
-              function is to undo a deliberate guardrail shouldn't be
-              offered at all. */}
-          <Controls showInteractive={false} />
-        </ReactFlow>
-      </figure>
-      {/* Wording per `product-scope-guardian`: the selection is a count of
-          the edges drawn here, never an importance judgment (ADR-0014). */}
+    <>
+      <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-muted">
+        <span>Arrows point to imported dependencies</span>
+        <span>Select an area for its evidence</span>
+      </div>
+      {/* Wording per `product-scope-guardian`: the subset is in Major Areas
+          order, never described as the "top", "key" or most important
+          areas (ADR-0014). */}
       {truncated && (
         <p className="mt-3 text-xs text-muted">
-          {pinnedAreaId
-            ? `Showing this system and the ${layout.nodes.length - 1} neighbors with the most detected relationships, of ${layout.connectedAreaCount - 1} connected neighbors.`
-            : `Showing the ${layout.nodes.length} areas with the most detected relationships, of ${layout.connectedAreaCount} connected areas.`}{" "}
-          Counts include only imports resolved to a file in this repository;
+          {pinned
+            ? `Showing this system and ${layout.nodes.length - 1} of its ${layout.connectedAreaCount - 1} connected neighbors, in Major Areas order.`
+            : `Showing ${layout.nodes.length} of ${layout.connectedAreaCount} connected areas, in Major Areas order.`}{" "}
+          Arrows include only imports resolved to a file in this repository;
           unresolved or dynamic imports are Unknown. Full list:{" "}
           <Link
             href={`/lore/${owner}/${repo}/architecture#component-connections`}
@@ -327,6 +459,187 @@ export function AreaDependencyDiagram({
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+/**
+ * Renders the area dependency diagram client-side with `@xyflow/react`
+ * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
+ * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
+ * product owner found larger diagrams didn't fit the fixed viewport. Node
+ * positions and edge routes still come exclusively from
+ * `deriveProductionAreaDiagramLayout` (dagre) — react-flow is a renderer here, never a
+ * second layout engine.
+ *
+ * GitHub issue #79 amends ADR-0016, after `product-scope-guardian` review,
+ * to allow exactly this, as local view state (never in the URL or storage):
+ * selecting one area at a time, which opens the shared inspector
+ * (`AreaInspector`, rendered into `AreaMapFrame`'s slot) and moves the
+ * node's GitHub link there; "Focus on selected area", dimming everything
+ * outside its one-hop neighborhood (`areaNeighborhood`); "Expand map", a
+ * taller in-page canvas; "Show all areas", from `DEFAULT_DIAGRAM_AREAS` up
+ * to `MAX_DIAGRAM_AREAS`; and a custom edge drawn smoothly along dagre's
+ * routed points. Hover only restyles a node; it doesn't preview the focus.
+ *
+ * Still deliberately NOT enabled, per ADR-0016's guardrails against the
+ * "since it's already there" interactivity creep ADR-0009 originally warned
+ * about: node dragging, node/edge connecting, react-flow element selection,
+ * a minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
+ * `elementsSelectable` below are explicitly set to `false` rather than left
+ * at react-flow's defaults. Anything beyond the list above — hover
+ * previews, path/impact tracing, multi-hop focus, filters, search in the
+ * map, layout persistence, deep-linking a selection — needs its own ADR and
+ * `product-scope-guardian` review, same as ADR-0009's own item 7 required.
+ */
+export function AreaDependencyDiagram({
+  areas,
+  relationships,
+  owner,
+  repo,
+  commitSha,
+  pinnedAreaId,
+}: AreaDependencyDiagramProps) {
+  const { inspector, slot } = useAreaMapInspector();
+  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  // On by default (GitHub issue #79): selecting an area focuses on it.
+  const [focus, setFocus] = useState(true);
+  const figureRef = useRef<HTMLElement>(null);
+  const flowRef = useRef<ReactFlowInstance<
+    Node<AreaNodeData>,
+    Edge<AreaEdgeData>
+  > | null>(null);
+
+  const graph = useMemo(
+    () => deriveProductionAreaGraph(areas, relationships),
+    [areas, relationships]
+  );
+  // The same function each page gates on, so the gate and what renders
+  // can't disagree.
+  const layout = useMemo(
+    () =>
+      deriveProductionAreaDiagramLayout(
+        areas,
+        relationships,
+        pinnedAreaId,
+        showAll ? MAX_DIAGRAM_AREAS : DEFAULT_DIAGRAM_AREAS
+      ),
+    [areas, relationships, pinnedAreaId, showAll]
+  );
+  const fitZoom = useAreaMapZoom(figureRef, flowRef, layout);
+
+  const selectedId = inspector.open ? inspector.selectedId : undefined;
+  const neighborhood =
+    focus && selectedId && layout
+      ? areaNeighborhood(layout.edges, selectedId)
+      : null;
+  const { select, close } = inspector;
+  const { nodes, edges } = useAreaMapElements(
+    layout,
+    selectedId,
+    neighborhood,
+    select
+  );
+
+  if (!layout) return null;
+
+  const selectedArea = graph.productionAreas.find(
+    (area) => area.id === selectedId
+  );
+  const height = expanded
+    ? "max(640px, calc(100dvh - 10rem))"
+    : Math.min(Math.max(layout.height + 80, 320), 600);
+
+  return (
+    <div
+      id="area-dependency-diagram"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && selectedId) close();
+      }}
+    >
+      <AreaMapControls
+        connectedAreaCount={layout.connectedAreaCount}
+        hasSelection={!!selectedId}
+        focus={focus}
+        onFocusChange={setFocus}
+        showAll={showAll}
+        onShowAllChange={setShowAll}
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+      />
+      <figure
+        ref={figureRef}
+        className="w-full overflow-hidden rounded-lg border border-border"
+        style={{ height }}
+        aria-label="Diagram of how major areas depend on each other"
+      >
+        <ReactFlow
+          // Remounting re-applies `fitView` to a new node set; the selection
+          // lives outside, so it's kept.
+          key={String(showAll)}
+          onInit={(instance) => {
+            flowRef.current = instance;
+          }}
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
+          fitView
+          // The fitted zoom (`useAreaMapZoom`, GitHub issue #79), so neither
+          // the wheel, the Zoom Out button nor a pinch shrinks the map past
+          // fully in view. Until the canvas is measured, a floor low enough
+          // not to clamp `fitView` itself: react-flow's default (0.5)
+          // clipped wide graphs (GitHub issue #51).
+          minZoom={fitZoom ?? 0.05}
+          maxZoom={MAX_ZOOM}
+          // Plain wheel events reach the page unless `useAreaMapZoom` zooms.
+          preventScrolling={false}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          // Each node's own button takes focus instead (Tab, then Enter or
+          // Space selects), so react-flow's node/edge wrappers don't add a
+          // second, inert tab stop.
+          nodesFocusable={false}
+          edgesFocusable={false}
+          onPaneClick={() => close()}
+          proOptions={{ hideAttribution: true }}
+          style={CONTROLS_THEME}
+        >
+          <Background />
+          {/* `showInteractive={false}` hides react-flow's default "Toggle
+              Interactivity" button, whose only purpose is to re-enable
+              nodesDraggable/nodesConnectable/elementsSelectable — the exact
+              capabilities ADR-0016 disables above. The explicit props above
+              already win even if it were clicked, but a control whose sole
+              function is to undo a deliberate guardrail shouldn't be
+              offered at all. */}
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </figure>
+      <AreaMapNotes
+        layout={layout}
+        pinned={!!pinnedAreaId}
+        owner={owner}
+        repo={repo}
+        commitSha={commitSha}
+      />
+      {slot &&
+        selectedArea &&
+        createPortal(
+          <AreaInspector
+            inspector={inspector}
+            area={selectedArea}
+            areas={graph.productionAreas}
+            relationships={graph.productionRelationships}
+            shownIds={new Set(layout.nodes.map((node) => node.id))}
+            owner={owner}
+            repo={repo}
+            commitSha={commitSha}
+          />,
+          slot
+        )}
     </div>
   );
 }
