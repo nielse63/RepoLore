@@ -1,4 +1,4 @@
-import { latestGitTag } from "../src/lib/app-version";
+import { appVersion } from "../src/lib/app-version";
 import { expect, test } from "./coverage";
 
 /**
@@ -8,14 +8,10 @@ import { expect, test } from "./coverage";
  * it sits at the end of `LorePageFrame`'s main column. Those last two need
  * `DATABASE_URL` (the pinned fixture `nielse63/repo-lore-ts-react-app-fixture`
  * has a persisted run) but not `GITHUB_TOKEN`. The version after the
- * copyright is the same git tag the build read, so this needs a checkout
- * with tags (CI fetches full history).
+ * copyright is resolved the same way the build resolved it.
  */
 
-const version = latestGitTag();
-const copyright = `© ${new Date().getFullYear()} Repo Lore${
-  version ? ` | ${version}` : ""
-}`;
+const copyright = `© ${new Date().getFullYear()} Repo Lore | ${appVersion()}`;
 
 const routes = [
   "/",

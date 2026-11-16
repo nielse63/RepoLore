@@ -27,8 +27,8 @@ function GitHubMark() {
  * and after `<main>` in `LorePageFrame` on Lore pages, where
  * `spacingClassName` replaces the default padding to line up with that
  * frame's own.
- * The copyright line ends with the build's git tag (`APP_VERSION`, set in
- * `next.config.ts`) when one was available.
+ * The copyright line ends with the app version (`APP_VERSION`, set in
+ * `next.config.ts` from `appVersion`).
  */
 export function SiteFooter({
   spacingClassName = "px-8 py-6",
