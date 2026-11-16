@@ -162,7 +162,17 @@ export function AnalysisDialog({
               <dd className="mt-0.5 text-sm text-foreground">
                 <time
                   dateTime={analysis.analyzedAt}
-                  title={new Date(analysis.analyzedAt).toLocaleString()}
+                  // Pinned locale and timezone, so server and browser
+                  // render the same text (see HistoryContent).
+                  title={new Date(analysis.analyzedAt).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZone: "UTC",
+                    timeZoneName: "short",
+                  })}
                 >
                   {relativeTime(analysis.analyzedAt)}
                 </time>

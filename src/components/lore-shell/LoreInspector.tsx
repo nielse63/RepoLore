@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useEffectEvent,
   useId,
   useReducer,
   useRef,
@@ -96,6 +97,7 @@ export function LoreInspector<Id>({
     close();
     restoreFocus(openerRef);
   }, [close, openerRef]);
+  const onEscape = useEffectEvent(closeAndRestore);
 
   // The side/inline panel isn't modal, so it handles Escape itself; the
   // sheet's Radix dialog does that, and keeps focus while it's open.
@@ -106,11 +108,11 @@ export function LoreInspector<Id>({
       if (event.key !== "Escape" || event.defaultPrevented) return;
       const target = event.target instanceof Element ? event.target : null;
       if (target?.closest('[role="dialog"]')) return;
-      closeAndRestore();
+      onEscape();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [sheet, closeAndRestore]);
+  }, [sheet]);
 
   const header = (Title: React.ElementType) => (
     <div className="flex items-start justify-between gap-3">

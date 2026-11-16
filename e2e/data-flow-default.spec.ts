@@ -105,13 +105,24 @@ test("the function list is paginated, continuing the importance ranking across p
 }) => {
   await page.goto(dataFlowUrl);
   await expect(currentPage(page)).toHaveText("1");
-  const firstPage = await listedFunctions(page);
 
+  // The server renders the maximum page size and the client shrinks it to
+  // fit after hydration, so read page 1 only once paging has worked (the
+  // fitted size is final by then).
   await pagination(page)
     .getByRole("button", { name: "Go to next page" })
     .click();
   await expect(currentPage(page)).toHaveText("2");
   const secondPage = await listedFunctions(page);
+  await pagination(page)
+    .getByRole("button", { name: "Go to previous page" })
+    .click();
+  await expect(currentPage(page)).toHaveText("1");
+  const firstPage = await listedFunctions(page);
+  await pagination(page)
+    .getByRole("button", { name: "Go to next page" })
+    .click();
+  await expect(currentPage(page)).toHaveText("2");
   expect(secondPage.length).toBeGreaterThan(0);
   expect(secondPage.length).toBeLessThanOrEqual(firstPage.length);
   const scores = [...firstPage, ...secondPage].map((f) => f.score);

@@ -36,6 +36,11 @@ test.describe("Analysis dialog", () => {
       `https://github.com/nielse63/RepoLore/commit/${sha}`
     );
     await expect(snapshot).toContainText(/js-ts-v\d+/);
+    // The exact time is pinned to UTC, so server and browser agree on it.
+    await expect(snapshot.locator("time")).toHaveAttribute(
+      "title",
+      /^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M UTC$/
+    );
 
     const sources = dialog.getByRole("region", { name: "Evidence sources" });
     await expect(sources).toContainText("typescript");
