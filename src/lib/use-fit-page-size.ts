@@ -5,12 +5,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 const MIN_PAGE_SIZE = 5;
 
 /**
- * `<main>`'s column (LorePageFrame) is styled `overflow-y-auto`, but its ancestor
- * chain doesn't actually bound its height in practice, so it never clips —
- * the whole document scrolls instead (confirmed: `main.clientHeight ===
- * main.scrollHeight` while `document.scrollingElement.scrollHeight` exceeds
- * `window.innerHeight`). "Without scrolling" therefore means the window's
- * viewport, not `<main>`'s own box.
+ * Lore pages scroll the whole document, not `<main>` (`LorePageFrame`), so
+ * "without scrolling" means the window's viewport, not `<main>`'s own box.
  */
 
 // useLayoutEffect warns when it runs during SSR (it never actually executes

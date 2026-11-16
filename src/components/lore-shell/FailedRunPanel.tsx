@@ -1,16 +1,14 @@
 import { ReanalyzeButton } from "@/components/ReanalyzeButton";
-import { TopBar } from "@/components/lore-shell/TopBar";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { Card } from "@/components/ui/Card";
-import { relativeTime } from "@/lib/relative-time";
 import type { AnalysisRunRow } from "@/db/analysis-runs";
 
 /**
  * Shared honest "analysis failed" rendering for any `/lore/{owner}/{repo}/*`
  * page that reads the latest run directly (acceptance criterion 2) — a
  * failed or resultless run must never look like "not found" or a partial
- * success.
+ * success. Re-analyze stays on the page, not only in the Analysis dialog,
+ * since it's the recovery action here.
  */
 export function FailedRunPanel({
   owner,
@@ -25,23 +23,7 @@ export function FailedRunPanel({
   >;
 }) {
   return (
-    <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              statusLabel="Analysis failed"
-              statusTone="alert"
-              updatedLabel={relativeTime(run.createdAt)}
-              branch="—"
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-    >
+    <LorePageFrame>
       <div className="max-w-2xl">
         <h1 className="font-serif text-3xl font-semibold text-foreground">
           Analysis failed
@@ -59,6 +41,9 @@ export function FailedRunPanel({
             {run.errorMessage ?? "Unknown error."}
           </p>
         </Card>
+        <div className="mt-4">
+          <ReanalyzeButton owner={owner} repo={repo} align="start" />
+        </div>
       </div>
     </LorePageFrame>
   );

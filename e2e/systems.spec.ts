@@ -104,9 +104,7 @@ test("clicking a system opens its subview with responsibilities, ownership, and 
   await expect(
     page.getByRole("heading", { name: "Relationships" })
   ).toBeVisible();
-  await expect(
-    page.getByRole("complementary", { name: "Evidence" })
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Evidence" })).toBeVisible();
 });
 
 test("the subview breadcrumb returns to the systems list", async ({ page }) => {

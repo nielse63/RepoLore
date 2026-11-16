@@ -1,8 +1,6 @@
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { TopBar } from "@/components/lore-shell/TopBar";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
@@ -10,7 +8,6 @@ import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
 import { IconTile } from "@/components/ui/IconTile";
 import { SourceLink } from "@/components/ui/SourceLink";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
-import { relativeTime } from "@/lib/relative-time";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
 import { deriveProductionAreaDiagramLayout } from "@/lore/area-diagram-layout";
@@ -86,55 +83,15 @@ export function SystemDetailContent({
   const classification = classifySystem(area);
 
   return (
-    <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <Breadcrumbs
-              items={[
-                { label: "Systems", href: `${base}/systems` },
-                { label: formatPath(area.name) },
-              ]}
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        <RightRailShell title="Evidence">
-          <p className="text-sm text-muted">
-            {area.evidence.length}{" "}
-            {area.evidence.length === 1 ? "reference" : "references"} · Last
-            verified {relativeTime(lore.snapshot.analyzedAt)}
-          </p>
-          <ul className="mt-4 space-y-3 text-sm">
-            {area.evidence.map((evidence, i) => (
-              <li key={listItemKey(i)}>
-                <div className="flex items-center gap-2">
-                  {evidence.location && (
-                    <SourceLink
-                      location={evidence.location}
-                      sourceUrl={sourceUrl}
-                    />
-                  )}
-                  <CertaintyBadge certainty={evidence.certainty} />
-                </div>
-                <p className="mt-0.5 text-xs text-muted">
-                  {evidence.description}
-                </p>
-              </li>
-            ))}
-            {area.evidence.length === 0 && (
-              <li className="text-sm text-muted">
-                No evidence was recorded for this system.
-              </li>
-            )}
-          </ul>
-        </RightRailShell>
-      }
-    >
+    <LorePageFrame>
       <div className="max-w-4xl">
-        <div className="flex flex-wrap items-center gap-3">
+        <Breadcrumbs
+          items={[
+            { label: "Systems", href: `${base}/systems` },
+            { label: formatPath(area.name) },
+          ]}
+        />
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <h1 className="font-serif text-4xl font-semibold text-foreground">
             {formatPath(area.name)}
           </h1>
@@ -145,6 +102,7 @@ export function SystemDetailContent({
         <p className="mt-2 text-base text-muted">
           {area.responsibility ?? area.rationale}
         </p>
+        <LoreStatusLine />
 
         <div className="mt-6 flex flex-col gap-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -246,6 +204,42 @@ export function SystemDetailContent({
             </Card>
           )}
         </div>
+
+        <section aria-labelledby="system-evidence-heading" className="mt-10">
+          <h2
+            id="system-evidence-heading"
+            className="mb-1 text-lg font-semibold text-foreground"
+          >
+            Evidence
+          </h2>
+          <p className="text-sm text-muted">
+            {area.evidence.length}{" "}
+            {area.evidence.length === 1 ? "reference" : "references"}
+          </p>
+          <ul className="mt-4 space-y-3 text-sm">
+            {area.evidence.map((evidence, i) => (
+              <li key={listItemKey(i)}>
+                <div className="flex items-center gap-2">
+                  {evidence.location && (
+                    <SourceLink
+                      location={evidence.location}
+                      sourceUrl={sourceUrl}
+                    />
+                  )}
+                  <CertaintyBadge certainty={evidence.certainty} />
+                </div>
+                <p className="mt-0.5 text-xs text-muted">
+                  {evidence.description}
+                </p>
+              </li>
+            ))}
+            {area.evidence.length === 0 && (
+              <li className="text-sm text-muted">
+                No evidence was recorded for this system.
+              </li>
+            )}
+          </ul>
+        </section>
       </div>
     </LorePageFrame>
   );

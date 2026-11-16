@@ -1,10 +1,10 @@
 import { expect, test } from "./coverage";
 
 /**
- * Mobile-responsive shell coverage: the hamburger-triggered Sidebar drawer,
- * the RightRailShell bottom sheet, and the layout fixes that keep every
- * routed page free of horizontal overflow and usable down to a 375px
- * viewport. Like `systems.spec.ts`, these need `DATABASE_URL` (reading the
+ * Responsive shell coverage: the menu-triggered Sidebar drawer, the
+ * inspector's bottom sheet at 660px and below (issue #84), and the layout
+ * fixes that keep every routed page free of horizontal overflow from 320px
+ * to 1440px. Like `systems.spec.ts`, these need `DATABASE_URL` (reading the
  * already-persisted `completed` analysis run for the pinned private fixture
  * `nielse63/repo-lore-ts-react-app-fixture`, see README "Fixtures") but not
  * `GITHUB_TOKEN`, since nothing here triggers a fresh analysis.
@@ -74,63 +74,88 @@ test.describe("Sidebar mobile drawer", () => {
   });
 });
 
-test.describe("RightRailShell mobile bottom sheet", () => {
-  test("the floating trigger is hidden at desktop width and visible at mobile width", async ({
+test.describe("Inspector bottom sheet at 390px", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("selecting a dependency opens a focused sheet that closes back to the row", async ({
     page,
   }) => {
-    await page.setViewportSize(DESKTOP_VIEWPORT);
-    await page.goto(`${repoUrl}/architecture`);
-    await expect(
-      page.getByRole("button", { name: "Show About this architecture panel" })
-    ).toBeHidden();
+    await page.goto(`${repoUrl}/dependencies`);
+    const row = page
+      .getByRole("button", { name: /^View .+ dependency details$/ })
+      .first();
+    await row.click();
 
-    await page.setViewportSize(MOBILE_VIEWPORT);
+    const sheet = page.getByRole("dialog");
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toHaveAttribute("id", "lore-inspector");
+    await expect(sheet).toContainText("Dependency evidence");
+    // A bottom sheet: anchored to the viewport's bottom edge.
+    const box = (await sheet.boundingBox())!;
+    expect(Math.round(box.y + box.height)).toBe(844);
     await expect(
-      page.getByRole("button", { name: "Show About this architecture panel" })
-    ).toBeVisible();
+      sheet.getByRole("button", { name: "Close inspector" })
+    ).toBeFocused();
+
+    await sheet.getByRole("button", { name: "Close inspector" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(row).toBeFocused();
   });
 
-  test("opening the sheet shows the rail content, including the Systems page's System map", async ({
+  test("Escape dismisses the sheet and restores focus", async ({ page }) => {
+    await page.goto(`${repoUrl}/dependencies`);
+    const row = page
+      .getByRole("button", { name: /^View .+ dependency details$/ })
+      .first();
+    await row.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(row).toBeFocused();
+  });
+
+  test("the Systems page's System map is in the page, not behind a panel", async ({
     page,
   }) => {
-    await page.setViewportSize(MOBILE_VIEWPORT);
     await page.goto(`${repoUrl}/systems`);
-
-    await expect(
-      page.getByRole("heading", { name: "System map" })
-    ).toBeHidden();
-
-    await page.getByRole("button", { name: "Show System map panel" }).click();
-
     await expect(
       page.getByRole("heading", { name: "System map" })
     ).toBeVisible();
-    await expect(
-      page.getByRole("figure", {
-        name: "Diagram of how major areas depend on each other",
-      })
-    ).toBeVisible();
-
-    await page.getByRole("button", { name: "Close System map panel" }).click();
-    await expect(
-      page.getByRole("heading", { name: "System map" })
-    ).toBeHidden();
   });
 });
 
-test.describe("No horizontal overflow at 375px", () => {
-  for (const route of SHELL_ROUTES) {
-    test(`${route} has no horizontal overflow`, async ({ page }) => {
-      await page.setViewportSize(MOBILE_VIEWPORT);
-      await page.goto(route);
+const WIDTHS = [320, 390, 768, 1024, 1440];
 
-      const overflowing = await page.evaluate(
-        () => document.documentElement.scrollWidth
-      );
-      const viewportWidth = await page.evaluate(
-        () => document.documentElement.clientWidth
-      );
-      expect(overflowing).toBeLessThanOrEqual(viewportWidth);
+test.describe("No horizontal overflow", () => {
+  for (const width of WIDTHS) {
+    test(`no shell route overflows at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      for (const route of SHELL_ROUTES) {
+        await page.goto(route);
+        const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        }));
+        expect(scrollWidth, route).toBeLessThanOrEqual(clientWidth);
+      }
+    });
+
+    test(`the open inspector doesn't overflow at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${repoUrl}/dependencies`);
+      await page
+        .getByRole("button", { name: /^View .+ dependency details$/ })
+        .first()
+        .click();
+      await expect(page.locator("#lore-inspector")).toBeVisible();
+      const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
     });
   }
 });

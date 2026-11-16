@@ -68,3 +68,29 @@ test("no lockfile field, nested key, or script is reported as a dependency", asy
     )
   ).toHaveCount(0);
 });
+
+test("the timeframe picker narrows to a custom range and resets to the default window", async ({
+  page,
+}) => {
+  const trigger = page.locator("#git-history-timeframe");
+  await expect(trigger).toHaveText(/Last 90 days/);
+  await trigger.click();
+
+  const from = page.getByRole("button", { name: /^From/ });
+  await from.click();
+  await expect(from).toHaveAttribute("aria-expanded", "true");
+  // The first selectable day after the window's current start.
+  const day = page
+    .getByRole("gridcell", { selected: false })
+    .getByRole("button", { disabled: false })
+    .first();
+  await day.click();
+
+  await expect(from).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toHaveText(
+    /[A-Z][a-z]{2} \d{1,2}(, \d{4})? – [A-Z][a-z]{2} \d{1,2}, \d{4}/
+  );
+
+  await page.getByRole("button", { name: "Reset to last 90 days" }).click();
+  await expect(trigger).toHaveText(/Last 90 days/);
+});
