@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { githubTreeUrl } from "@/github/urls";
 import { cn } from "@/lib/cn";
 import { formatPath } from "@/lib/format-path";
+import { wheelZoom } from "@/lib/wheel-zoom";
 import {
+  areaDiagramBounds,
   areaEdgeId,
   areaNeighborhood,
   DEFAULT_DIAGRAM_AREAS,
@@ -21,6 +23,7 @@ import {
   BaseEdge,
   Controls,
   getBezierPath,
+  getViewportForBounds,
   Handle,
   MarkerType,
   Position,
@@ -33,7 +36,15 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
@@ -192,6 +203,11 @@ const EDGE_TYPES = { areaEdge: AreaEdge };
 const EDGE_COLOR = "var(--muted)";
 const FOCUSED_EDGE_COLOR = "var(--primary)";
 
+// react-flow's own defaults: how far `fitView` pads the nodes, and how far
+// Zoom In goes.
+const FIT_VIEW_PADDING = 0.1;
+const MAX_ZOOM = 2;
+
 // react-flow's zoom controls ship a fixed near-white palette that only
 // switches with its own `colorMode`, so they stayed light in the app's dark
 // scheme. Its override variables take the app's theme tokens instead, so
@@ -269,7 +285,8 @@ export function AreaDependencyDiagram({
   const { inspector, slot } = useAreaMapInspector();
   const [showAll, setShowAll] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [focus, setFocus] = useState(false);
+  // On by default (GitHub issue #79): selecting an area focuses on it.
+  const [focus, setFocus] = useState(true);
   const focusHintId = useId();
   const figureRef = useRef<HTMLElement>(null);
   const flowRef = useRef<ReactFlowInstance<
@@ -277,24 +294,42 @@ export function AreaDependencyDiagram({
     Edge<AreaEdgeData>
   > | null>(null);
 
-  // Re-fit whenever the canvas changes size — "Expand map", or the
-  // inspector opening beside it and narrowing the page — since react-flow
-  // only applies `fitView` on mount. The first observation is just the
-  // mount size, which `fitView` already handles.
-  useEffect(() => {
+  const [canvasSize, setCanvasSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  // The canvas's size, measured before paint and kept current, for the
+  // fitted zoom below.
+  useLayoutEffect(() => {
     const figure = figureRef.current;
     if (!figure) return;
-    let last: { width: number; height: number } | undefined;
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      if (last && (last.width !== width || last.height !== height)) {
-        flowRef.current?.fitView();
-      }
-      last = { width, height };
-    });
+    const measure = () =>
+      setCanvasSize((previous) => {
+        const { clientWidth: width, clientHeight: height } = figure;
+        return previous?.width === width && previous.height === height
+          ? previous
+          : { width, height };
+      });
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(figure);
     return () => observer.disconnect();
   }, []);
+
+  // Re-fit whenever the canvas changes size after mount — "Expand map", or
+  // the inspector opening beside it and narrowing the page — since
+  // react-flow only applies `fitView` on mount. A frame later, so the new
+  // zoom-out limit below is already in place.
+  const mountedSize = useRef(true);
+  useEffect(() => {
+    if (mountedSize.current) {
+      mountedSize.current = false;
+      return;
+    }
+    const frame = requestAnimationFrame(() => flowRef.current?.fitView());
+    return () => cancelAnimationFrame(frame);
+  }, [canvasSize]);
 
   const graph = useMemo(
     () => deriveProductionAreaGraph(areas, relationships),
@@ -312,6 +347,52 @@ export function AreaDependencyDiagram({
       ),
     [areas, relationships, pinnedAreaId, showAll]
   );
+
+  // The zoom at which the whole drawn map fits — the zoom-out limit (GitHub
+  // issue #79), so zooming out stops where the map is fully in view
+  // rather than shrinking it to a speck.
+  const fitZoom =
+    layout && canvasSize
+      ? getViewportForBounds(
+          areaDiagramBounds(layout),
+          canvasSize.width,
+          canvasSize.height,
+          0,
+          MAX_ZOOM,
+          FIT_VIEW_PADDING
+        ).zoom
+      : undefined;
+
+  // The mouse wheel zooms the map only while it can still zoom in that
+  // direction; at a limit it's left to scroll the page, so scrolling down a
+  // page past the map isn't "caught" on it (GitHub issue #79). react-flow's
+  // own wheel zoom always swallowed the event, so it's off
+  // (`preventScrolling={false}` below) apart from trackpad pinch.
+  const onWheel = useEffectEvent((event: WheelEvent) => {
+    const flow = flowRef.current;
+    const pane = figureRef.current?.querySelector(".react-flow");
+    // A pinch arrives as a Ctrl-modified wheel; react-flow handles that.
+    if (!flow || fitZoom === undefined || !pane || event.ctrlKey) return;
+    const rect = pane.getBoundingClientRect();
+    const next = wheelZoom({
+      viewport: flow.getViewport(),
+      pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top },
+      deltaY: event.deltaY,
+      deltaMode: event.deltaMode,
+      minZoom: fitZoom,
+      maxZoom: MAX_ZOOM,
+    });
+    if (!next) return;
+    event.preventDefault();
+    flow.setViewport(next);
+  });
+  useEffect(() => {
+    const figure = figureRef.current;
+    if (!figure) return;
+    const listener = (event: WheelEvent) => onWheel(event);
+    figure.addEventListener("wheel", listener, { passive: false });
+    return () => figure.removeEventListener("wheel", listener);
+  }, []);
 
   const selectedId = inspector.open ? inspector.selectedId : undefined;
   const selectedArea = graph.productionAreas.find(
@@ -401,16 +482,10 @@ export function AreaDependencyDiagram({
       }}
     >
       <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <label
-          className={cn(
-            "flex items-center gap-2 text-sm",
-            selectedId ? "text-foreground" : "text-muted"
-          )}
-        >
+        <label className="flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
-            checked={focus && !!selectedId}
-            disabled={!selectedId}
+            checked={focus}
             onChange={(event) => setFocus(event.target.checked)}
             aria-describedby={focusHintId}
             className="h-4 w-4 accent-primary"
@@ -460,11 +535,15 @@ export function AreaDependencyDiagram({
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
           fitView
-          // react-flow's default `minZoom` (0.5) also clamps `fitView`, so a
-          // wide graph stayed at 0.5 with its outer nodes clipped (GitHub
-          // issue #51). 0.05 fits even a `MAX_DIAGRAM_AREAS`-wide single rank
-          // in the Systems rail; Zoom In stays available for reading labels.
-          minZoom={0.05}
+          // The fitted zoom (GitHub issue #79), so neither the wheel, the
+          // Zoom Out button nor a pinch shrinks the map past fully in view.
+          // Until the canvas is measured, a floor low enough not to clamp
+          // `fitView` itself: react-flow's default (0.5) clipped wide graphs
+          // (GitHub issue #51).
+          minZoom={fitZoom ?? 0.05}
+          maxZoom={MAX_ZOOM}
+          // Plain wheel events reach the page unless the handler above zooms.
+          preventScrolling={false}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}

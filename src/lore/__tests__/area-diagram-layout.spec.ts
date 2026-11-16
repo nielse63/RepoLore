@@ -1,4 +1,5 @@
 import {
+  areaDiagramBounds,
   areaNeighborhood,
   DEFAULT_DIAGRAM_AREAS,
   deriveAreaDiagramLayout,
@@ -474,5 +475,48 @@ describe("smoothEdgePath", () => {
 
   it("is empty for no points", () => {
     expect(smoothEdgePath([])).toBe("");
+  });
+});
+
+describe("areaDiagramBounds", () => {
+  it("is the box around every drawn node", () => {
+    const node = (x: number, y: number) => ({
+      id: `${x},${y}`,
+      name: "n",
+      location: { filePath: "n" },
+      x,
+      y,
+      width: 200,
+      height: 64,
+    });
+    expect(
+      areaDiagramBounds({ nodes: [node(40, 10), node(-20, 120), node(300, 0)] })
+    ).toEqual({ x: -20, y: 0, width: 520, height: 184 });
+  });
+
+  it("matches a real layout's nodes", () => {
+    const api = area({ id: "area:api", name: "api" });
+    const worker = area({ id: "area:worker", name: "worker" });
+    const layout = deriveAreaDiagramLayout(
+      [api, worker],
+      [edge({ fromAreaId: "area:api", toAreaId: "area:worker" })]
+    )!;
+    const bounds = areaDiagramBounds(layout);
+    for (const n of layout.nodes) {
+      expect(n.x).toBeGreaterThanOrEqual(bounds.x);
+      expect(n.y).toBeGreaterThanOrEqual(bounds.y);
+      expect(n.x + n.width).toBeLessThanOrEqual(bounds.x + bounds.width);
+      expect(n.y + n.height).toBeLessThanOrEqual(bounds.y + bounds.height);
+    }
+    expect(bounds.width).toBe(200);
+  });
+
+  it("is empty for no nodes", () => {
+    expect(areaDiagramBounds({ nodes: [] })).toEqual({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    });
   });
 });

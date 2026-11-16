@@ -216,7 +216,7 @@ test.describe("Architecture page", () => {
     );
   });
 
-  test("Focus on selected area dims everything outside the selection's one-hop neighborhood", async ({
+  test("Focus on selected area is on by default and dims everything outside the selection's one-hop neighborhood", async ({
     page,
   }) => {
     await page.goto(architectureUrl);
@@ -239,16 +239,13 @@ test.describe("Architecture page", () => {
       return color;
     });
 
-    // Nothing to focus on until an area is selected.
-    await expect(focus).toBeDisabled();
-    await expect(page.getByText("Select an area to focus on it")).toBeVisible();
-
-    await areaNode(page, "/src/utils").click();
+    // On by default, but nothing is dimmed until an area is selected.
+    await expect(focus).toBeChecked();
     await expect(focus).toBeEnabled();
-    // Selecting alone doesn't dim anything.
+    await expect(page.getByText("Select an area to focus on it")).toBeVisible();
     await expect.poll(() => backgroundOf("/src")).not.toBe(surface);
 
-    await focus.check();
+    await areaNode(page, "/src/utils").click();
 
     // `/src/utils`'s only neighbor is `/src/components`; `/src` is two hops
     // away, so it and its edge are dimmed.
@@ -266,6 +263,17 @@ test.describe("Architecture page", () => {
     );
     expect(strokes).toContain(primary);
 
+    // Turning focus off undims everything, keeping the selection; turning
+    // it back on dims again.
+    await focus.uncheck();
+    await expect.poll(() => backgroundOf("/src")).not.toBe(surface);
+    await expect(areaNode(page, "/src/utils")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await focus.check();
+    await expect.poll(() => backgroundOf("/src")).toBe(surface);
+
     // Escape clears the selection, which undoes the dimming.
     await page.keyboard.press("Escape");
     await expect(areaNode(page, "/src/utils")).toHaveAttribute(
@@ -273,7 +281,7 @@ test.describe("Architecture page", () => {
       "false"
     );
     await expect(inspector(page)).toHaveCount(0);
-    await expect(focus).toBeDisabled();
+    await expect(focus).toBeChecked();
     await expect.poll(() => backgroundOf("/src")).not.toBe(surface);
     expect(
       await edgePaths.evaluateAll((paths) =>
@@ -537,6 +545,84 @@ test.describe("on a wide area graph", () => {
 
     await diagram.getByRole("button", { name: "Show fewer areas" }).click();
     await expect(nodes).toHaveCount(8);
+  });
+
+  /** The map's current zoom, from react-flow's viewport transform. */
+  async function mapZoom(page: Page) {
+    const transform = await page
+      .locator("#area-dependency-diagram .react-flow__viewport")
+      .evaluate((el) => el.style.transform);
+    return Number(/scale\(([\d.]+)\)/.exec(transform)![1]);
+  }
+
+  /** Puts the map mid-screen with the mouse over it, settled at its fit. */
+  async function hoverSettledMap(page: Page) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${wideRepoUrl}/architecture`);
+    const figure = page.locator("#area-dependency-diagram figure");
+    await expect(figure.locator(".react-flow__node").first()).toBeVisible();
+    await figure.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await waitForSettledViewport(page);
+    const box = (await figure.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    return figure;
+  }
+
+  const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
+
+  test("scrolling down over the map at its fitted view scrolls the page instead", async ({
+    page,
+  }) => {
+    await hoverSettledMap(page);
+    const zoom = await mapZoom(page);
+    const before = await scrollY(page);
+
+    await page.mouse.wheel(0, 400);
+
+    await expect.poll(() => scrollY(page)).toBeGreaterThan(before);
+    expect(await mapZoom(page)).toBeCloseTo(zoom, 3);
+    // Already at the zoom-out limit: Zoom Out is disabled, Zoom In isn't.
+    const flow = page.locator("#area-dependency-diagram .react-flow");
+    await expect(flow.getByRole("button", { name: "Zoom Out" })).toBeDisabled();
+    await expect(flow.getByRole("button", { name: "Zoom In" })).toBeEnabled();
+  });
+
+  test("scrolling up over the map zooms in; scrolling down zooms back to the fit, then scrolls the page", async ({
+    page,
+  }) => {
+    await hoverSettledMap(page);
+    const fitZoom = await mapZoom(page);
+    const before = await scrollY(page);
+
+    await page.mouse.wheel(0, -300);
+    await expect.poll(() => mapZoom(page)).toBeGreaterThan(fitZoom * 1.2);
+    expect(await scrollY(page)).toBe(before);
+    const flow = page.locator("#area-dependency-diagram .react-flow");
+    await expect(flow.getByRole("button", { name: "Zoom Out" })).toBeEnabled();
+
+    // Back down: the map zooms out first, and stops at its fitted view...
+    await page.mouse.wheel(0, 300);
+    await expect.poll(() => mapZoom(page)).toBeCloseTo(fitZoom, 3);
+    expect(await scrollY(page)).toBe(before);
+
+    // ...then the page scrolls.
+    await page.mouse.wheel(0, 300);
+    await expect.poll(() => scrollY(page)).toBeGreaterThan(before);
+    expect(await mapZoom(page)).toBeCloseTo(fitZoom, 3);
+  });
+
+  test("Zoom Out stops at the fitted view", async ({ page }) => {
+    await hoverSettledMap(page);
+    const fitZoom = await mapZoom(page);
+    const flow = page.locator("#area-dependency-diagram .react-flow");
+    const zoomOut = flow.getByRole("button", { name: "Zoom Out" });
+
+    await flow.getByRole("button", { name: "Zoom In" }).click();
+    await expect.poll(() => mapZoom(page)).toBeGreaterThan(fitZoom);
+    await zoomOut.click();
+    await expect(zoomOut).toBeDisabled();
+    await waitForSettledViewport(page);
+    expect(await mapZoom(page)).toBeCloseTo(fitZoom, 3);
   });
 
   test("areas with no edges are listed under the diagram, not drawn as nodes", async ({

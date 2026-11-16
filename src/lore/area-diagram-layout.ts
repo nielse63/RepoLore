@@ -293,6 +293,25 @@ export function smoothEdgePath(points: { x: number; y: number }[]): string {
   return path;
 }
 
+/**
+ * The box around a layout's drawn nodes — what react-flow's `fitView` fits
+ * (it measures nodes, not edges) — so the diagram can work out the fitted
+ * zoom ahead of time and make it the zoom-out limit (GitHub issue #79).
+ */
+export function areaDiagramBounds(layout: Pick<AreaDiagramLayout, "nodes">): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  if (layout.nodes.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+  const left = Math.min(...layout.nodes.map((node) => node.x));
+  const top = Math.min(...layout.nodes.map((node) => node.y));
+  const right = Math.max(...layout.nodes.map((node) => node.x + node.width));
+  const bottom = Math.max(...layout.nodes.map((node) => node.y + node.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
 /** The id react-flow and `areaNeighborhood` use for a drawn edge. */
 export function areaEdgeId(edge: { fromId: EntityId; toId: EntityId }) {
   return `${edge.fromId}->${edge.toId}`;
