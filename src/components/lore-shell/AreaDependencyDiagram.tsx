@@ -391,7 +391,7 @@ function AreaMapNotes({
     <>
       <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-muted">
         <span>Arrows point to imported dependencies</span>
-        <span>Select an area for its evidence</span>
+        <span>Select an area for its relationships</span>
       </div>
       {/* Wording per `product-scope-guardian`: the subset is in Major Areas
           order, never described as the "top", "key" or most important

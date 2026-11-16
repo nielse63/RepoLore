@@ -384,7 +384,7 @@ test.describe("Architecture page", () => {
       diagram.getByText("Arrows point to imported dependencies")
     ).toBeVisible();
     await expect(
-      diagram.getByText("Select an area for its evidence")
+      diagram.getByText("Select an area for its relationships")
     ).toBeVisible();
     await expect(diagram.getByRole("button", { name: /^Show / })).toHaveCount(
       0
