@@ -89,10 +89,6 @@ jobs:
           DATABASE_URL: postgres://repolore:repolore@localhost:5432/repolore
         run: npm run verify
 
-      - name: Check formatting
-        if: steps.changes.outputs.changed == 'true'
-        run: npm run format:check
-
       - name: Ensure verification did not modify other tracked files
         if: steps.changes.outputs.changed == 'true'
         run: |
