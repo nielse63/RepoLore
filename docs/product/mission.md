@@ -26,10 +26,11 @@ The long-term ambition is for an engineer to speak confidently about an unfamili
 
 ## Who It Serves
 
-The primary user is an experienced engineer investigating an unfamiliar TypeScript, JavaScript, or Python repository.
+The primary user is an experienced engineer newly contributing to an open-source TypeScript, JavaScript, or Python project who needs to get oriented as quickly as possible: what the main pieces are, where to start, how those pieces connect, and the source behind each claim. For this user, the 15-minute target means going from a public repository URL to a justified first place to read or change, without asking a maintainer for a tour.
 
 Common situations include:
 
+- making a first contribution to an open-source project;
 - onboarding to an existing project;
 - moving to another team or codebase;
 - investigating a bug or proposed change outside a familiar area;
@@ -37,6 +38,8 @@ Common situations include:
 - helping another team understand its system.
 
 Engineering managers are an important secondary audience. They should benefit from the same shared model and terminology, not from a separate dashboard of weak proxies.
+
+The user and the eventual buyer differ. Open-source contributors use the free, public product; startups and small-to-medium engineering organizations, whose engineers onboard to unfamiliar codebases in the same way, remain the intended paying customer. Paid capabilities (for example, private repositories) are deferred until that demand is demonstrated and pass the Scope Rule in `non-goals.md`. Until then, product decisions are judged by whether they help the open-source contributor.
 
 ## How Repo Lore Earns Confidence
 

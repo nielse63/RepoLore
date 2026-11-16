@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <title>Repo Lore · Interactive Design Reference</title>
+  <style>
+    :root{color-scheme:light dark}
+    html,body{margin:0;padding:0;background:light-dark(#f8f7f3,#19211d)}
+    /* Repo Lore design reference. Product tokens; no framework or host dependency. */
+#repolore-design{
+ --rl-paper:light-dark(#f8f7f3,#19211d);--rl-panel:light-dark(#fffefa,#232d26);--rl-nav:light-dark(#f0f2eb,#1e2922);--rl-ink:light-dark(#283e35,#e5eee6);--rl-muted:light-dark(#5e6f64,#b3c6b9);--rl-line:light-dark(#d9e1d6,#405246);--rl-teal:light-dark(#226b5c,#92d2b9);--rl-on-teal:light-dark(#fffefa,#173126);--rl-wash:light-dark(#e8f0e6,#2c4233);--rl-warn:light-dark(#785b25,#e5c58d);--rl-warn-bg:light-dark(#f6efde,#3b3529);--rl-red:light-dark(#954c46,#f0aaa0);--rl-red-bg:light-dark(#faeeea,#422e2b);--rl-shadow:0 20px 65px color-mix(in srgb,var(--rl-ink) 12%,transparent);
+ color:var(--rl-ink);font:400 14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--rl-paper);container-type:inline-size;position:relative;min-width:0;text-align:left;isolation:isolate;
+}
+#repolore-design *,#repolore-design *:before,#repolore-design *:after{box-sizing:border-box}
+#repolore-design [hidden]{display:none!important}
+#repolore-design h1,#repolore-design h2,#repolore-design h3,#repolore-design p{margin:0}
+#repolore-design h1{font:400 36px/1.15 Georgia,"Times New Roman",serif;letter-spacing:-.9px;margin:5px 0 12px}
+#repolore-design h2{font:400 25px/1.25 Georgia,"Times New Roman",serif;letter-spacing:-.4px}
+#repolore-design h3{font-family:inherit;font-size:15px;line-height:1.4;font-weight:500}
+#repolore-design strong,#repolore-design b{font-weight:500}
+#repolore-design a{color:var(--rl-teal);text-underline-offset:4px;text-decoration-thickness:1px}
+#repolore-design button,#repolore-design input,#repolore-design select,#repolore-design textarea{font:inherit;color:inherit}
+#repolore-design button,#repolore-design a,#repolore-design summary{touch-action:manipulation}
+#repolore-design button:focus-visible,#repolore-design a:focus-visible,#repolore-design input:focus-visible,#repolore-design select:focus-visible,#repolore-design textarea:focus-visible,#repolore-design summary:focus-visible{outline:3px solid var(--rl-teal);outline-offset:3px}
+#repolore-design button:disabled{opacity:.45}
+#repolore-design .rl-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--rl-panel);border:1px solid var(--rl-line);padding:9px 14px;border-radius:6px;text-decoration:none;font-weight:500;font-size:12px;min-height:38px;color:var(--rl-ink)}
+#repolore-design .rl-button:hover{background:var(--rl-wash);border-color:var(--rl-teal)}
+#repolore-design .rl-button.rl-primary{background:var(--rl-teal);border-color:var(--rl-teal);color:var(--rl-on-teal)}
+#repolore-design .rl-linkbutton{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:transparent;color:var(--rl-teal);padding:5px 0;font-size:12px;min-height:30px;text-align:left;text-decoration:underline;text-underline-offset:4px}
+#repolore-design .rl-plain{border:0;background:transparent;padding:5px;color:var(--rl-muted);font-size:12px;text-decoration:none}
+#repolore-design .rl-muted{color:var(--rl-muted)}
+#repolore-design .rl-kicker{font-size:11px;letter-spacing:1.5px;color:var(--rl-teal);text-transform:uppercase;font-weight:500}
+#repolore-design .rl-lead{color:var(--rl-muted);font-size:14px;max-width:680px}
+#repolore-design .rl-mono{font:400 11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;word-break:break-word}
+#repolore-design .rl-chip{font-size:11px;padding:4px 8px;border-radius:4px;background:var(--rl-wash);color:var(--rl-teal);display:inline-flex;align-items:center;gap:6px}
+#repolore-design .rl-chip.rl-inferred{background:var(--rl-paper);border:1px solid var(--rl-line);color:var(--rl-muted)}
+#repolore-design .rl-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+#repolore-design .rl-spread{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+#repolore-design .rl-prototype{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--rl-nav);color:var(--rl-muted);padding:8px 25px;font-size:11px;border-bottom:1px solid var(--rl-line)}
+#repolore-design .rl-prototype .rl-plain{font-size:11px;padding:2px 0;min-height:25px}
+#repolore-design .rl-topbar{background:var(--rl-panel);border-bottom:1px solid var(--rl-line);padding:19px 29px;display:flex;align-items:center;gap:25px;min-height:76px}
+#repolore-design .rl-brand{font:500 25px/1.1 Georgia,serif;color:var(--rl-ink);text-decoration:none;letter-spacing:-.8px;white-space:nowrap}
+#repolore-design .rl-topnav{margin-left:auto;display:flex;gap:26px;align-items:center;padding-right:65px}
+#repolore-design .rl-topnav a{font-size:12px;color:var(--rl-muted);text-decoration:none}
+#repolore-design .rl-topnav a[aria-current=page]{color:var(--rl-teal);text-decoration:underline}
+#repolore-design .rl-repo-crumb{font-size:12px;color:var(--rl-muted);padding-left:24px;border-left:1px solid var(--rl-line)}
+#repolore-design .rl-repo-crumb strong{color:var(--rl-ink)}
+#repolore-design .rl-top-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+#repolore-design .rl-menu{display:none}
+#repolore-design .rl-shell{display:grid;grid-template-columns:173px minmax(0,1fr);position:relative;align-items:stretch;min-height:780px}
+#repolore-design .rl-sidebar{display:flex;flex-direction:column;padding:27px 13px;background:var(--rl-nav);border-right:1px solid var(--rl-line);gap:5px}
+#repolore-design .rl-nav-caption{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--rl-muted);padding:0 12px 11px}
+#repolore-design .rl-nav-item{border:0;text-decoration:none;display:flex;align-items:center;gap:10px;border-radius:6px;background:transparent;font-size:12px;padding:11px 12px;color:var(--rl-muted);min-height:40px}
+#repolore-design .rl-nav-item:hover{background:var(--rl-wash)}
+#repolore-design .rl-nav-item[aria-current=page]{background:var(--rl-wash);color:var(--rl-teal);font-weight:500}
+#repolore-design .rl-nav-mark{width:16px;color:var(--rl-muted);font-size:13px;text-align:center}
+#repolore-design .rl-sidefoot{margin-top:auto;padding:38px 12px 0;font-size:11px;color:var(--rl-muted)}
+#repolore-design .rl-sidefoot p{margin:6px 0 14px}
+#repolore-design .rl-main{padding:31px 34px 29px;min-width:0;position:relative}
+#repolore-design .rl-status{display:flex;gap:9px;align-items:center;color:var(--rl-muted);font-size:11px;margin:19px 0 29px;flex-wrap:wrap}
+#repolore-design .rl-status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--rl-teal)}
+#repolore-design .rl-section{margin-top:30px}
+#repolore-design .rl-sectionhead{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:15px}
+#repolore-design .rl-sectionhead p{font-size:12px;color:var(--rl-muted);margin-top:6px}
+#repolore-design .rl-map-surface{padding:24px 20px 14px;border:1px solid var(--rl-line);border-radius:9px;background:var(--rl-panel)}
+#repolore-design .rl-map{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:49px 34px;position:relative;padding:8px 0 17px;min-width:0}
+#repolore-design .rl-map svg.rl-connections{position:absolute;inset:0;width:100%;height:100%;overflow:visible;color:var(--rl-teal);pointer-events:none}
+#repolore-design .rl-edge{stroke:currentColor;stroke-width:1.5;fill:none;opacity:.55}
+#repolore-design .rl-edge.rl-active{opacity:1;stroke-width:2}
+#repolore-design .rl-node{position:relative;z-index:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left;border:1px solid var(--rl-line);padding:14px 12px;border-radius:7px;background:var(--rl-paper);min-height:75px}
+#repolore-design .rl-node strong{font-size:12px;overflow-wrap:anywhere}
+#repolore-design .rl-node small{font:400 11px/1.4 ui-monospace,monospace;overflow-wrap:anywhere;color:var(--rl-muted);margin-top:6px}
+#repolore-design .rl-node:hover,#repolore-design .rl-node[aria-pressed=true]{background:var(--rl-wash);border-color:var(--rl-teal)}
+#repolore-design .rl-node[aria-pressed=true]{box-shadow:0 0 0 1px var(--rl-teal)}
+#repolore-design .rl-node.rl-dim{opacity:.35}
+#repolore-design .rl-node[data-area=ui]{grid-column:1;grid-row:1}
+#repolore-design .rl-node[data-area=api]{grid-column:1;grid-row:2}
+#repolore-design .rl-node[data-area=projects]{grid-column:2;grid-row:1}
+#repolore-design .rl-node[data-area=auth]{grid-column:2;grid-row:2}
+#repolore-design .rl-node[data-area=db]{grid-column:3;grid-row:1}
+#repolore-design .rl-node[data-area=notifications]{grid-column:3;grid-row:2}
+#repolore-design .rl-map-caption{font-size:11px;color:var(--rl-muted);display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-top:7px}
+#repolore-design .rl-map-controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:15px;color:var(--rl-muted)}
+#repolore-design .rl-map-controls label{display:flex;align-items:center;gap:7px}
+#repolore-design input[type=checkbox]{accent-color:var(--rl-teal)}
+#repolore-design .rl-stop{width:100%;background:transparent;border:0;border-bottom:1px solid var(--rl-line);display:grid;grid-template-columns:27px 1fr 15px;gap:13px;padding:18px 0;text-align:left;align-items:start}
+#repolore-design .rl-stop:hover strong{color:var(--rl-teal)}
+#repolore-design .rl-stop strong{font-size:13px}
+#repolore-design .rl-stop p{font-size:12px;color:var(--rl-muted);margin:5px 0}
+#repolore-design .rl-stop .rl-mono{color:var(--rl-teal)}
+#repolore-design .rl-step-number{width:25px;height:25px;border:1px solid var(--rl-line);border-radius:50%;display:grid;place-items:center;font-size:12px;color:var(--rl-teal)}
+#repolore-design .rl-two-col{display:grid;grid-template-columns:1fr 1fr;gap:27px;margin-top:22px}
+#repolore-design .rl-quietbox{border-top:1px solid var(--rl-line);padding-top:17px}
+#repolore-design .rl-quietbox p{color:var(--rl-muted);font-size:12px;margin-top:7px}
+#repolore-design .rl-disclosure{border-top:1px solid var(--rl-line);font-size:12px;margin-top:22px;padding:15px 0;color:var(--rl-muted)}
+#repolore-design .rl-disclosure summary{color:var(--rl-teal);padding:4px 0}
+#repolore-design .rl-disclosure p{margin:13px 0;max-width:680px}
+#repolore-design .rl-inspecting{grid-template-columns:155px minmax(0,1fr) 292px}
+#repolore-design .rl-inspecting .rl-main{padding-left:25px;padding-right:25px}
+#repolore-design .rl-inspecting .rl-map{gap:43px 18px}
+#repolore-design .rl-inspecting .rl-node{padding:11px 9px}
+#repolore-design .rl-inspecting .rl-node small{display:none}
+#repolore-design .rl-inspector{background:var(--rl-panel);border-left:1px solid var(--rl-line);padding:24px 22px;min-width:0;z-index:5}
+#repolore-design .rl-inspector-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:21px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--rl-muted)}
+#repolore-design .rl-close{display:grid;place-items:center;width:33px;height:33px;border:1px solid var(--rl-line);border-radius:5px;background:var(--rl-panel);font-size:19px;color:var(--rl-muted)}
+#repolore-design .rl-inspector h2{font-size:26px;margin-bottom:9px}
+#repolore-design .rl-inspector .rl-description{font-size:12px;color:var(--rl-muted);margin:17px 0}
+#repolore-design .rl-inspector h3{font-size:12px;font-weight:500;margin:25px 0 10px}
+#repolore-design .rl-proof{padding:12px 0;border-bottom:1px solid var(--rl-line)}
+#repolore-design .rl-proof>span{display:block;font-size:11px;color:var(--rl-muted);margin-bottom:4px}
+#repolore-design .rl-proof .rl-linkbutton{font:400 11px/1.6 ui-monospace,monospace;text-decoration:none;overflow-wrap:anywhere;display:block;word-break:break-word}
+#repolore-design .rl-inspector .rl-button{margin-top:17px}
+#repolore-design .rl-inspector .rl-row{gap:8px}
+#repolore-design .rl-inspector .rl-disclosure{font-size:11px}
+#repolore-design .rl-panel-note{font-size:11px;color:var(--rl-muted);margin:13px 0}
+#repolore-design .rl-toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:24px 0 18px}
+#repolore-design .rl-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+#repolore-design .rl-field>span,#repolore-design label.rl-label{font-size:11px;color:var(--rl-muted)}
+#repolore-design .rl-field input,#repolore-design .rl-field select,#repolore-design .rl-field textarea{width:100%;min-width:0;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:6px;padding:10px 12px;font-size:14px;min-height:42px}
+#repolore-design .rl-search{flex:1;min-width:170px}
+#repolore-design .rl-table-wrap{min-width:0}
+#repolore-design table{width:100%;border-collapse:collapse;text-align:left;font-size:12px;table-layout:fixed}
+#repolore-design th{font-weight:400;color:var(--rl-muted);font-size:11px;border-bottom:1px solid var(--rl-line);padding:12px 10px 12px 0}
+#repolore-design td{padding:15px 10px 15px 0;border-bottom:1px solid var(--rl-line);vertical-align:top;overflow-wrap:anywhere}
+#repolore-design td:first-child{padding-left:0}
+#repolore-design td .rl-linkbutton{font-size:12px;font-weight:500;text-decoration:none;min-height:25px;word-break:break-word;display:block}
+#repolore-design td p{font-size:11px;color:var(--rl-muted);margin-top:5px}
+#repolore-design .rl-systems{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:27px}
+#repolore-design .rl-system-card{display:flex;flex-direction:column;align-items:start;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:8px;padding:22px;min-width:0;text-decoration:none;color:var(--rl-ink)}
+#repolore-design .rl-system-card:first-child{grid-column:1/-1}
+#repolore-design .rl-system-card:hover{border-color:var(--rl-teal);background:var(--rl-wash)}
+#repolore-design .rl-system-card h2{font-size:25px;margin:12px 0 9px}
+#repolore-design .rl-system-card p{font-size:13px;color:var(--rl-muted);max-width:490px;margin-bottom:17px}
+#repolore-design .rl-system-card .rl-card-footer{display:flex;gap:15px;align-items:center;justify-content:space-between;width:100%;font-size:11px;color:var(--rl-teal);margin-top:auto}
+#repolore-design .rl-list-row{display:flex;align-items:start;justify-content:space-between;gap:15px;padding:16px 0;border-bottom:1px solid var(--rl-line)}
+#repolore-design .rl-list-row p{font-size:12px;color:var(--rl-muted);margin-top:5px}
+#repolore-design .rl-list-row .rl-linkbutton{font-size:13px;font-weight:500;text-decoration:none}
+#repolore-design .rl-breadcrumb{font-size:11px;margin-bottom:15px}
+#repolore-design .rl-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-top:23px;position:relative}
+#repolore-design .rl-flow-step{position:relative;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:7px;padding:15px 11px;min-width:0;display:flex;flex-direction:column;align-items:start;text-align:left;gap:9px}
+#repolore-design .rl-flow-step:not(:last-child):after{content:'→';position:absolute;right:-17px;top:40%;color:var(--rl-teal);font-size:14px}
+#repolore-design .rl-flow-step[aria-pressed=true]{border-color:var(--rl-teal);background:var(--rl-wash);box-shadow:0 0 0 1px var(--rl-teal)}
+#repolore-design .rl-flow-step strong{font-size:12px}
+#repolore-design .rl-flow-step .rl-mono{font-size:11px;color:var(--rl-muted)}
+#repolore-design .rl-flow-detail{border:1px solid var(--rl-line);border-radius:8px;background:var(--rl-panel);padding:21px;margin-top:20px}
+#repolore-design .rl-flow-detail h2{font-size:23px;margin:6px 0 9px}
+#repolore-design .rl-flow-detail p{font-size:13px;color:var(--rl-muted);max-width:630px}
+#repolore-design .rl-flow-io{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:19px 0}
+#repolore-design .rl-flow-io span{font-size:11px;color:var(--rl-muted);display:block;margin-bottom:5px}
+#repolore-design .rl-flow-next{display:flex;gap:8px;margin-left:auto}
+#repolore-design .rl-timeline{margin-top:27px}
+#repolore-design .rl-event{display:grid;grid-template-columns:18px 1fr;gap:15px;position:relative;padding:0 0 29px}
+#repolore-design .rl-event:not(:last-child):before{content:'';position:absolute;top:12px;bottom:0;left:5px;border-left:1px solid var(--rl-line)}
+#repolore-design .rl-event-dot{width:11px;height:11px;border:2px solid var(--rl-teal);border-radius:50%;background:var(--rl-wash);margin-top:4px;z-index:1}
+#repolore-design .rl-event-date{font-size:11px;color:var(--rl-muted);margin-bottom:9px}
+#repolore-design .rl-event h2{font:500 15px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:0;margin-bottom:6px}
+#repolore-design .rl-event p{font-size:12px;color:var(--rl-muted);max-width:620px}
+#repolore-design .rl-event .rl-row{margin:13px 0}
+#repolore-design .rl-diff{font:400 11px/1.6 ui-monospace,monospace;margin:15px 0}
+#repolore-design .rl-diff div{padding:9px 10px;overflow-wrap:anywhere}
+#repolore-design .rl-diff-add{background:var(--rl-wash);color:var(--rl-teal)}
+#repolore-design .rl-diff-remove{background:var(--rl-red-bg);color:var(--rl-red)}
+#repolore-design .rl-banner{border:1px solid var(--rl-line);border-radius:7px;padding:15px 17px;background:var(--rl-warn-bg);color:var(--rl-warn);font-size:12px;margin-bottom:25px;display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+#repolore-design .rl-state{padding:45px 20px;max-width:600px;margin:20px auto;text-align:center}
+#repolore-design .rl-state h1{font-size:32px;margin:16px 0}
+#repolore-design .rl-state p{color:var(--rl-muted);font-size:14px;margin:13px 0 22px}
+#repolore-design .rl-state .rl-row{justify-content:center}
+#repolore-design .rl-state-symbol{font:400 36px/1 Georgia,serif;color:var(--rl-teal)}
+#repolore-design .rl-skeleton{height:13px;border-radius:4px;background:color-mix(in srgb,var(--rl-muted) 13%,transparent);margin:14px auto}
+#repolore-design .rl-public-main{padding:0 5.5% 45px;max-width:1250px;margin:0 auto}
+#repolore-design .rl-hero{text-align:center;padding:54px 3% 35px}
+#repolore-design .rl-hero h1{font-size:clamp(37px,5.5cqi,62px);letter-spacing:-1.8px;line-height:1.08;margin:17px auto 20px;max-width:780px}
+#repolore-design .rl-hero p{font-size:16px;color:var(--rl-muted);max-width:570px;margin:0 auto 27px}
+#repolore-design .rl-repo-form{display:flex;gap:8px;max-width:650px;margin:0 auto;padding:7px;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:9px}
+#repolore-design .rl-repo-form input{width:100%;min-width:0;flex:1;border:0;background:transparent;padding:12px 15px;font-size:16px;color:var(--rl-ink)}
+#repolore-design .rl-repo-form .rl-button{white-space:nowrap;font-size:13px}
+#repolore-design .rl-hero .rl-after{font-size:12px;margin:13px 0 0;max-width:none}
+#repolore-design .rl-form-error{font-size:12px;color:var(--rl-red);margin-top:12px}
+#repolore-design .rl-preview{border:1px solid var(--rl-line);border-radius:10px;background:var(--rl-panel);overflow:hidden;box-shadow:var(--rl-shadow)}
+#repolore-design .rl-preview-bar{font-size:12px;padding:13px 23px;border-bottom:1px solid var(--rl-line);display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;color:var(--rl-muted)}
+#repolore-design .rl-preview-body{display:grid;grid-template-columns:1.35fr 1fr;gap:30px;padding:27px 28px}
+#repolore-design .rl-preview-body h2{font-size:29px;margin:0 0 8px}
+#repolore-design .rl-preview-body p{font-size:12px;color:var(--rl-muted);margin:0 0 19px}
+#repolore-design .rl-preview-body .rl-map-surface{padding:8px 0;border:0;background:transparent}
+#repolore-design .rl-preview-body .rl-node small{display:none}
+#repolore-design .rl-preview-body .rl-map{gap:30px 15px}
+#repolore-design .rl-preview-body .rl-node{padding:12px 10px;min-height:48px}
+#repolore-design .rl-preview-stops{border-left:1px solid var(--rl-line);padding-left:27px}
+#repolore-design .rl-preview-stops .rl-stop{padding:12px 0}
+#repolore-design .rl-preview-stops p{margin:4px 0 0}
+#repolore-design .rl-preview-footer{padding:14px 23px;background:var(--rl-wash);border-top:1px solid var(--rl-line);font-size:12px;color:var(--rl-muted);display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+#repolore-design .rl-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin:38px 0 14px}
+#repolore-design .rl-benefits h3{font-size:14px;font-weight:500}
+#repolore-design .rl-benefits p{font-size:12px;color:var(--rl-muted);margin-top:6px}
+#repolore-design .rl-footer{display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:22px 5.5%;border-top:1px solid var(--rl-line);font-size:11px;color:var(--rl-muted)}
+#repolore-design .rl-footer a{color:var(--rl-muted);text-decoration:none}
+#repolore-design .rl-public-header{padding:42px 0 10px}
+#repolore-design .rl-explore-feature{border:1px solid var(--rl-line);border-radius:9px;background:var(--rl-panel);display:grid;grid-template-columns:1.2fr 1fr;gap:30px;padding:28px;margin:23px 0}
+#repolore-design .rl-explore-feature h2{font-size:32px;margin:10px 0}
+#repolore-design .rl-explore-feature p{font-size:13px;color:var(--rl-muted);margin:10px 0 20px}
+#repolore-design .rl-explore-feature .rl-map-surface{padding:12px;border:0;background:transparent}
+#repolore-design .rl-explore-feature .rl-node{min-height:48px}
+#repolore-design .rl-explore-feature .rl-node small{display:none}
+#repolore-design .rl-tourgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:18px}
+#repolore-design .rl-tour{padding:20px 0;border-top:1px solid var(--rl-line)}
+#repolore-design .rl-tour h3{font-size:14px;font-weight:500;margin-bottom:8px}
+#repolore-design .rl-tour p{font-size:12px;color:var(--rl-muted);margin-bottom:10px}
+#repolore-design .rl-essay{max-width:680px;margin:0 auto;padding:45px 0 20px}
+#repolore-design .rl-essay h1{font-size:49px;line-height:1.12;margin:20px 0 25px}
+#repolore-design .rl-essay .rl-essay-intro{font-size:18px;color:var(--rl-muted);margin-bottom:35px}
+#repolore-design .rl-essay section{padding:26px 0;border-top:1px solid var(--rl-line)}
+#repolore-design .rl-essay p{font-size:15px;color:var(--rl-muted);margin:14px 0}
+#repolore-design .rl-quote{font:400 29px/1.35 Georgia,serif;padding:24px 0;border-left:3px solid var(--rl-teal);padding-left:24px;margin:20px 0 35px}
+#repolore-design .rl-design-index{max-width:940px;margin:0 auto;padding:36px 25px 45px}
+#repolore-design .rl-design-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:25px 0}
+#repolore-design .rl-design-grid a{display:block;padding:18px;border:1px solid var(--rl-line);background:var(--rl-panel);border-radius:7px;text-decoration:none}
+#repolore-design .rl-design-grid a small{display:block;font-size:12px;color:var(--rl-muted);margin-top:7px}
+#repolore-design .rl-state-links{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}
+#repolore-design .rl-checklist{padding-left:20px;color:var(--rl-muted);font-size:13px}
+#repolore-design .rl-checklist li{margin:9px 0}
+#repolore-design .rl-progress{width:100%;height:6px;background:color-mix(in srgb,var(--rl-teal) 12%,transparent);border-radius:6px;overflow:hidden;margin:25px 0}
+#repolore-design .rl-progress>span{display:block;height:100%;background:var(--rl-teal);transition:width .25s ease}
+#repolore-design .rl-analysis-steps{padding:0;list-style:none;text-align:left;margin:25px auto;max-width:420px}
+#repolore-design .rl-analysis-steps li{padding:12px 0;border-bottom:1px solid var(--rl-line);display:flex;gap:13px;font-size:13px;color:var(--rl-muted)}
+#repolore-design .rl-analysis-steps li.rl-done{color:var(--rl-teal)}
+#repolore-design .rl-empty-results{padding:25px 0;color:var(--rl-muted);font-size:13px}
+#repolore-design .rl-expanded .rl-map{row-gap:105px;padding-top:35px;padding-bottom:45px}
+#repolore-design .rl-expanded .rl-area-inventory{display:none}
+#repolore-design .rl-inline-note{font-size:11px;color:var(--rl-muted);margin-top:13px}
+#repolore-design .rl-error-text{color:var(--rl-red)}
+#repolore-design .rl-backdrop{position:absolute;inset:0;background:color-mix(in srgb,var(--rl-ink) 12%,transparent);z-index:10;padding:50px 20px;display:flex;align-items:flex-start;justify-content:center}
+#repolore-design .rl-modal{background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:12px;padding:27px;max-width:760px;width:100%;box-shadow:var(--rl-shadow);min-width:0}
+#repolore-design .rl-modal h2{font-size:27px}
+#repolore-design .rl-modal .rl-spread{align-items:flex-start}
+#repolore-design .rl-modal p{font-size:13px;color:var(--rl-muted);margin:15px 0}
+#repolore-design .rl-modal .rl-field{margin:18px 0}
+#repolore-design .rl-modal textarea{min-height:90px;resize:vertical;font:400 12px/1.7 ui-monospace,monospace}
+#repolore-design .rl-code{font:400 12px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--rl-paper);border:1px solid var(--rl-line);border-radius:6px;margin-top:18px;padding:10px 0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;min-width:0}
+#repolore-design .rl-code-line{display:grid;grid-template-columns:35px minmax(0,1fr);padding:1px 13px 1px 0}
+#repolore-design .rl-line-number{color:var(--rl-muted);text-align:right;padding-right:12px;user-select:none;font-size:11px}
+#repolore-design .rl-line-selected{background:var(--rl-wash)}
+#repolore-design .rl-modal-footer{margin-top:18px;font-size:11px;color:var(--rl-muted)}
+#repolore-design .rl-hidden-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@container(max-width:950px){
+ #repolore-design .rl-inspecting{grid-template-columns:150px minmax(0,1fr)}
+ #repolore-design .rl-inspector{grid-column:2;border-top:1px solid var(--rl-line);border-left:0;padding:25px 30px}
+ #repolore-design .rl-inspecting .rl-node small{display:block}
+ #repolore-design .rl-main{padding:27px}
+ #repolore-design .rl-topbar{padding-left:22px;padding-right:22px;gap:18px}
+ #repolore-design .rl-topnav{padding-right:0}
+ #repolore-design .rl-repo-crumb{padding-left:18px}
+ #repolore-design .rl-flow{gap:15px}
+ #repolore-design .rl-flow-step{padding:13px 9px}
+ #repolore-design .rl-flow-step:not(:last-child):after{right:-14px}
+}
+@container(max-width:660px){
+ #repolore-design .rl-prototype{padding:7px 18px;font-size:11px;gap:6px}
+ #repolore-design .rl-prototype .rl-prototype-long{display:none}
+ #repolore-design .rl-topbar{padding:17px 18px;gap:14px;flex-wrap:wrap}
+ #repolore-design .rl-brand{font-size:24px}
+ #repolore-design .rl-topnav{gap:17px}
+ #repolore-design .rl-topnav .rl-button{display:none}
+ #repolore-design .rl-menu{display:inline-flex;margin-left:auto;min-height:40px}
+ #repolore-design .rl-repo-crumb{order:4;padding:10px 0 0;border:0;width:100%;font-size:12px}
+ #repolore-design .rl-top-actions{margin-left:0}
+ #repolore-design .rl-top-actions .rl-share-label{display:none}
+ #repolore-design .rl-top-actions .rl-button{padding:8px 10px;font-size:11px}
+ #repolore-design .rl-shell,#repolore-design .rl-inspecting{display:block;min-height:800px}
+ #repolore-design .rl-sidebar{display:none;border-right:0;border-bottom:1px solid var(--rl-line);padding:15px}
+ #repolore-design .rl-sidebar.rl-open{display:flex}
+ #repolore-design .rl-sidefoot{display:none}
+ #repolore-design .rl-main,#repolore-design .rl-inspecting .rl-main{padding:27px 20px}
+ #repolore-design h1{font-size:32px}
+ #repolore-design h2{font-size:24px}
+ #repolore-design .rl-lead{font-size:13px}
+ #repolore-design .rl-status{gap:7px;margin-bottom:25px}
+ #repolore-design .rl-map-surface{padding:17px 13px 13px}
+ #repolore-design .rl-map,#repolore-design .rl-inspecting .rl-map{grid-template-columns:repeat(2,minmax(0,1fr));gap:35px 24px;padding:7px 0 14px}
+ #repolore-design .rl-node,#repolore-design .rl-inspecting .rl-node{padding:13px 10px;min-height:74px}
+ #repolore-design .rl-node[data-area=ui]{grid-row:1;grid-column:1}
+ #repolore-design .rl-node[data-area=api]{grid-row:1;grid-column:2}
+ #repolore-design .rl-node[data-area=projects]{grid-row:2;grid-column:1}
+ #repolore-design .rl-node[data-area=auth]{grid-row:2;grid-column:2}
+ #repolore-design .rl-node[data-area=db]{grid-row:3;grid-column:1}
+ #repolore-design .rl-node[data-area=notifications]{grid-row:3;grid-column:2}
+ #repolore-design .rl-map-hint{display:none}
+ #repolore-design .rl-inspector{position:absolute;top:16px;left:10px;right:10px;border:1px solid var(--rl-line);border-radius:14px;padding:25px;box-shadow:var(--rl-shadow)}
+ #repolore-design .rl-inspector:before{content:'';display:block;width:35px;height:4px;border-radius:5px;background:var(--rl-line);margin:-12px auto 16px}
+ #repolore-design .rl-inspecting .rl-main{opacity:.22;pointer-events:none}
+ #repolore-design .rl-two-col,#repolore-design .rl-systems{grid-template-columns:1fr;gap:20px}
+ #repolore-design .rl-system-card:first-child{grid-column:auto}
+ #repolore-design .rl-system-card{padding:21px}
+ #repolore-design .rl-toolbar{align-items:stretch;gap:13px}
+ #repolore-design .rl-search{width:100%;flex-basis:100%}
+ #repolore-design .rl-field input,#repolore-design .rl-field select{font-size:16px}
+ #repolore-design .rl-field{flex:1}
+ #repolore-design .rl-table-secondary{display:none}
+ #repolore-design th,#repolore-design td{padding-top:14px;padding-bottom:14px}
+ #repolore-design .rl-flow{grid-template-columns:1fr;gap:17px}
+ #repolore-design .rl-flow-step{display:grid;grid-template-columns:25px 1fr;gap:6px 12px;padding:13px 16px}
+ #repolore-design .rl-flow-step .rl-step-number{grid-row:1/3}
+ #repolore-design .rl-flow-step:not(:last-child):after{content:'↓';right:auto;top:auto;left:28px;bottom:-19px}
+ #repolore-design .rl-flow-io{grid-template-columns:1fr;gap:16px}
+ #repolore-design .rl-flow-detail{padding:19px}
+ #repolore-design .rl-flow-next{margin-left:0}
+ #repolore-design .rl-hero{padding:37px 0 28px}
+ #repolore-design .rl-hero h1{font-size:39px;letter-spacing:-1px}
+ #repolore-design .rl-hero p{font-size:15px}
+ #repolore-design .rl-repo-form{flex-direction:column;padding:10px}
+ #repolore-design .rl-repo-form input{padding:10px 8px}
+ #repolore-design .rl-repo-form .rl-button{min-height:46px}
+ #repolore-design .rl-preview-body{grid-template-columns:1fr;padding:22px;gap:22px}
+ #repolore-design .rl-preview-stops{padding:20px 0 0;border-left:0;border-top:1px solid var(--rl-line)}
+ #repolore-design .rl-preview-body .rl-map{gap:24px}
+ #repolore-design .rl-preview-body .rl-node{min-height:50px}
+ #repolore-design .rl-benefits,#repolore-design .rl-tourgrid,#repolore-design .rl-explore-feature,#repolore-design .rl-design-grid{grid-template-columns:1fr}
+ #repolore-design .rl-explore-feature{padding:23px;gap:10px}
+ #repolore-design .rl-public-header{padding-top:30px}
+ #repolore-design .rl-essay{padding-top:32px}
+ #repolore-design .rl-essay h1{font-size:39px}
+ #repolore-design .rl-essay .rl-essay-intro{font-size:17px}
+ #repolore-design .rl-quote{font-size:25px;padding-left:18px}
+ #repolore-design .rl-benefits{gap:22px;margin-top:30px}
+ #repolore-design .rl-tourgrid{gap:0}
+ #repolore-design .rl-preview-footer{align-items:flex-start}
+ #repolore-design .rl-backdrop{padding:20px 10px}
+ #repolore-design .rl-modal{padding:23px 18px}
+ #repolore-design .rl-modal h2{font-size:24px}
+ #repolore-design .rl-code{font-size:11px}
+ #repolore-design .rl-code-line{grid-template-columns:29px 1fr}
+ #repolore-design .rl-line-number{padding-right:8px}
+}
+@media(pointer:coarse){#repolore-design button,#repolore-design .rl-button,#repolore-design .rl-nav-item,#repolore-design .rl-plain,#repolore-design .rl-linkbutton{min-height:44px}#repolore-design summary{padding-top:10px;padding-bottom:10px}}
+@media(prefers-reduced-motion:reduce){#repolore-design *{transition:none!important;scroll-behavior:auto!important}}
+
+@container(max-width:660px){#repolore-design .rl-map-compact{grid-template-columns:1fr}#repolore-design .rl-map-compact .rl-node{grid-column:1}}
+
+  </style>
+</head>
+<body>
+<div id="repolore-design">
+  <div class="rl-product"></div>
+  <div class="rl-modal-host"></div>
+  <div class="rl-route-status rl-hidden-label" role="status" aria-live="polite"></div>
+  <noscript>This interactive design reference needs JavaScript enabled. It contains only local sample data.</noscript>
+</div>
+
+<script>
+/* Illustrative, internally consistent fixture. Never use as production analysis. */
+const REPO_LORE_FIXTURE = {
+  repo: { owner:'trailhead', name:'web', branch:'main', commit:'b42f17a', analyzed:'October 23, 2026', stack:'Next.js · TypeScript · Prisma', description:'A workspace for creating and managing personal projects.' },
+  sources: {
+    page:{path:'app/(workspace)/projects/page.tsx',code:`import { getSession } from '@/lib/auth';
+import { getProjects } from '@/lib/projects';
+import { ProjectList } from '@/components/project-list';
+
+export default async function ProjectsPage() {
+  const session = await getSession();
+  if (!session) return <SignInPrompt />;
+  const projects = await getProjects(session.user.id);
+  return <ProjectList projects={projects} />;
+}`},
+    route:{path:'app/api/projects/route.ts',code:`import { getSession } from '@/lib/auth';
+import { getProjects, createProject } from '@/lib/projects';
+import { notifyProjectCreated } from '@/lib/notifications';
+
+export async function GET() {
+  const session = await getSession();
+  if (!session) return new Response(null, { status: 401 });
+  return Response.json(await getProjects(session.user.id));
+}
+
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session) return new Response(null, { status: 401 });
+  const input = await request.json();
+  if (typeof input.name !== 'string' || !input.name.trim()) {
+    return new Response('Name is required', { status: 400 });
+  }
+  const project = await createProject(session.user.id, input.name.trim());
+  await notifyProjectCreated(project);
+  return Response.json(project, { status: 201 });
+}`},
+    projects:{path:'src/lib/projects.ts',code:`import { db } from './db';
+
+export async function getProjects(ownerId: string) {
+  return db.project.findMany({ where: { ownerId } });
+}
+
+export async function createProject(ownerId: string, name: string) {
+  return db.project.create({ data: { ownerId, name } });
+}`},
+    auth:{path:'src/lib/auth.ts',code:`import { auth } from './auth-provider';
+
+export async function getSession() {
+  return auth();
+}`},
+    db:{path:'src/lib/db.ts',code:`import { PrismaClient } from '@prisma/client';
+
+export const db = new PrismaClient();`},
+    notifications:{path:'src/lib/notifications.ts',code:`import { projectCreated } from './mail-provider';
+
+export async function notifyProjectCreated(project: { id: string; name: string }) {
+  return projectCreated(project);
+}`},
+    component:{path:'src/components/project-list.tsx',code:`import { useState } from 'react';
+
+export function ProjectList({ projects }) {
+  const [query, setQuery] = useState('');
+  const visible = projects.filter(project => project.name.includes(query));
+  return <ProjectResults projects={visible} query={query} onQueryChange={setQuery} />;
+}`},
+    test:{path:'src/lib/projects.test.ts',code:`import { describe, it, expect } from 'vitest';
+import { getProjects } from './projects';
+
+describe('project access', () => {
+  it('queries projects for the supplied owner', async () => {
+    const projects = await getProjects('demo-user');
+    expect(projects).toBeDefined();
+  });
+});`},
+    e2e:{path:'e2e/projects.spec.ts',code:`import { test, expect } from '@playwright/test';
+
+test('project workspace', async ({ page }) => {
+  await page.goto('/projects');
+  await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible();
+});`},
+    manifest:{path:'package.json',code:`{
+  "name": "trailhead-web",
+  "dependencies": {
+    "next": "^15.4.0",
+    "react": "^19.1.0",
+    "@prisma/client": "^6.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "vitest": "^3.2.0",
+    "@playwright/test": "^1.54.0"
+  }
+}`},
+    config:{path:'tsconfig.json',code:`{
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "preserve",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["app/**/*.ts", "app/**/*.tsx", "src/**/*.ts", "src/**/*.tsx"]
+}`}
+  },
+  areas:[
+    {id:'ui',name:'Workspace UI',path:'app/(workspace)/',summary:'Renders a signed-in user’s projects.',reason:'Begin with the projects page: it reads the session and loads the current user’s projects.',source:'page',lines:[1,10],members:['page','component'],evidence:'A Next.js page export and imports of getSession, getProjects, and ProjectList.',basis:'Role inferred from route conventions and imports.',kind:'Interface'},
+    {id:'api',name:'Project API',path:'app/api/projects/',summary:'Exposes read and create operations for projects.',reason:'Inspect this boundary when changing project requests or how a session is required.',source:'route',lines:[1,21],members:['route'],evidence:'GET and POST exports in a Next.js route file. Both call getSession.',basis:'Route detected from framework convention; role label inferred.',kind:'Request boundary'},
+    {id:'projects',name:'Project access',path:'src/lib/projects.ts',summary:'Retrieves and creates projects through the database client.',reason:'Both the interface and the API depend on this shared module.',source:'projects',lines:[1,9],members:['projects','test'],evidence:'getProjects calls db.project.findMany; createProject calls db.project.create.',basis:'Calls detected in source; role label inferred.',kind:'Shared logic'},
+    {id:'auth',name:'Session checks',path:'src/lib/auth.ts',summary:'Provides the current session to pages and route handlers.',reason:'Follow callers to see which paths check the result and reject unauthenticated requests.',source:'auth',lines:[1,5],members:['auth'],evidence:'getSession delegates to auth. The project page and route import getSession.',basis:'Imports and calls detected; authentication internals not expanded.',kind:'Identity boundary'},
+    {id:'db',name:'Database client',path:'src/lib/db.ts',summary:'Exports the Prisma client used by project access.',reason:'Inspect the client and its callers when tracing project storage access.',source:'db',lines:[1,3],members:['db'],evidence:'Imports PrismaClient from @prisma/client and exports db.',basis:'Import and export detected; connection behavior not runtime verified.',kind:'Storage'},
+    {id:'notifications',name:'Notifications',path:'src/lib/notifications.ts',summary:'Delegates a project-created notification to a provider.',reason:'This path is called after a project is created by POST.',source:'notifications',lines:[1,5],members:['notifications'],evidence:'POST awaits notifyProjectCreated; this function calls projectCreated.',basis:'Calls detected; external delivery behavior unknown.',kind:'Integration'}
+  ],
+  imports:[['ui','projects'],['ui','auth'],['api','auth'],['api','projects'],['projects','db'],['api','notifications']],
+  systems:[
+    {id:'project-workspace',name:'Project workspace',description:'Follow a project from the interface and API into shared storage access.',areas:['ui','api','projects','db'],entry:'page',note:'An inferred grouping of connected modules, not a declared package boundary.',functions:['ProjectsPage','GET','getProjects']},
+    {id:'identity',name:'Identity & sessions',description:'See where the current session is read and where a missing session stops the request.',areas:['ui','api','auth'],entry:'auth',note:'A role-based grouping inferred from imports and session-checking callers.',functions:['getSession','GET']},
+    {id:'notifications',name:'Project notifications',description:'Trace the post-creation call into the notification provider.',areas:['api','projects','notifications'],entry:'notifications',note:'A possible call path identified in source. Delivery was not observed.',functions:['POST','createProject','notifyProjectCreated']}
+  ],
+  dependencies:[
+    {name:'next',version:'^15.4.0',scope:'Runtime',role:'Routing & rendering',basis:'Role inferred from framework conventions.',usage:[['route',5],['page',5]]},
+    {name:'react',version:'^19.1.0',scope:'Runtime',role:'Interface components',basis:'Role inferred from imported hooks and JSX.',usage:[['component',1]]},
+    {name:'@prisma/client',version:'^6.0.0',scope:'Runtime',role:'Database client',basis:'Role supported by the PrismaClient import.',usage:[['db',1]]},
+    {name:'typescript',version:'^5.8.0',scope:'Development',role:'Language tooling',basis:'Declared in devDependencies; configuration detected.',usage:[],config:'config'},
+    {name:'vitest',version:'^3.2.0',scope:'Development',role:'Unit testing',basis:'Role supported by test imports.',usage:[['test',1]]},
+    {name:'@playwright/test',version:'^1.54.0',scope:'Development',role:'Browser testing',basis:'Role supported by the e2e test import.',usage:[['e2e',1]]}
+  ],
+  functions:[
+    {name:'getProjects',source:'projects',line:3,area:'projects',callers:['ProjectsPage','GET'],calls:['db.project.findMany'],reason:'Shared by the interface and API; directly queries persistence.'},
+    {name:'getSession',source:'auth',line:3,area:'auth',callers:['ProjectsPage','GET','POST'],calls:['auth'],reason:'A common boundary before reading or creating projects.'},
+    {name:'GET',source:'route',line:5,area:'api',callers:[],calls:['getSession','getProjects'],reason:'A framework entry point for project reads.'},
+    {name:'POST',source:'route',line:11,area:'api',callers:[],calls:['getSession','createProject','notifyProjectCreated'],reason:'A framework entry point for project creation.'},
+    {name:'createProject',source:'projects',line:7,area:'projects',callers:['POST'],calls:['db.project.create'],reason:'Creates a project for the supplied owner.'},
+    {name:'notifyProjectCreated',source:'notifications',line:3,area:'notifications',callers:['POST'],calls:['projectCreated'],reason:'Delegates the post-creation notification to a provider.'},
+    {name:'ProjectsPage',source:'page',line:5,area:'ui',callers:[],calls:['getSession','getProjects'],reason:'The framework page entry point for viewing projects.'}
+  ],
+  flows:{
+    read:{label:'Read projects',method:'GET',route:'/api/projects',summary:'A signed-in request retrieves projects belonging to the current user.',steps:[
+      {name:'Project route',symbol:'GET',source:'route',line:5,input:'HTTP request',output:'A response or 401',explanation:'The GET export is a Next.js route entry point.'},
+      {name:'Read the session',symbol:'getSession',source:'route',line:6,input:'Current request context',output:'Session or no session',explanation:'GET calls getSession. A missing session returns 401 before project access.'},
+      {name:'Load owned projects',symbol:'getProjects',source:'route',line:8,input:'session.user.id → ownerId',output:'Project records',explanation:'The route passes the user ID into the shared project loader.'},
+      {name:'Query storage',symbol:'db.project.findMany',source:'projects',line:4,input:'where: { ownerId }',output:'Matching project records',explanation:'The loader filters by the supplied owner ID. Database internals are outside this trace.'}
+    ]},
+    create:{label:'Create a project',method:'POST',route:'/api/projects',summary:'The route checks the session, validates a name, stores the project, and calls the notifier.',steps:[
+      {name:'Check the session',symbol:'getSession',source:'route',line:12,input:'HTTP request context',output:'Session or 401',explanation:'POST returns 401 when getSession yields no session.'},
+      {name:'Validate the name',symbol:'POST',source:'route',line:15,input:'request.json() → input.name',output:'Trimmed name or 400',explanation:'A missing or blank name returns 400 before creating a project.'},
+      {name:'Create the project',symbol:'createProject',source:'projects',line:7,input:'session.user.id, input.name.trim()',output:'Created project',explanation:'The helper writes the owner ID and project name through db.project.create.'},
+      {name:'Call the notifier',symbol:'notifyProjectCreated',source:'notifications',line:3,input:'Created project',output:'Provider result',explanation:'POST awaits the notification helper before returning 201. Delivery success is not proven by this static path.'}
+    ]}
+  },
+  history:[
+    {id:'b42f17a',date:'October 23',title:'Share project loading between the page and API',summary:'The page and route now import getProjects from one module.',areas:['ui','api','projects'],type:'Imports',source:'projects',added:["import { getProjects } from '@/lib/projects';"],removed:['const projects = await db.project.findMany({ where: { ownerId } });'],impact:'If you are changing project reads, inspect src/lib/projects.ts and both callers.',limit:'The author’s motivation is not recorded in the available commit message.'},
+    {id:'9cf6a32',date:'October 21',title:'Require a session for project requests',summary:'The project route checks for a session before retrieving project data.',areas:['api','auth'],type:'Routes',source:'route',added:['const session = await getSession();','if (!session) return new Response(null, { status: 401 });'],removed:[],impact:'Inspect GET and POST when changing unauthenticated request handling.',limit:'The diff establishes the check. It does not establish a complete authorization policy.'},
+    {id:'6ad8031',date:'October 18',title:'Add a project access test',summary:'A test imports getProjects and exercises a query with an owner ID.',areas:['projects'],type:'Tests',source:'test',added:["const projects = await getProjects('demo-user');",'expect(projects).toBeDefined();'],removed:[],impact:'Use the test as a starting point, then inspect its assertions before relying on its coverage.',limit:'A test import indicates a relationship; test quality and successful execution are not inferred.'}
+  ]
+};
+
+</script>
+<script>
+/* Local prototype only: hash routes, fixture data, no API calls or external dependencies. */
+(()=>{
+ 'use strict';
+ const root=document.getElementById('repolore-design');
+ if(!root) return;
+ const F=REPO_LORE_FIXTURE;
+ const state={route:'/home',query:new URLSearchParams(),selected:null,flow:'read',step:0,depSearch:'',depScope:'All',depSort:'name',functionSearch:'',historyType:'All',focus:false,expanded:false,menu:false,analysisStep:0,submitted:'',modal:null};
+ let lastFocus=null,modalFocus=null,analysisTimer=null,drawObserver=null;
+ const $=s=>root.querySelector(s), $$=s=>[...root.querySelectorAll(s)];
+ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const attrs=(name,value)=>`${name}="${esc(value)}"`;
+ const link=(route,label,cls='rl-linkbutton')=>`<a href="#${esc(route)}" data-route="${esc(route)}" class="${cls} cursor-interaction">${label}</a>`;
+ const button=(action,label,cls='rl-button',data='')=>`<button type="button" data-action="${action}" class="${cls} cursor-interaction" ${data}>${label}</button>`;
+ const chip=(text,inferred=false)=>`<span class="rl-chip${inferred?' rl-inferred':''}">${esc(text)}</span>`;
+ const area=id=>F.areas.find(a=>a.id===id);
+ const sourceButton=(id,line,label)=>button('source',esc(label||`${F.sources[id].path}:${line||1}`),'rl-linkbutton',`data-source="${id}" data-line="${line||1}"`);
+ const pageNames={overview:'Overview',architecture:'Architecture',systems:'Systems',dependencies:'Dependencies','data-flow':'Data Flow',history:'History'};
+ const navMarks={overview:'◉',architecture:'⌘',systems:'▦',dependencies:'◇','data-flow':'↝',history:'↶'};
+ const appPage=()=>state.route.split('/')[2]||'overview';
+ const routeIsRepo=()=>state.route.startsWith('/repo/');
+ function routeFromHash(){const raw=location.hash.slice(1);return raw.startsWith('/')?raw:'/home';}
+ function navigate(route,write=true){
+  if(analysisTimer){clearInterval(analysisTimer);analysisTimer=null;}
+  const [path,query='']=route.split('?');
+  state.route=path;state.query=new URLSearchParams(query);state.selected=null;state.modal=null;state.menu=false;state.expanded=false;
+  if(write&&root.dataset.inline!=='true'&&location.hash!=='#'+route){history.pushState(null,'','#'+route);}
+  render();
+ }
+ function prototypeBar(){return `<div class="rl-prototype"><span>DESIGN PROTOTYPE <span class="rl-prototype-long">· illustrative repository · no live analysis</span></span>${link('/design','Page index &amp; handoff','rl-plain')}</div>`;}
+ function publicHeader(active=''){return `<header class="rl-topbar">${link('/home','Repo Lore','rl-brand')}<nav class="rl-topnav" aria-label="Main navigation">${link('/explore','Explore Lores','rl-plain')}${link('/manifesto','Manifesto','rl-plain')}${link('/home?focus=analyze','Analyze a repository','rl-button')}</nav></header>`;}
+ function publicFooter(){return `<footer class="rl-footer"><span>Repo Lore · Understanding that outlives tribal knowledge.</span><div class="rl-row">${link('/manifesto','Manifesto','rl-plain')}${link('/explore','Explore Lores','rl-plain')}${link('/design','Design reference','rl-plain')}</div></footer>`;}
+ function repoHeader(){return `<header class="rl-topbar">${link('/home','Repo Lore','rl-brand')}<div class="rl-repo-crumb">${link('/explore','Lores','rl-plain')} &nbsp;/&nbsp; <strong>trailhead / web</strong></div>${button('menu','Menu','rl-button rl-menu','aria-expanded="'+state.menu+'"')}<div class="rl-top-actions">${button('analysis','Analysis','rl-button')}${button('share','Share <span class="rl-share-label">Lore</span>','rl-button')}</div></header>`;}
+ function repoSidebar(){return `<nav class="rl-sidebar ${state.menu?'rl-open':''}" aria-label="Repository sections"><div class="rl-nav-caption">Understand</div>${Object.entries(pageNames).map(([id,name])=>`<a href="#/repo/${id}" data-route="/repo/${id}" class="rl-nav-item cursor-interaction" ${appPage()===id?'aria-current="page"':''}><span class="rl-nav-mark" aria-hidden="true">${navMarks[id]}</span>${name}</a>`).join('')}<div class="rl-sidefoot"><strong>A map you can trust.</strong><p>Important findings lead back to the source.</p>${link('/explore','← All Lores','rl-plain')}<p>TypeScript · Next.js<br>Example repository</p></div></nav>`;}
+ function status(){return `<div class="rl-status"><span class="rl-status-dot"></span><span>Analyzed commit <span class="rl-mono">${F.repo.commit}</span></span><span>· main</span>${button('analysis','Analysis details','rl-linkbutton')}</div>`;}
+ function heading(kicker,title,lead){return `<div class="rl-kicker">${kicker}</div><h1>${title}</h1><p class="rl-lead">${lead}</p>${status()}`;}
+ function footerNote(){return `<div class="rl-inline-note" style="border-top:1px solid var(--rl-line);padding-top:17px;margin-top:30px">Source-backed relationships. Role labels and suggested starting points are inferred.</div>`;}
+ function mapMarkup(ids=F.areas.map(a=>a.id),compact=false){
+  return `<div class="rl-map-surface"><div class="rl-map ${compact?'rl-map-compact':''}" data-map-ids="${ids.join(',')}" aria-label="Source dependency map"><svg class="rl-connections" aria-hidden="true"></svg>${ids.map(id=>{const a=area(id);return `<button type="button" class="rl-node cursor-interaction" data-action="area" data-area="${id}" aria-pressed="${state.selected?.type==='area'&&state.selected.id===id}"><strong>${a.name}</strong>${!compact?`<small>${esc(a.path)}</small>`:''}</button>`;}).join('')}</div><div class="rl-map-caption"><span>Arrows point to imported dependencies</span><span class="rl-map-hint">Select an area for its evidence</span></div></div>`;
+ }
+ function syncInspectorMode(){
+  const panel=$('.rl-inspector');if(!panel)return;
+  const mobile=root.getBoundingClientRect().width<=660;
+  if($('.rl-main'))$('.rl-main').inert=mobile;
+  if($('.rl-sidebar'))$('.rl-sidebar').inert=mobile;
+  if($('.rl-topbar'))$('.rl-topbar').inert=mobile;
+  panel.setAttribute('role',mobile?'dialog':'complementary');
+  if(mobile)panel.setAttribute('aria-modal','true');else panel.removeAttribute('aria-modal');
+ }
+ function drawMaps(){
+  syncInspectorMode();
+  $$('.rl-map').forEach((map,index)=>{
+   const rect=map.getBoundingClientRect();if(!rect.width)return;
+   const ids=map.dataset.mapIds.split(','),svg=map.querySelector('.rl-connections');svg.setAttribute('viewBox',`0 0 ${rect.width} ${rect.height}`);
+   const selected=state.selected?.type==='area'?state.selected.id:null,marker=`${root.id}-arrow-${index}`;
+   let paths='';
+   F.imports.filter(([a,b])=>ids.includes(a)&&ids.includes(b)).forEach(([from,to])=>{
+    const a=map.querySelector(`[data-area="${from}"]`).getBoundingClientRect(),b=map.querySelector(`[data-area="${to}"]`).getBoundingClientRect();
+    let x1,y1,x2,y2,d;
+    if(Math.abs(a.top-b.top)<15){const right=b.left>a.left;x1=(right?a.right:a.left)-rect.left;y1=(a.top+a.bottom)/2-rect.top;x2=(right?b.left:b.right)-rect.left;y2=(b.top+b.bottom)/2-rect.top;d=`M${x1},${y1} L${x2},${y2}`;}
+    else{const down=b.top>a.top;x1=(a.left+a.right)/2-rect.left;y1=(down?a.bottom:a.top)-rect.top;x2=(b.left+b.right)/2-rect.left;y2=(down?b.top:b.bottom)-rect.top;const middle=(y1+y2)/2;d=`M${x1},${y1} C${x1},${middle} ${x2},${middle} ${x2},${y2}`;}
+    const active=selected&&(from===selected||to===selected),dim=state.focus&&selected&&!active;
+    paths+=`<path d="${d}" class="rl-edge${active?' rl-active':''}" ${dim?'style="opacity:.12"':''} marker-end="url(#${marker})"/>`;
+   });
+   svg.innerHTML=`<defs><marker id="${marker}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L8 4 L0 8" fill="currentColor"/></marker></defs>${paths}`;
+   const neighbors=new Set(selected?[selected]:[]);F.imports.forEach(([a,b])=>{if(a===selected)neighbors.add(b);if(b===selected)neighbors.add(a);});
+   map.querySelectorAll('.rl-node').forEach(n=>{n.classList.toggle('rl-dim',!!(state.focus&&selected&&!neighbors.has(n.dataset.area)));n.setAttribute('aria-pressed',String(selected===n.dataset.area));});
+  });
+ }
+ function stops(){return `<section class="rl-section"><div class="rl-sectionhead"><h2>Your first three stops</h2></div>${[
+  ['ui','Find where the workspace begins','The page reads the current session and loads that user’s projects.','page'],
+  ['api','Trace a project request','The route checks identity before reading or creating project data.','route'],
+  ['projects','Understand the shared project logic','Both entry points use one module to query and create projects.','projects']
+ ].map(([id,title,reason,src],i)=>`<button class="rl-stop cursor-interaction" type="button" data-action="area" data-area="${id}"><span class="rl-step-number">${i+1}</span><span><strong>${title}</strong><p>${reason}</p><span class="rl-mono">${esc(F.sources[src].path)}</span></span><span aria-hidden="true">↗</span></button>`).join('')}</section>`;}
+ function home(){return `<main class="rl-public-main"><section class="rl-hero"><div class="rl-kicker">Understand the code. Find your footing.</div><h1>A new codebase.<br>A clear place to start.</h1><p>See how the main pieces fit together, where to begin, and the code behind every connection.</p><form class="rl-repo-form" data-form="analyze" novalidate><label class="rl-hidden-label" for="rl-repo-input">GitHub repository URL</label><input id="rl-repo-input" type="url" required name="repository" placeholder="https://github.com/owner/repository" autocomplete="off" aria-describedby="rl-repo-error"><button class="rl-button rl-primary cursor-interaction" type="submit">Understand this repo →</button></form><div id="rl-repo-error" class="rl-form-error" role="alert"></div><p class="rl-after">Built for TypeScript &amp; React. ${link('/repo/overview','Try the example first')}</p></section><section class="rl-preview" aria-label="Interactive product preview"><div class="rl-preview-bar"><span><strong>trailhead / web</strong> &nbsp;·&nbsp; Example repository</span><span>Overview / Start here</span></div><div class="rl-preview-body"><div><h2>From interface to storage.</h2><p>A project workspace, built with Next.js and TypeScript.</p>${mapMarkup(['ui','projects','db'],true)}<p style="margin:12px 0 0">Source imports, made readable.</p></div><div class="rl-preview-stops"><h3>Your first three stops</h3>${[['Find the entry point','Begin with the workspace page.'],['Trace a project request','Follow the route into shared project logic.'],['Inspect the session boundary','See where unauthenticated requests stop.']].map(([t,d],i)=>`<a href="#/repo/overview" data-route="/repo/overview" class="rl-stop cursor-interaction" style="text-decoration:none;color:var(--rl-ink)"><span class="rl-step-number">${i+1}</span><span><strong>${t}</strong><p>${d}</p></span><span>↗</span></a>`).join('')}</div></div><div class="rl-preview-footer"><span>Less searching through files. More understanding how they connect.</span>${link('/repo/overview','Explore this repository →')}</div></section><section class="rl-benefits"><div><h3>Know where to begin.</h3><p>A short orientation and meaningful starting points.</p></div><div><h3>Follow the evidence.</h3><p>Inspect the source behind a relationship.</p></div><div><h3>Keep your bearings.</h3><p>A shared map of the system as the code evolves.</p></div></section></main>`;}
+ function explore(){return `<main class="rl-public-main"><div class="rl-public-header"><div class="rl-kicker">A little orientation goes a long way</div><h1>See what understanding feels like.</h1><p class="rl-lead">Explore a complete example before bringing your own repository.</p></div><div class="rl-toolbar"><label class="rl-field rl-search"><span>Find an example</span><input type="search" data-filter="explore" placeholder="Search by repository, stack, or topic" aria-label="Search examples"></label></div><div class="rl-explore-result"><section class="rl-explore-feature"><div><span class="rl-chip">Featured walkthrough</span><h2>trailhead / web</h2><p>A small project workspace with a React interface, request handlers, shared project access, and session checks.</p><div class="rl-row" style="margin-bottom:20px">${chip('TypeScript')}${chip('Next.js')}${chip('Prisma')}</div>${link('/repo/overview','Explore this Lore →','rl-button rl-primary')}</div><div>${mapMarkup(['ui','projects','db'],true)}</div></section><div class="rl-sectionhead"><h2>Choose a way in</h2><span class="rl-muted" style="font-size:11px">Three tours through the same example</span></div><div class="rl-tourgrid"><div class="rl-tour"><h3>“Where should I start?”</h3><p>Get a short orientation and three useful first stops.</p>${link('/repo/overview','Open the overview →')}</div><div class="rl-tour"><h3>“How does this request work?”</h3><p>Follow a project read through its possible call path.</p>${link('/repo/data-flow','Trace a request →')}</div><div class="rl-tour"><h3>“What changed here?”</h3><p>See distinct changes and their affected areas.</p>${link('/repo/history','Explore the history →')}</div></div></div><div class="rl-explore-empty rl-empty-results" hidden><h2>No matching examples.</h2><p>Try “TypeScript,” “projects,” or “Trailhead.” This prototype includes one complete sample repository.</p>${button('clear-explore','Clear search','rl-linkbutton')}</div><p class="rl-inline-note">Design preview · one complete sample repository. The production collection should use real analyzed examples.</p></main>`;}
+ function manifesto(){return `<main class="rl-public-main"><article class="rl-essay"><div class="rl-kicker">The Repo Lore manifesto</div><h1>Software should be understandable.</h1><p class="rl-essay-intro">The knowledge of how a system works belongs to the organization. It should outlive the people who first built it.</p><blockquote class="rl-quote">Confidence comes from understanding relationships, not memorizing files.</blockquote><section><h2>Understanding before information.</h2><p>Another inventory of files is not a mental model. Engineers need a way to see the main pieces, understand their responsibilities, and follow the connections between them.</p></section><section><h2>Evidence before explanation.</h2><p>Code, imports, configuration, and history provide the foundation. Important findings should be traceable. When a role is inferred, say so. When something is unknown, leave it unknown.</p></section><section><h2>Knowledge without a gatekeeper.</h2><p>Joining a team should not require finding the one engineer who remembers why everything works. A shared understanding makes the whole team more capable.</p></section><section><h2>Automatic by default.</h2><p>A living picture of a system should follow the code, without another documentation chore. Connect a repository, understand it, and return when the code changes.</p></section><section><h2>Build confidence. Then open the IDE.</h2><p>Our goal is simple: help an engineer enter an unfamiliar codebase and begin making changes with confidence.</p>${link('/repo/overview','See that idea in practice →','rl-button rl-primary')}</section></article></main>`;}
+ function overview(){return `${heading('Your repository, oriented','Start with the big picture.','Trailhead is a project workspace. Follow the interface and API into shared project access, then inspect the session boundary.')}<section><div class="rl-sectionhead"><h2>How the pieces connect</h2>${link('/repo/architecture','Explore the architecture ↗','rl-button')}</div>${mapMarkup()}</section>${stops()}<div class="rl-two-col"><section class="rl-quietbox"><h3>Two ways into the same project logic</h3><p>The workspace page and project API both import the project access module.</p>${button('area','Inspect project access →','rl-linkbutton','data-area="projects"')}</section><section class="rl-quietbox"><h3>What this view cannot tell you</h3><p>Notification delivery and authentication-provider internals are outside the resolved source path.</p>${button('analysis','View analysis limits →','rl-linkbutton')}</section></div>${footerNote()}`;}
+ function architecture(){return `${heading('Architecture','Follow the connections.','Explore the source dependencies behind the workspace. Select an area to see its role, callers, and supporting evidence.')}<div class="rl-sectionhead"><h2>Repository map</h2>${button('expand',state.expanded?'Return to normal view':'Expand map','rl-button','aria-expanded="'+state.expanded+'"')}</div><div class="rl-map-controls"><label><input type="checkbox" data-filter="neighbors" ${state.focus?'checked':''}>Focus on selected area</label><span class="rl-muted">Source imports · ${state.focus?'select a node to focus':'all connections'}</span></div>${mapMarkup()}<section class="rl-section rl-area-inventory"><div class="rl-sectionhead"><h2>Explore an area</h2><span class="rl-muted" style="font-size:11px">Role labels are inferred</span></div>${F.areas.map(a=>`<div class="rl-list-row"><div>${button('area',a.name,'rl-linkbutton',`data-area="${a.id}"`)}<p>${a.summary}</p><span class="rl-mono rl-muted">${esc(a.path)}</span></div><span class="rl-chip rl-inferred">${a.kind}</span></div>`).join('')}</section>${footerNote()}`;}
+ function systems(){const id=state.route.split('/')[3];return id?systemDetail(id):`${heading('Systems','Understand a connected responsibility.','Explore groups of related areas without losing sight of the source relationships underneath.')}<label class="rl-field"><span>Find a system</span><input type="search" data-filter="systems" placeholder="Search systems or responsibilities" aria-label="Search systems"></label><div class="rl-systems">${F.systems.map(s=>`<a href="#/repo/systems/${s.id}" data-route="/repo/systems/${s.id}" class="rl-system-card cursor-interaction" data-system-card="${s.id}">${chip('Inferred grouping',true)}<h2>${s.name}</h2><p>${s.description}</p><div class="rl-card-footer"><span>${s.areas.length} connected areas</span><span>Explore system →</span></div></a>`).join('')}</div><div class="rl-system-empty rl-empty-results" hidden>No systems match that search.</div><details class="rl-disclosure"><summary class="cursor-interaction">How should I read a system grouping?</summary><p>Groups connect source areas that participate in a responsibility. In this example, labels are inferred from import and call relationships. They are not declared service or package boundaries.</p></details>${footerNote()}`;}
+ function systemDetail(id){const s=F.systems.find(x=>x.id===id);if(!s)return notFound(true);return `<div class="rl-breadcrumb">${link('/repo/systems','← All systems')}</div>${heading('System / '+s.name,s.name,s.description)}<div class="rl-row" style="margin-bottom:22px">${chip('Inferred grouping',true)}<span class="rl-muted" style="font-size:12px">${s.note}</span></div><div class="rl-sectionhead"><h2>How this system connects</h2>${button('source','Inspect starting point ↗','rl-button',`data-source="${s.entry}" data-line="1"`)}</div>${mapMarkup(s.areas)}<section class="rl-section"><h2>Areas in this system</h2>${s.areas.map(id=>{const a=area(id);return `<div class="rl-list-row"><div>${button('area',a.name,'rl-linkbutton',`data-area="${a.id}"`)}<p>${a.summary}</p></div><span class="rl-mono rl-muted">${esc(a.path)}</span></div>`;}).join('')}</section><section class="rl-section"><h2>Useful functions to read</h2>${s.functions.map(name=>{const f=F.functions.find(x=>x.name===name);return `<div class="rl-list-row"><div>${button('function',name,'rl-linkbutton',`data-function="${name}"`)}<p>${f.reason}</p></div><span class="rl-chip">${f.callers.length?`${f.callers.length} production callers`:'Entry point'}</span></div>`;}).join('')}</section><details class="rl-disclosure"><summary class="cursor-interaction">Evidence and open questions</summary><p>Relationships are supported by the module imports shown above. Group names and recommended starting points are inferred. Database, auth-provider, and mail-provider behavior must be inspected separately.</p></details>${footerNote()}`;}
+ function filteredDependencies(){return F.dependencies.filter(d=>(state.depScope==='All'||d.scope===state.depScope)&&`${d.name} ${d.role}`.toLowerCase().includes(state.depSearch.toLowerCase())).sort((a,b)=>state.depSort==='evidence'?b.usage.length-a.usage.length:a.name.localeCompare(b.name));}
+ function dependencyRows(){const rows=filteredDependencies();return rows.length?rows.map(d=>`<tr><td>${button('package',esc(d.name),'rl-linkbutton',`data-package="${esc(d.name)}"`)}<p class="rl-mono">${esc(d.version)}</p></td><td class="rl-table-secondary">${d.role}<p>Role inferred</p></td><td>${chip(d.scope==='Development'?'Dev':d.scope)}</td><td><span>${d.usage.length?`${d.usage.length} source ${d.usage.length===1?'reference':'references'}`:'Configuration'}</span><p>Declared in package.json</p></td></tr>`).join(''):`<tr><td colspan="4"><div class="rl-empty-results">No dependencies match these filters.</div></td></tr>`;}
+ function dependencies(){return `${heading('Dependencies','See what the system relies on.','Understand why a package appears here and where it connects to source or configuration.')}<div class="rl-toolbar"><label class="rl-field rl-search"><span>Find a package</span><input type="search" data-filter="dependencies" value="${esc(state.depSearch)}" placeholder="Search package or role" aria-label="Search packages"></label><label class="rl-field"><span>Scope</span><select data-filter="dep-scope" aria-label="Dependency scope">${['All','Runtime','Development'].map(s=>`<option value="${s}" ${s===state.depScope?'selected':''}>${s}</option>`).join('')}</select></label><label class="rl-field"><span>Sort by</span><select data-filter="dep-sort" aria-label="Sort dependencies"><option value="name" ${state.depSort==='name'?'selected':''}>Package name</option><option value="evidence" ${state.depSort==='evidence'?'selected':''}>Source references</option></select></label></div><div class="rl-table-wrap"><table aria-label="Repository dependencies"><colgroup><col style="width:29%"><col class="rl-table-secondary" style="width:28%"><col style="width:18%"><col style="width:25%"></colgroup><thead><tr><th>Package / declared range</th><th class="rl-table-secondary">Role</th><th>Scope</th><th>Evidence</th></tr></thead><tbody class="rl-dependency-rows">${dependencyRows()}</tbody></table></div><p class="rl-inline-note rl-dep-count" aria-live="polite">${filteredDependencies().length} of ${F.dependencies.length} packages</p><details class="rl-disclosure"><summary class="cursor-interaction">What do these relationships establish?</summary><p>A declaration establishes that a package appears in the manifest. A source reference may be an import or a framework convention. Role descriptions are inferred. Version ranges shown here are fixture declarations; they are not recommendations or security assessments.</p></details>${footerNote()}`;}
+ function functionRows(){const rows=F.functions.filter(f=>`${f.name} ${F.sources[f.source].path}`.toLowerCase().includes(state.functionSearch.toLowerCase()));return rows.length?rows.map(f=>`<tr><td>${button('function',f.name,'rl-linkbutton',`data-function="${f.name}"`)}<p class="rl-mono">${esc(F.sources[f.source].path)}</p></td><td class="rl-table-secondary">${f.callers.length?f.callers.join(', '):'Framework entry point'}</td><td><p style="margin:0">${f.reason}</p></td></tr>`).join(''):`<tr><td colspan="3">No matching functions.</td></tr>`;}
+ function flowSteps(){const f=F.flows[state.flow];return f.steps.map((s,i)=>`<button type="button" class="rl-flow-step cursor-interaction" data-action="step" data-step="${i}" aria-pressed="${state.step===i}"><span class="rl-step-number">${i+1}</span><strong>${s.name}</strong><span class="rl-mono">${s.symbol}</span></button>`).join('');}
+ function flowDetail(){const flow=F.flows[state.flow],s=flow.steps[state.step];return `<div class="rl-kicker">Step ${state.step+1} of ${flow.steps.length}</div><h2>${s.name}</h2><p>${s.explanation}</p><div class="rl-flow-io"><div><span>Input</span><code class="rl-mono">${esc(s.input)}</code></div><div><span>Output</span><code class="rl-mono">${esc(s.output)}</code></div></div><div class="rl-spread">${sourceButton(s.source,s.line,'View source for this step ↗')}<div class="rl-flow-next">${button('previous-step','← Previous','rl-button',state.step===0?'disabled':'')}${button('next-step','Next step →','rl-button',state.step===flow.steps.length-1?'disabled':'')}</div></div>`;}
+ function dataFlow(){const f=F.flows[state.flow];return `${heading('Data flow','Follow a request through the code.','Choose an entry point, then inspect a possible call path one step at a time.')}<div class="rl-toolbar"><label class="rl-field" style="min-width:220px"><span>Entry point</span><select data-filter="flow" aria-label="Choose request path">${Object.entries(F.flows).map(([id,f])=>`<option value="${id}" ${state.flow===id?'selected':''}>${f.method} ${f.route} · ${f.label}</option>`).join('')}</select></label><span class="rl-chip rl-inferred">Static call path</span></div><p class="rl-lead rl-flow-summary">${f.summary}</p><div class="rl-flow" aria-label="Request path steps">${flowSteps()}</div><section class="rl-flow-detail" aria-live="polite">${flowDetail()}</section><details class="rl-disclosure"><summary class="cursor-interaction">Scope and limits of this path</summary><p>This is a possible path assembled from source calls, not a recording of a running application. Branches can stop execution. Authentication, database, and mail-provider internals are not expanded. Payload names are visible where arguments are explicit; this is not full data lineage or taint analysis.</p></details><section class="rl-section"><div class="rl-sectionhead"><h2>Useful functions to read</h2><span class="rl-muted" style="font-size:11px">Suggested order · inferred</span></div><label class="rl-field" style="margin-bottom:15px"><span>Find a function</span><input type="search" data-filter="functions" value="${esc(state.functionSearch)}" placeholder="Search function or path" aria-label="Search functions"></label><table aria-label="Functions and their roles"><colgroup><col style="width:33%"><col class="rl-table-secondary" style="width:27%"><col style="width:40%"></colgroup><thead><tr><th>Function</th><th class="rl-table-secondary">Production callers</th><th>Why read it?</th></tr></thead><tbody class="rl-function-rows">${functionRows()}</tbody></table></section>${footerNote()}`;}
+ function historyItems(){const rows=F.history.filter(c=>state.historyType==='All'||c.type===state.historyType);return rows.map(c=>`<article class="rl-event"><span class="rl-event-dot" aria-hidden="true"></span><div><div class="rl-event-date">${c.date} · <span class="rl-mono">${c.id}</span></div><h2>${c.title}</h2><p>${c.summary}</p><div class="rl-row">${c.areas.map(id=>chip(area(id).name)).join('')}</div>${button('commit','Inspect this change →','rl-button',`data-commit="${c.id}"`)}</div></article>`).join('');}
+ function historyPage(){return `${heading('Repository history','Keep your mental model current.','See what changed, which areas it touches, and where to inspect the evidence.')}<div class="rl-toolbar"><label class="rl-field"><span>Change category</span><select data-filter="history" aria-label="Filter history">${['All','Imports','Routes','Tests'].map(t=>`<option value="${t}" ${state.historyType===t?'selected':''}>${t}</option>`).join('')}</select></label><span class="rl-muted" style="font-size:11px">Commit messages and source changes</span></div><div class="rl-timeline">${historyItems()}</div><details class="rl-disclosure"><summary class="cursor-interaction">Can Repo Lore explain why something changed?</summary><p>A diff shows what changed. A commit message may record intent, but a relationship alone does not prove motivation. This view keeps source changes separate from interpretations and explicitly leaves missing rationale unknown.</p></details>${footerNote()}`;}
+ function banner(){const kind=state.query.get('state');if(kind==='stale')return `<div class="rl-banner"><span><strong>A newer commit is waiting for analysis.</strong><br>This view still describes ${F.repo.commit}.</span>${button('reanalyze','Analyze latest commit','rl-button')}</div>`;if(kind==='partial')return `<div class="rl-banner"><span><strong>Part of this analysis is unresolved.</strong><br>The source map is available. Provider internals remain unknown.</span>${button('analysis','View analysis gaps','rl-button')}</div>`;return '';}
+ function repoState(kind){
+  if(kind==='loading')return `<section class="rl-state" aria-busy="true"><div class="rl-kicker">Analysis in progress</div><h1>Building a picture of the repository.</h1><p>Source files, imports, and framework entry points are being connected.</p><div class="rl-skeleton" style="width:80%"></div><div class="rl-skeleton" style="width:60%"></div><div class="rl-skeleton" style="width:70%;height:170px;margin-top:30px"></div><p class="rl-inline-note">Design state · progress and timing are illustrative.</p>${link('/repo/overview','View completed example','rl-button')}</section>`;
+  if(kind==='empty')return `<section class="rl-state"><div class="rl-state-symbol" aria-hidden="true">∅</div><h1>No supported source found yet.</h1><p>There are no TypeScript or React files in this example state. Check the repository and branch, then try again.</p><div class="rl-row">${link('/home?focus=analyze','Choose a repository','rl-button rl-primary')}${link('/repo/overview','Explore an example','rl-button')}</div><details class="rl-disclosure"><summary>What can be analyzed?</summary><p>This design focuses on TypeScript and React projects. A successful connection does not guarantee every source relationship can be resolved.</p></details></section>`;
+  return `<section class="rl-state"><div class="rl-state-symbol" aria-hidden="true">!</div><h1>We couldn’t finish this analysis.</h1><p>The repository could not be read in this example state. Check the URL and access, then retry.</p><div class="rl-row">${button('retry','Try again','rl-button rl-primary')}${link('/home?focus=analyze','Change repository','rl-button')}</div><details class="rl-disclosure"><summary>Technical details</summary><p>Example error: REPOSITORY_UNAVAILABLE. No credentials or source content are included in this message.</p></details></section>`;
+ }
+ function analysisPage(){const complete=state.analysisStep>=4;return `<main class="rl-public-main"><section class="rl-state" aria-live="polite"><div class="rl-kicker">Example analysis walkthrough</div><h1>${complete?'Your starting point is ready.':'From repository to understanding.'}</h1><p>${complete?'Open the Trailhead example to inspect its architecture and supporting source.':'A short demonstration of the analysis journey.'}</p>${state.submitted?`<div class="rl-mono rl-muted">Entered URL: ${esc(state.submitted)}</div>`:''}<div class="rl-progress" role="progressbar" aria-label="Example analysis progress" aria-valuemin="0" aria-valuemax="4" aria-valuenow="${state.analysisStep}"><span style="width:${state.analysisStep*25}%"></span></div><ol class="rl-analysis-steps">${['Read repository structure','Resolve imports and entry points','Connect areas and source evidence','Prepare a short orientation'].map((s,i)=>`<li class="${state.analysisStep>i?'rl-done':''}"><span aria-hidden="true">${state.analysisStep>i?'✓':'○'}</span>${s}</li>`).join('')}</ol>${complete?link('/repo/overview','Open example Lore →','rl-button rl-primary'):button('finish-analysis','Skip to completed example','rl-button')}<p class="rl-inline-note">Prototype only. No URL is fetched or analyzed. The result is always the supplied Trailhead fixture.</p></section></main>`;}
+ function notFound(inRepo=false){const content=`<section class="rl-state"><div class="rl-kicker">Page not found</div><h1>Let’s find a useful starting point.</h1><p>This page is not included in the design prototype.</p><div class="rl-row">${link(inRepo?'/repo/overview':'/home',inRepo?'Repository overview':'Go to homepage','rl-button rl-primary')}${link('/design','Browse all designs','rl-button')}</div></section>`;return inRepo?content:`<main class="rl-public-main">${content}</main>`;}
+ const routeIndex=[['/home','Homepage','Value proposition, repository input, interactive example preview.'],['/explore','Explore Lores','A featured repository and focused ways into the example.'],['/manifesto','Manifesto','An editorial expression of the product’s principles.'],['/repo/overview','Overview','A map, three starting points, and honest analysis limits.'],['/repo/architecture','Architecture','Selectable areas, immediate dependencies, and source evidence.'],['/repo/systems','Systems','Connected responsibilities with inferred grouping labels.'],['/repo/systems/project-workspace','System detail','Areas, source relationships, and useful functions.'],['/repo/dependencies','Dependencies','Search, scope, sort, declarations, and usage evidence.'],['/repo/data-flow','Data Flow','Read and create paths, step inspection, function relationships.'],['/repo/history','History','Concise changes with affected areas and source differences.']];
+ function designIndex(){return `<main class="rl-design-index"><div class="rl-kicker">Design handoff · outside the product UI</div><h1>One connected product experience.</h1><p class="rl-lead">Ten core page types, shared evidence interactions, and responsive layouts. Every finding and source excerpt uses the illustrative Trailhead repository.</p><div class="rl-design-grid">${routeIndex.map(([r,t,d])=>link(r,`<strong>${t} →</strong><small>${d}</small>`,'cursor-interaction')).join('')}</div><section class="rl-section"><h2>Review the important states</h2><div class="rl-state-links">${[['ready','Completed'],['loading','Loading'],['empty','No source'],['error','Error'],['stale','Stale analysis'],['partial','Partial analysis']].map(([k,t])=>link('/repo/overview'+(k==='ready'?'':'?state='+k),t,'rl-button')).join('')}${link('/analyze','Analysis journey','rl-button')}${link('/missing-page','Not found','rl-button')}</div></section><section class="rl-section"><h2>Try the connected interactions</h2><ul class="rl-checklist"><li>Select a map area, inspect an import, and open the source excerpt.</li><li>Open a system and move from a function to its calling or called functions.</li><li>Search dependencies, change scope, and inspect manifest declarations.</li><li>Step through GET and POST request paths.</li><li>Filter History and inspect source changes with their limits.</li><li>Open Analysis and Share from the repository header.</li><li>Resize the window to review the menu and selected-area sheet.</li></ul></section><section class="rl-section"><h2>Implementation boundaries</h2><p class="rl-lead" style="margin-top:14px">Use the existing analyzers and real evidence model. These screens specify hierarchy and behavior; they do not justify generating new architectural claims. Grouping names are inferred, imports and calls are detected, and missing runtime knowledge stays unknown.</p><div class="rl-two-col"><div class="rl-quietbox"><h3>MVP refinements</h3><p>Public pages, all existing repository sections, readable maps, progressive evidence, responsive details, and necessary states.</p></div><div class="rl-quietbox"><h3>Keep out of this pass</h3><p>New AI reasoning, runtime tracing, saved progress, accounts, pricing, or new analysis guarantees. They need separate product decisions.</p></div></div></section><p class="rl-inline-note">This reference preserves the current public page families. Proposed layout, grouping presentation, source excerpts, filters, and state details must be mapped to actual capabilities during implementation.</p></main>`;}
+ function inspectorMarkup(){return `<aside class="rl-inspector" aria-label="Selected evidence"><div class="rl-inspector-top"><span class="rl-inspector-kind">Selected area</span>${button('close-inspector','×','rl-close','aria-label="Close selected evidence"')}</div><div class="rl-inspector-content" aria-live="polite"></div></aside>`;}
+ function areaDetail(a){const imported=F.imports.filter(([from])=>from===a.id).map(([,to])=>to),callers=F.imports.filter(([,to])=>to===a.id).map(([from])=>from);return `<h2>${a.name}</h2><div class="rl-mono rl-muted">${esc(a.path)}</div><p class="rl-description">${a.summary}</p>${chip('Role inferred',true)}<p class="rl-description">${a.reason}</p><h3>Supporting evidence</h3><div class="rl-proof"><span>Detected in source</span>${sourceButton(a.source,a.lines[0],F.sources[a.source].path)}<p class="rl-panel-note">${a.evidence}</p></div><p class="rl-panel-note">${a.basis}</p>${imported.length?`<h3>Imports</h3>${imported.map(id=>button('area',area(id).name+' →','rl-linkbutton',`data-area="${id}"`)).join('<br>')}`:''}${callers.length?`<h3>Imported by</h3>${callers.map(id=>button('area',area(id).name+' →','rl-linkbutton',`data-area="${id}"`)).join('<br>')}`:''}<div>${button('source','View source excerpt ↗','rl-button rl-primary',`data-source="${a.source}" data-line="${a.lines[0]}"`)}</div>`;}
+ function packageDetail(d){const manifest=F.sources.manifest.code.split('\n').findIndex(line=>line.includes('"'+d.name+'"'))+1;return `<h2>${esc(d.name)}</h2><div class="rl-mono rl-muted">${esc(d.version)} · ${d.scope}</div><p class="rl-description">${d.role}. ${d.basis}</p>${chip('Declaration detected')}<h3>Declared in</h3><div class="rl-proof"><span>${d.scope==='Runtime'?'dependencies':'devDependencies'}</span>${sourceButton('manifest',manifest,'package.json:'+manifest)}<code class="rl-mono">"${esc(d.name)}": "${esc(d.version)}"</code></div><h3>Source references</h3>${d.usage.length?d.usage.map(([src,line])=>`<div class="rl-proof"><span>${d.name==='next'?'Framework route convention':'Import detected'}</span>${sourceButton(src,line)}</div>`).join(''):`<p class="rl-panel-note">No direct source import is shown in this example. The package is declared as development tooling.</p>`}${d.config?`<div class="rl-proof"><span>Related configuration</span>${sourceButton(d.config,1)}</div>`:''}<p class="rl-panel-note">Declared ranges are not resolved installed versions. Usage references do not establish runtime execution or security status.</p>`;}
+ function functionDetail(f){return `<h2>${f.name}</h2><div class="rl-mono rl-muted">${esc(F.sources[f.source].path)}:${f.line}</div><p class="rl-description">${f.reason}</p>${chip('Suggested starting point',true)}<h3>Production callers</h3>${f.callers.length?f.callers.map(name=>`<div class="rl-proof">${button('function',name+' →','rl-linkbutton',`data-function="${name}"`)}</div>`).join(''):`<p class="rl-panel-note">Framework entry point. No production caller is resolved in this example.</p>`}<h3>Calls</h3>${f.calls.map(name=>{const known=F.functions.some(x=>x.name===name);return `<div class="rl-proof">${known?button('function',name+' →','rl-linkbutton',`data-function="${name}"`):`<code class="rl-mono">${name}</code><span style="margin-top:5px">External or provider internals not expanded</span>`}</div>`;}).join('')}<div>${button('source','View definition ↗','rl-button rl-primary',`data-source="${f.source}" data-line="${f.line}"`)}</div><details class="rl-disclosure"><summary>Why is this suggested?</summary><p>The suggestion uses entry-point reachability, resolved production callers, and the responsibility visible in source. It is an orientation aid, not a quality score or measured runtime importance.</p></details>`;}
+ function commitDetail(c){return `<h2>${c.title}</h2><div class="rl-mono rl-muted">${c.id} · ${c.date}, 2026</div><p class="rl-description">${c.impact}</p><div class="rl-row">${c.areas.map(id=>button('area',area(id).name,'rl-button',`data-area="${id}"`)).join('')}</div><h3>Illustrative source changes</h3><div class="rl-diff">${c.removed.map(l=>`<div class="rl-diff-remove">− ${esc(l)}</div>`).join('')}${c.added.map(l=>`<div class="rl-diff-add">+ ${esc(l)}</div>`).join('')}</div><p class="rl-panel-note">Excerpts may span different changed files; this is not a complete patch.</p><div>${button('source','Inspect current source ↗','rl-button rl-primary',`data-source="${c.source}" data-line="1"`)}</div><h3>What remains unknown</h3><p class="rl-description">${c.limit}</p>`;}
+ function openInspector(type,id,trigger){
+  if(!routeIsRepo())navigate('/repo/architecture');
+  if(!$('.rl-shell'))return;
+  if(!state.selected)lastFocus=trigger||document.activeElement;
+  state.selected={type,id};
+  if(!$('.rl-inspector'))$('.rl-shell').insertAdjacentHTML('beforeend',inspectorMarkup());
+  const panel=$('.rl-inspector');$('.rl-shell').classList.add('rl-inspecting');
+  const content=type==='area'?areaDetail(area(id)):type==='package'?packageDetail(F.dependencies.find(d=>d.name===id)):type==='function'?functionDetail(F.functions.find(f=>f.name===id)):commitDetail(F.history.find(c=>c.id===id));
+  $('.rl-inspector-kind').textContent={area:'Selected area',package:'Dependency evidence',function:'Function relationships',commit:'Change evidence'}[type];
+  $('.rl-inspector-content').innerHTML=content;
+  syncInspectorMode();
+  $('.rl-inspector [data-action="close-inspector"]').focus({preventScroll:true});
+  panel.scrollIntoView({block:'nearest'});drawMaps();
+ }
+ function closeInspector(){const old=state.selected;state.selected=null;$('.rl-inspector')?.remove();$('.rl-shell')?.classList.remove('rl-inspecting');['.rl-main','.rl-sidebar','.rl-topbar'].forEach(selector=>{if($(selector))$(selector).inert=false;});drawMaps();const fallback=old?.type==='area'?$(`[data-action="area"][data-area="${old.id}"]`):null;(lastFocus?.isConnected?lastFocus:fallback)?.focus({preventScroll:true});lastFocus=null;}
+ function sourceModal(id,line){const s=F.sources[id];return `<div class="rl-spread"><div><div class="rl-kicker">Source evidence</div><h2 style="margin-top:7px">${esc(s.path.split('/').pop())}</h2></div>${button('close-modal','×','rl-close','aria-label="Close dialog"')}</div><p class="rl-mono">${esc(s.path)} · ${F.repo.commit}</p>${chip('Illustrative source excerpt')}<div class="rl-code" aria-label="Source excerpt with line numbers">${s.code.split('\n').map((code,i)=>`<div class="rl-code-line ${i+1===Number(line)?'rl-line-selected':''}"><span class="rl-line-number">${i+1}</span><code>${esc(code)||' '}</code></div>`).join('')}</div><div class="rl-modal-footer">Source fixture for the design. Production should link to an immutable commit and source range. Highlighted line: ${line}.</div>`;}
+ function analysisModal(){return `<div class="rl-spread"><div><div class="rl-kicker">Repository analysis</div><h2 style="margin-top:7px">A clear view of what we know.</h2></div>${button('close-modal','×','rl-close','aria-label="Close dialog"')}</div><div class="rl-two-col"><div><span class="rl-muted" style="font-size:11px">Analyzed snapshot</span><p class="rl-mono">main · ${F.repo.commit}<br>${F.repo.analyzed}</p></div><div><span class="rl-muted" style="font-size:11px">Evidence sources</span><p>TypeScript imports and calls<br>Next.js conventions · package.json</p></div></div><h3 style="margin-top:20px">How to read the findings</h3><div class="rl-list-row"><div>${chip('Detected')}<p>Source imports, function calls, exports, and manifest declarations.</p></div></div><div class="rl-list-row"><div>${chip('Inferred',true)}<p>Role names, system groupings, and recommended starting points.</p></div></div><div class="rl-list-row"><div>${chip('Unknown',true)}<p>Actual runtime execution and external provider behavior.</p></div></div><h3 style="margin-top:22px">Open limits in this example</h3><ul class="rl-checklist"><li>Authentication-provider internals are not expanded.</li><li>The database client’s internal behavior is outside the source trace.</li><li>A notification call does not prove a message was delivered.</li></ul><div class="rl-row" style="margin-top:23px">${button('reanalyze','Re-analyze repository','rl-button rl-primary')}${button('close-modal','Back to the code map','rl-button')}</div><p class="rl-modal-footer">Design fixture · analyzer metadata here is illustrative. Do not create evidence fields the actual analyzer cannot support.</p>`;}
+ function shareModal(){const url='https://repolore.app/lore/trailhead/web',badge=`[![Repo Lore](https://repolore.app/badge.svg)](${url})`;return `<div class="rl-spread"><div><div class="rl-kicker">Share understanding</div><h2 style="margin-top:7px">Give the next engineer a starting point.</h2></div>${button('close-modal','×','rl-close','aria-label="Close dialog"')}</div><p>A stable Lore link belongs next to the repository. The example below is illustrative and has not been published.</p><label class="rl-field"><span>Example Lore URL</span><input readonly class="rl-share-url" value="${url}" aria-label="Example Lore URL"></label>${button('copy-url','Copy example link','rl-button rl-primary')}<label class="rl-field"><span>README badge · example Markdown</span><textarea readonly class="rl-badge-markdown" aria-label="README badge Markdown">${esc(badge)}</textarea></label>${button('copy-badge','Copy badge Markdown','rl-button')}<p class="rl-copy-result" role="status" aria-live="polite"></p>`;}
+ function openModal(type,payload={},trigger){modalFocus=trigger||document.activeElement;state.modal={type,payload};const html=type==='source'?sourceModal(payload.id,payload.line):type==='analysis'?analysisModal():shareModal();$('.rl-modal-host').innerHTML=`<div class="rl-backdrop"><section class="rl-modal" role="dialog" aria-modal="true" aria-label="${type==='source'?'Source evidence':type==='analysis'?'Analysis details':'Share Lore'}">${html}</section></div>`;$('.rl-product').inert=true;$('.rl-modal [data-action="close-modal"]').focus({preventScroll:true});$('.rl-backdrop').scrollIntoView({block:'start'});}
+ function closeModal(){state.modal=null;$('.rl-modal-host').innerHTML='';$('.rl-product').inert=false;if(modalFocus?.isConnected)modalFocus.focus({preventScroll:true});modalFocus=null;}
+ async function copyText(selector){const field=$(selector),text=field.value,result=$('.rl-copy-result');let copied=false;try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);copied=true;}}catch(_){}if(!copied){field.focus();field.select();try{copied=document.execCommand('copy');}catch(_){copied=false;}}if(result?.isConnected)result.textContent=copied?'Copied.':'Select and copy the text above. Clipboard access is unavailable in this preview.';}
+ function updateFlow(){if(!$('.rl-flow'))return;$('.rl-flow').innerHTML=flowSteps();$('.rl-flow-detail').innerHTML=flowDetail();$('.rl-flow-summary').textContent=F.flows[state.flow].summary;}
+ function updateDependencies(){if(!$('.rl-dependency-rows'))return;$('.rl-dependency-rows').innerHTML=dependencyRows();$('.rl-dep-count').textContent=`${filteredDependencies().length} of ${F.dependencies.length} packages`;}
+ function render(){
+  if(drawObserver){drawObserver.disconnect();drawObserver=null;}
+  const repo=routeIsRepo(),page=appPage(),mode=state.query.get('state');let content;
+  if(repo){const pages={overview,architecture,systems,dependencies,'data-flow':dataFlow,history:historyPage};const body=['loading','empty','error'].includes(mode)?repoState(mode):pages[page]?banner()+pages[page]():notFound(true);content=`${repoHeader()}<div class="rl-shell ${state.expanded?'rl-expanded':''}">${repoSidebar()}<main class="rl-main" id="rl-main">${body}</main></div>`;}
+  else{const pages={'/home':home,'/explore':explore,'/manifesto':manifesto,'/design':designIndex,'/analyze':analysisPage};content=publicHeader()+((pages[state.route]||(()=>notFound(false)))())+publicFooter();}
+  $('.rl-product').innerHTML=prototypeBar()+content;
+  $('.rl-product').inert=false;$('.rl-modal-host').innerHTML='';
+  drawObserver=new ResizeObserver(drawMaps);drawObserver.observe(root);$$('.rl-map').forEach(m=>drawObserver.observe(m));drawMaps();
+  if(state.query.get('focus')==='analyze')$('#rl-repo-input')?.focus();
+  const title=repo?(pageNames[page]||'Repository')+' · Trailhead':'Repo Lore · '+({'/home':'Understand the code','/explore':'Explore Lores','/manifesto':'Manifesto','/design':'Design handoff','/analyze':'Analysis preview'}[state.route]||'Page not found');
+  if(root.dataset.inline!=='true')document.title=title;
+  $('.rl-route-status').textContent=title;
+ }
+ function simulateAnalysis(url=''){state.submitted=url;state.analysisStep=0;navigate('/analyze');analysisTimer=setInterval(()=>{if(state.route!=='/analyze'){clearInterval(analysisTimer);analysisTimer=null;return;}state.analysisStep=Math.min(4,state.analysisStep+1);render();if(state.analysisStep===4){clearInterval(analysisTimer);analysisTimer=null;}},650);}
+ root.addEventListener('click',event=>{
+  const routeTarget=event.target.closest('[data-route]');if(routeTarget&&root.contains(routeTarget)){event.preventDefault();navigate(routeTarget.dataset.route);return;}
+  const el=event.target.closest('[data-action]');if(!el||!root.contains(el)||el.disabled)return;
+  const action=el.dataset.action;
+  if(action==='area')openInspector('area',el.dataset.area,el);
+  else if(action==='package')openInspector('package',el.dataset.package,el);
+  else if(action==='function')openInspector('function',el.dataset.function,el);
+  else if(action==='commit')openInspector('commit',el.dataset.commit,el);
+  else if(action==='source')openModal('source',{id:el.dataset.source,line:Number(el.dataset.line||1)},el);
+  else if(action==='analysis')openModal('analysis',{},el);
+  else if(action==='share')openModal('share',{},el);
+  else if(action==='close-inspector')closeInspector();
+  else if(action==='close-modal')closeModal();
+  else if(action==='menu'){state.menu=!state.menu;$('.rl-sidebar').classList.toggle('rl-open',state.menu);el.setAttribute('aria-expanded',String(state.menu));}
+  else if(action==='expand'){state.expanded=!state.expanded;$('.rl-shell').classList.toggle('rl-expanded',state.expanded);el.textContent=state.expanded?'Return to normal view':'Expand map';el.setAttribute('aria-expanded',String(state.expanded));drawMaps();}
+  else if(action==='step'){state.step=Number(el.dataset.step);updateFlow();$('.rl-flow-detail').scrollIntoView({block:'nearest'});}
+  else if(action==='next-step'){state.step=Math.min(F.flows[state.flow].steps.length-1,state.step+1);updateFlow();}
+  else if(action==='previous-step'){state.step=Math.max(0,state.step-1);updateFlow();}
+  else if(action==='copy-url')copyText('.rl-share-url');
+  else if(action==='copy-badge')copyText('.rl-badge-markdown');
+  else if(action==='reanalyze'||action==='retry')simulateAnalysis('');
+  else if(action==='finish-analysis'){clearInterval(analysisTimer);analysisTimer=null;state.analysisStep=4;render();}
+  else if(action==='clear-explore'){const input=$('[data-filter="explore"]');input.value='';filterInput(input);input.focus();}
+ });
+ function filterInput(el){const kind=el.dataset.filter,value=el.value;
+  if(kind==='dependencies'){state.depSearch=value;updateDependencies();}
+  else if(kind==='functions'){state.functionSearch=value;$('.rl-function-rows').innerHTML=functionRows();}
+  else if(kind==='systems'){let count=0;$$('[data-system-card]').forEach(card=>{const s=F.systems.find(s=>s.id===card.dataset.systemCard);card.hidden=!`${s.name} ${s.description}`.toLowerCase().includes(value.toLowerCase());if(!card.hidden)count++;});$('.rl-system-empty').hidden=count!==0;}
+  else if(kind==='explore'){const match='trailhead web typescript react next.js prisma projects architecture requests history'.includes(value.toLowerCase().trim());$('.rl-explore-result').hidden=!match;$('.rl-explore-empty').hidden=match;}
+ }
+ root.addEventListener('input',event=>{const el=event.target.closest('[data-filter]');if(el&&el.tagName==='INPUT'&&el.type!=='checkbox')filterInput(el);});
+ root.addEventListener('change',event=>{const el=event.target.closest('[data-filter]');if(!el)return;const type=el.dataset.filter;
+  if(type==='dep-scope'){state.depScope=el.value;updateDependencies();}
+  else if(type==='dep-sort'){state.depSort=el.value;updateDependencies();}
+  else if(type==='neighbors'){state.focus=el.checked;drawMaps();}
+  else if(type==='flow'){state.flow=el.value;state.step=0;updateFlow();}
+  else if(type==='history'){state.historyType=el.value;$('.rl-timeline').innerHTML=historyItems();}
+ });
+ root.addEventListener('submit',event=>{const form=event.target.closest('[data-form="analyze"]');if(!form)return;event.preventDefault();const input=form.querySelector('input'),raw=input.value.trim();let parsed;try{parsed=new URL(raw);}catch(_){}const valid=parsed&&parsed.protocol==='https:'&&parsed.hostname==='github.com'&&!parsed.username&&!parsed.password&&/^\/[\w.-]+\/[\w.-]+\/?$/.test(parsed.pathname)&&!parsed.search&&!parsed.hash;if(!valid){$('#rl-repo-error').textContent='Enter a GitHub repository URL, such as https://github.com/owner/repository.';input.setAttribute('aria-invalid','true');input.focus();return;}input.removeAttribute('aria-invalid');simulateAnalysis(parsed.href);});
+ root.addEventListener('keydown',event=>{
+  const dialog=$('.rl-modal')||(state.selected&&root.getBoundingClientRect().width<=660?$('.rl-inspector'):null);
+  if(event.key==='Escape'){if(state.modal){event.preventDefault();closeModal();}else if(state.selected){event.preventDefault();closeInspector();}else if(state.menu){state.menu=false;$('.rl-sidebar')?.classList.remove('rl-open');$('[data-action="menu"]')?.setAttribute('aria-expanded','false');}return;}
+  if(event.key==='Tab'&&dialog){const controls=[...dialog.querySelectorAll('button:not([disabled]),a[href],input,select,textarea,summary')].filter(n=>!n.closest('[hidden]'));const first=controls[0],last=controls[controls.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
+ });
+ if(root.dataset.inline!=='true')window.addEventListener('popstate',()=>navigate(routeFromHash(),false));
+ navigate(root.dataset.initialRoute||routeFromHash(),false);
+})();
+
+</script>
+</body>
+</html>
