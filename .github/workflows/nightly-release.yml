@@ -14,6 +14,7 @@ on:
   schedule:
     # Daily 06:00 UTC.
     - cron: "0 6 * * *"
+      timezone: America/Detroit
   workflow_dispatch:
 
 concurrency:
