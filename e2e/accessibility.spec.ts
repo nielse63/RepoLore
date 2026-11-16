@@ -1,4 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./coverage";
 
 /**
@@ -43,6 +44,52 @@ const PAGES = [
   { name: "Lore System detail", path: `${repoUrl}/systems/src` },
 ];
 
+/** The shell's on-demand surfaces (issue #84), scanned while open. */
+const OPEN_STATES: {
+  name: string;
+  path: string;
+  open: (page: Page) => Promise<void>;
+}[] = [
+  {
+    name: "Analysis dialog",
+    path: repoUrl,
+    open: (page) =>
+      page.getByRole("button", { name: "Analysis", exact: true }).click(),
+  },
+  {
+    name: "Share dialog",
+    path: repoUrl,
+    open: (page) =>
+      page.getByRole("button", { name: "Share", exact: true }).click(),
+  },
+  {
+    name: "Dependencies inspector",
+    path: `${repoUrl}/dependencies`,
+    open: (page) =>
+      page
+        .getByRole("button", { name: /^View .+ dependency details$/ })
+        .first()
+        .click(),
+  },
+];
+
+/**
+ * axe's WCAG A/AA violations, mapped to the fields that locate a failure, so
+ * an assertion diff names each rule and offending selector rather than
+ * dumping axe's full result objects.
+ */
+async function wcagViolations(page: Page) {
+  const { violations } = await new AxeBuilder({ page })
+    .withTags(WCAG_TAGS)
+    .analyze();
+  return violations.map(({ id, impact, help, nodes }) => ({
+    id,
+    impact,
+    help,
+    targets: nodes.map((node) => node.target.join(" ")),
+  }));
+}
+
 for (const colorScheme of ["light", "dark"] as const) {
   test.describe(`${colorScheme} color scheme`, () => {
     test.use({ colorScheme });
@@ -52,22 +99,20 @@ for (const colorScheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto(path);
+        expect(await wcagViolations(page)).toEqual([]);
+      });
+    }
 
-        const { violations } = await new AxeBuilder({ page })
-          .withTags(WCAG_TAGS)
-          .analyze();
-
-        // Mapped to the fields that locate a failure, so the assertion
-        // diff names each rule and offending selector rather than dumping
-        // axe's full result objects.
-        expect(
-          violations.map(({ id, impact, help, nodes }) => ({
-            id,
-            impact,
-            help,
-            targets: nodes.map((node) => node.target.join(" ")),
-          }))
-        ).toEqual([]);
+    for (const { name, path, open } of OPEN_STATES) {
+      test(`${name} has no detectable WCAG A/AA violations while open`, async ({
+        page,
+      }) => {
+        await page.goto(path);
+        await open(page);
+        await expect(
+          page.locator('[role="dialog"], #lore-inspector').first()
+        ).toBeVisible();
+        expect(await wcagViolations(page)).toEqual([]);
       });
     }
   });

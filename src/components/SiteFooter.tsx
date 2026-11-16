@@ -24,9 +24,9 @@ function GitHubMark() {
 
 /**
  * The site-wide footer: rendered by `SiteShell` on pages outside a Lore,
- * and at the end of `LorePageFrame`'s scrolling main column on Lore pages
- * (so the app shell's full-height layout is unchanged), where `spacingClassName`
- * replaces the default padding, since that column already provides its own.
+ * and after `<main>` in `LorePageFrame` on Lore pages, where
+ * `spacingClassName` replaces the default padding to line up with that
+ * frame's own.
  * The copyright line ends with the build's git tag (`APP_VERSION`, set in
  * `next.config.ts`) when one was available.
  */

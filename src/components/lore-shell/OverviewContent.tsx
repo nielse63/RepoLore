@@ -1,5 +1,6 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { GapsList } from "@/components/lore-shell/GapsList";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { PaginatedCardGrid } from "@/components/lore-shell/PaginatedCardGrid";
 import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
@@ -145,6 +146,7 @@ export function OverviewContent({
             {snapshot.repository.description}
           </p>
         )}
+        <LoreStatusLine />
         {/* A partial run's warning comes before the summary it qualifies. */}
         {snapshot.status !== "completed" && (
           <div className="mt-4">

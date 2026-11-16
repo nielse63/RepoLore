@@ -31,7 +31,12 @@ export function StepList({ steps }: { steps: Step[] }) {
                 <span className="w-px flex-1 bg-border" aria-hidden="true" />
               )}
             </div>
-            <div className={cn("flex-1", !isLast && "pb-6")}>
+            <div
+              className={cn(
+                "min-w-0 flex-1 [overflow-wrap:anywhere]",
+                !isLast && "pb-6"
+              )}
+            >
               <div className="flex items-start justify-between gap-4">
                 <h3 className="text-sm font-semibold text-foreground">
                   {step.title}

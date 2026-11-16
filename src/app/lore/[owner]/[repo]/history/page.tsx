@@ -6,10 +6,8 @@ import {
   saveHistoryEntries,
 } from "@/db/history-entries";
 import { upsertRepo } from "@/db/repos";
-import { getAnalysisStatus } from "@/helpers";
 import { computeHistory } from "@/history/compute-history";
 import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
-import { relativeTime } from "@/lib/relative-time";
 import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -69,10 +67,6 @@ export default async function HistoryPage({
     });
   }
 
-  const languages = [
-    ...new Set(lore.projects.flatMap((p) => p.languages)),
-  ].join(", ");
-
   return (
     <HistoryContent
       owner={owner}
@@ -80,15 +74,7 @@ export default async function HistoryPage({
       entries={cached.entries}
       truncated={truncated}
       nowIso={new Date().toISOString()}
-      repoIdentity={{
-        statusLabel: getAnalysisStatus(lore),
-        statusTone: lore.snapshot.status === "completed" ? "success" : "alert",
-        updatedLabel: `Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`,
-        branch: lore.snapshot.repository.defaultBranch,
-        language: languages,
-      }}
       commitSha={lore.snapshot.commitSha}
-      lore={lore}
     />
   );
 }

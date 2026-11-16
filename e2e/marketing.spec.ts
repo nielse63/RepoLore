@@ -2,7 +2,7 @@ import { expect, test } from "./coverage";
 
 /**
  * Search/sharing surface functional coverage: `robots.txt`, `sitemap.xml`, the per-repository Open Graph image, and
- * the Overview's README badge card. Like `systems.spec.ts`, needs
+ * the static README badge (its snippets are covered by `lore-dialogs.spec.ts`). Like `systems.spec.ts`, needs
  * `DATABASE_URL` for already-persisted runs but not `GITHUB_TOKEN`. The
  * seeded `nielse63/RepoLore` Lore's latest run is `completed`, public, and
  * has entry points and areas, so it's the positive case for
@@ -99,29 +99,6 @@ test("serves a PNG Open Graph image for a repository", async ({ request }) => {
   expect(response.headers()["content-type"]).toContain("image/png");
 });
 
-test("the README badge card copies Markdown linking the badge to this Lore", async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.goto(repoUrl);
-
-  const card = page.getByRole("region", { name: "Add a README badge" });
-  await expect(card).toBeVisible();
-  const snippet = card.locator("code");
-  await expect(snippet).toHaveText(
-    new RegExp(
-      String.raw`^\[!\[Repo Lore\]\(https?://\S+/badge\.svg\)\]\(https?://\S+${repoUrl}\)$`
-    )
-  );
-
-  await card.getByRole("button", { name: "Copy badge Markdown" }).click();
-  await expect(card.getByRole("button", { name: "Copied" })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    await snippet.textContent()
-  );
-});
-
 test("serves the static badge SVG", async ({ request }) => {
   const response = await request.get("/badge.svg");
   expect(response.ok()).toBe(true);
@@ -152,7 +129,7 @@ test("a submission redirect reports the run's outcome once and strips the marker
 
   await page.reload();
   await expect(
-    page.getByRole("region", { name: "Add a README badge" })
+    page.getByRole("heading", { level: 1, name: "Overview" })
   ).toBeVisible();
   expect(
     await page.evaluate(

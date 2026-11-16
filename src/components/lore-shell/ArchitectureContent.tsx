@@ -1,6 +1,7 @@
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { AreaRelationshipsTable } from "@/components/lore-shell/AreaRelationshipsTable";
 import { GapsList } from "@/components/lore-shell/GapsList";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginatedList } from "@/components/lore-shell/PaginatedList";
 import { Badge } from "@/components/ui/Badge";
@@ -17,7 +18,7 @@ import {
   majorAreasOrderNote,
   rankMajorAreas,
 } from "@/lore/major-areas";
-import type { Lore, SourceLocation } from "@/lore/model";
+import { countEvidence, type Lore, type SourceLocation } from "@/lore/model";
 import startCase from "lodash.startcase";
 import { Compass, GapHorizontal, Layers, Link2, TestTube2 } from "lucide-react";
 
@@ -51,6 +52,7 @@ export function ArchitectureContent({
     majorAreas,
     lore.relationships
   );
+  const evidenceCount = countEvidence(lore);
 
   return (
     <div className="flex max-w-4xl flex-col gap-10">
@@ -61,6 +63,29 @@ export function ArchitectureContent({
         <p className="mt-2 text-base text-muted">
           How the major parts of this repository work together.
         </p>
+        <LoreStatusLine />
+        <details className="mt-4 border-t border-border pt-3 text-sm text-muted">
+          <summary className="cursor-pointer text-primary">
+            About this view
+          </summary>
+          <p className="mt-3">
+            This view shows the repository&apos;s major structural areas, how
+            they directly depend on one another, and its probable entry points,
+            as analyzed on the default branch.
+          </p>
+          <p className="mt-2">
+            It reflects only what the analyzer directly detected — it does not
+            infer runtime topology, infrastructure, or system-wide behavioral
+            guarantees.
+          </p>
+          <p className="mt-2">
+            {evidenceCount.toLocaleString()}{" "}
+            {evidenceCount === 1
+              ? "evidence reference supports"
+              : "evidence references support"}{" "}
+            the areas, relationships, and entry points shown.
+          </p>
+        </details>
       </div>
 
       {lore.projects.map((project) => {

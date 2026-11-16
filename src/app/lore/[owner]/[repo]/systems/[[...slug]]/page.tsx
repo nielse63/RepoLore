@@ -2,9 +2,7 @@ import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { SystemDetailContent } from "@/components/lore-shell/SystemDetailContent";
 import { SystemsContent } from "@/components/lore-shell/SystemsContent";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
-import { getAnalysisStatus } from "@/helpers";
 import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
-import { relativeTime } from "@/lib/relative-time";
 import { buildLoreMetadata, loreRouteTitle } from "@/lib/route-metadata";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -66,22 +64,5 @@ export default async function SystemsPage({
     );
   }
 
-  const languages = [
-    ...new Set(lore.projects.flatMap((p) => p.languages)),
-  ].join(", ");
-
-  return (
-    <SystemsContent
-      owner={owner}
-      repo={repo}
-      lore={lore}
-      repoIdentity={{
-        statusLabel: getAnalysisStatus(lore),
-        statusTone: lore.snapshot.status === "completed" ? "success" : "alert",
-        updatedLabel: `Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`,
-        branch: lore.snapshot.repository.defaultBranch,
-        language: languages,
-      }}
-    />
-  );
+  return <SystemsContent owner={owner} repo={repo} lore={lore} />;
 }

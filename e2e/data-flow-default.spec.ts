@@ -3,8 +3,8 @@ import { expect, test } from "./coverage";
 
 /**
  * The Data Flow page opens in its most informative state (GitHub issue #7):
- * List view, sorted by Importance (descending), with the detail panel
- * focused on the top-ranked function — not Chain view in alphabetical order
+ * List view, sorted by Importance (descending), focused on the top-ranked
+ * function (its inspector opens once a function is selected, issue #84) — not Chain view in alphabetical order
  * focused on an arbitrary zero-importance entry. Reads `nielse63/RepoLore`
  * (this repository's own tree, persisted by `npm run seed:e2e`), whose
  * alphabetically first function is a zero-importance config callback.
@@ -41,7 +41,7 @@ async function listedFunctions(page: Page): Promise<ListedFunction[]> {
     );
 }
 
-const rail = (page: Page) => page.locator("#right-rail");
+const inspector = (page: Page) => page.locator("#lore-inspector");
 const pagination = (page: Page) =>
   page.getByRole("main").getByRole("navigation", { name: "Pagination" });
 const currentPage = (page: Page) =>
@@ -78,12 +78,22 @@ test("Data Flow opens in List view, ranked by importance, focused on the top fun
   expect(scores).toEqual([...scores].sort((a, b) => b - a));
   expect(scores[0]).toBeGreaterThan(0);
 
-  // The pre-selected function is the top-ranked one, not the first by name.
+  // The pre-selected function is the top-ranked one, not the first by name,
+  // and the inspector stays closed until a function is selected.
   const top = functions[0];
-  await expect(rail(page).getByRole("heading", { level: 2 })).toHaveText(
+  const focused = page
+    .getByRole("main")
+    .getByRole("listitem")
+    .locator('button[aria-current="true"]');
+  await expect(focused).toHaveCount(1);
+  await expect(focused.locator("p").first()).toHaveText(top.name);
+  await expect(inspector(page)).toHaveCount(0);
+
+  await focused.click();
+  await expect(inspector(page).getByRole("heading", { level: 2 })).toHaveText(
     top.name
   );
-  await expect(rail(page)).toContainText(`Importance${top.score}`);
+  await expect(inspector(page)).toContainText(`Importance${top.score}`);
   const alphabeticalFirst = [...functions].sort((a, b) =>
     a.name.localeCompare(b.name)
   )[0];
@@ -166,7 +176,7 @@ test("a repository with no named functions shows the empty state, not an empty s
     )
   ).toBeVisible();
   await expect(page.getByText(/No functions match/)).toBeHidden();
-  await expect(page.locator("#right-rail")).toBeHidden();
+  await expect(inspector(page)).toHaveCount(0);
 });
 
 test.describe("at a 1440×800 viewport", () => {
@@ -189,13 +199,18 @@ test.describe("at a 1440×800 viewport", () => {
         return { top, bottom, height };
       })
     );
-    expect(boxes.length).toBeGreaterThanOrEqual(7);
+    // At least six rows fit below the shell's header and the heading's
+    // status line; the check below asserts no further row would.
+    expect(boxes.length).toBeGreaterThanOrEqual(6);
     for (const box of boxes) expect(box.height).toBeLessThan(60);
 
     // Every row is on screen without scrolling, and another wouldn't fit.
     const last = boxes[boxes.length - 1];
     const viewportHeight = page.viewportSize()!.height;
     expect(last.bottom).toBeLessThanOrEqual(viewportHeight);
-    expect(viewportHeight - last.bottom).toBeLessThan(last.height + 1);
+    // Rows are a pitch apart (row plus divider); the page size is measured
+    // once after first paint, so allow a pixel of later layout shift.
+    const pitch = (last.top - boxes[0].top) / (boxes.length - 1);
+    expect(viewportHeight - last.bottom).toBeLessThan(pitch + 1);
   });
 });

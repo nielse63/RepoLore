@@ -99,7 +99,7 @@ test("the Overview's Major Areas are ranked by relationships, tests last, across
 
 async function systemsPageAreas(page: Page): Promise<ListedArea[]> {
   return page
-    .getByRole("main")
+    .getByRole("list", { name: "Systems", exact: true })
     .getByRole("listitem")
     .getByRole("link")
     .evaluateAll((links) =>

@@ -1,13 +1,15 @@
 "use client";
 
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { AreaRelationshipsTable } from "@/components/lore-shell/AreaRelationshipsTable";
+import {
+  LoreInspector,
+  useInspector,
+  type Inspector,
+} from "@/components/lore-shell/LoreInspector";
+import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { MAX_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { TopBar } from "@/components/lore-shell/TopBar";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
@@ -108,17 +110,23 @@ function usedByLocations(dependency: ExternalDependency) {
   return locations;
 }
 
-/** The right rail for the selected external dependency: description, usage locations, evidence, and gaps. */
-function DependencyDetailRail({
+/** The inspector for the selected external dependency: description, usage locations, evidence, and gaps. */
+function DependencyInspector({
+  inspector,
   dependency,
   sourceUrl,
 }: {
+  inspector: Inspector<string>;
   dependency: ExternalDependency;
   sourceUrl: (location: SourceLocation) => string;
 }) {
   const usedBy = usedByLocations(dependency);
   return (
-    <RightRailShell title={dependency.name}>
+    <LoreInspector
+      inspector={inspector}
+      kind="Dependency evidence"
+      title={dependency.name}
+    >
       <Badge variant="primary">
         {SCOPE_LABEL[dependency.scope]} dependency
       </Badge>
@@ -192,7 +200,7 @@ function DependencyDetailRail({
           </ul>
         </div>
       )}
-    </RightRailShell>
+    </LoreInspector>
   );
 }
 
@@ -200,20 +208,12 @@ export interface DependenciesContentProps {
   owner: string;
   repo: string;
   lore: Lore;
-  repoIdentity: {
-    statusLabel: string;
-    statusTone?: "success" | "alert";
-    updatedLabel: string;
-    branch: string;
-    language: string;
-  };
 }
 
 export function DependenciesContent({
   owner,
   repo,
   lore,
-  repoIdentity,
 }: DependenciesContentProps) {
   const [tab, setTab] = useState<"external" | "internal">("external");
   const [query, setQuery] = useState("");
@@ -279,37 +279,21 @@ export function DependenciesContent({
   const start = (page - 1) * pageSize;
   const pageFiltered = filtered.slice(start, start + pageSize);
 
-  const [selectedId, setSelectedId] = useState(dependencies[0]?.id);
-  const selected =
-    filtered.find((d) => d.id === selectedId) ?? filtered[0] ?? dependencies[0];
+  const inspector = useInspector<string>();
+  const selected = dependencies.find((d) => d.id === inspector.selectedId);
 
   const areaRelationships = deriveAreaRelationships(lore.structuralAreas);
 
   return (
     <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              statusLabel={repoIdentity.statusLabel}
-              statusTone={repoIdentity.statusTone}
-              updatedLabel={repoIdentity.updatedLabel}
-              branch={repoIdentity.branch}
-              language={repoIdentity.language}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        selected ? (
-          <DependencyDetailRail dependency={selected} sourceUrl={sourceUrl} />
-        ) : undefined
+      inspector={
+        inspector.open && selected ? (
+          <DependencyInspector
+            inspector={inspector}
+            dependency={selected}
+            sourceUrl={sourceUrl}
+          />
+        ) : null
       }
     >
       <div className="max-w-4xl">
@@ -319,6 +303,7 @@ export function DependenciesContent({
         <p className="mt-2 text-base text-muted">
           What this repository relies on, and where those dependencies are used.
         </p>
+        <LoreStatusLine />
 
         <Tabs
           value={tab}
@@ -387,12 +372,18 @@ export function DependenciesContent({
                 <tbody ref={tbodyRef}>
                   {pageFiltered.map((dep) => {
                     const Icon = dependencyCategoryIcon(dep);
-                    const active = dep.id === selected?.id;
+                    const active =
+                      inspector.open && dep.id === inspector.selectedId;
                     const referenceCount = usageEvidence(dep).length;
                     return (
                       <Tr
                         key={dep.id}
-                        onClick={() => setSelectedId(dep.id)}
+                        onClick={(e) =>
+                          inspector.select(
+                            dep.id,
+                            e.currentTarget.querySelector("button")
+                          )
+                        }
                         className={cn(
                           "cursor-pointer",
                           active ? "bg-tile-core-bg/40" : "hover:bg-border/10"
@@ -401,7 +392,6 @@ export function DependenciesContent({
                         <Td>
                           <button
                             type="button"
-                            onClick={() => setSelectedId(dep.id)}
                             aria-current={active ? "true" : undefined}
                             aria-label={`View ${dep.name} dependency details`}
                             className="flex items-center gap-2.5 text-left focus-visible:outline-2 focus-visible:outline-primary"

@@ -1,27 +1,19 @@
 import { NotAnalyzedPanel } from "@/components/NotAnalyzedPanel";
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { SubmissionOutcomeEvent } from "@/components/SubmissionOutcomeEvent";
-import { AnalysisRail } from "@/components/lore-shell/AnalysisRail";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { OverviewContent } from "@/components/lore-shell/OverviewContent";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { TopBar } from "@/components/lore-shell/TopBar";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
-import { getAnalysisStatus } from "@/helpers";
 import {
   indexabilityFactsFromRun,
   isIndexableLore,
 } from "@/lib/lore-indexability";
 import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
-import { relativeTime } from "@/lib/relative-time";
-import { readmeBadgeMarkdown } from "@/lib/readme-badge";
 import {
   buildLoreMetadata,
   loreOverviewDescription,
   loreOverviewTitle,
-  siteMetadataBase,
 } from "@/lib/route-metadata";
 import type { SourceLocation } from "@/lore/model";
 import type { Metadata } from "next";
@@ -89,12 +81,6 @@ export default async function LorePage({
   }
 
   const lore = run.result;
-  // A mixed-language repository (ADR-0007) can have more than one project —
-  // aggregate across all of them rather than reading only the first, so a
-  // second detected language isn't silently hidden.
-  const languages = [
-    ...new Set(lore.projects.flatMap((p) => p.languages)),
-  ].join(", ");
   const sourceUrl = (location: SourceLocation) =>
     githubBlobUrl(owner, repo, lore.snapshot.commitSha, location);
   const areaUrl = (location: SourceLocation) =>
@@ -103,37 +89,7 @@ export default async function LorePage({
   return (
     <>
       {outcomeEvent}
-      <LorePageFrame
-        topBar={
-          <TopBar
-            left={
-              <RepoIdentity
-                owner={owner}
-                repo={repo}
-                visibility={
-                  lore.snapshot.repository.isPrivate ? "Private" : "Public"
-                }
-                statusLabel={getAnalysisStatus(lore)}
-                statusTone={
-                  lore.snapshot.status === "completed" ? "success" : "alert"
-                }
-                updatedLabel={`Analyzed ${relativeTime(lore.snapshot.analyzedAt)}`}
-                branch={lore.snapshot.repository.defaultBranch}
-                language={languages}
-              />
-            }
-            actions={<ReanalyzeButton owner={owner} repo={repo} />}
-          />
-        }
-        rightRail={
-          <AnalysisRail
-            snapshot={lore.snapshot}
-            projects={lore.projects}
-            gaps={lore.gaps}
-            badgeSnippet={readmeBadgeMarkdown(owner, repo, siteMetadataBase())}
-          />
-        }
-      >
+      <LorePageFrame>
         <OverviewContent
           lore={lore}
           sourceUrl={sourceUrl}

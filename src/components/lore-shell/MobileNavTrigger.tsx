@@ -9,7 +9,7 @@ export function MobileNavTrigger() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="shrink-0 rounded-lg p-2.5 text-muted hover:bg-border/20 hover:text-foreground lg:hidden"
+      className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border text-muted hover:bg-wash hover:text-foreground min-[661px]:hidden"
       aria-label="Open navigation menu"
     >
       <Menu className="h-5 w-5" aria-hidden="true" />

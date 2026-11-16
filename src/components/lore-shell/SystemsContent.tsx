@@ -1,13 +1,10 @@
 "use client";
 
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
 import { AreaDependencyDiagram } from "@/components/lore-shell/AreaDependencyDiagram";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { MAJOR_AREAS_PAGE_SIZE } from "@/components/lore-shell/major-areas-page-size";
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { TopBar } from "@/components/lore-shell/TopBar";
 import { Badge, type BadgeVariant } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import {
@@ -63,27 +60,15 @@ export interface SystemsContentProps {
   owner: string;
   repo: string;
   lore: Lore;
-  repoIdentity: {
-    statusLabel: string;
-    statusTone?: "success" | "alert";
-    updatedLabel: string;
-    branch: string;
-    language: string;
-  };
 }
 
 /**
  * Real Systems view (ADR-0014): a renamed, re-presented view of the existing
  * Major Area (`StructuralArea`) model — no new analyzer capability, no
- * infrastructure/data-store nodes. Search/filter and the right-rail system
- * map reuse exactly the data Architecture/Overview already compute.
+ * infrastructure/data-store nodes. Search/filter and the system map reuse
+ * exactly the data Architecture/Overview already compute.
  */
-export function SystemsContent({
-  owner,
-  repo,
-  lore,
-  repoIdentity,
-}: SystemsContentProps) {
+export function SystemsContent({ owner, repo, lore }: SystemsContentProps) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("all");
 
@@ -143,55 +128,7 @@ export function SystemsContent({
   const pageFiltered = filtered.slice(start, start + MAJOR_AREAS_PAGE_SIZE);
 
   return (
-    <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              statusLabel={repoIdentity.statusLabel}
-              statusTone={repoIdentity.statusTone}
-              updatedLabel={repoIdentity.updatedLabel}
-              branch={repoIdentity.branch}
-              language={repoIdentity.language}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        <RightRailShell title="System map">
-          <p className="text-sm text-muted">
-            How this repository&apos;s systems relate.
-          </p>
-          {diagramLayout ? (
-            <div className="mt-4">
-              <AreaDependencyDiagram
-                areas={majorAreas}
-                relationships={lore.relationships}
-                owner={owner}
-                repo={repo}
-                commitSha={commitSha}
-              />
-              <Link
-                href={`/lore/${owner}/${repo}/architecture#area-dependency-diagram`}
-                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-              >
-                View full diagram <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted">
-              Not enough connected systems were detected to diagram.
-            </p>
-          )}
-        </RightRailShell>
-      }
-    >
+    <LorePageFrame>
       <div className="max-w-4xl">
         <h1 className="font-serif text-4xl font-semibold text-foreground">
           Systems
@@ -200,6 +137,7 @@ export function SystemsContent({
           The responsibilities, boundaries, and relationships that make up this
           repository.
         </p>
+        <LoreStatusLine />
         <p className="mt-1 text-sm text-muted">
           {majorAreas.length} {majorAreas.length === 1 ? "system" : "systems"}{" "}
           identified ·{" "}
@@ -234,7 +172,7 @@ export function SystemsContent({
         </div>
 
         <Card className="mt-4 p-0">
-          <ul className="divide-y divide-border">
+          <ul aria-label="Systems" className="divide-y divide-border">
             {pageFiltered.map(({ area, slug }) => (
               <SystemRow
                 key={area.id}
@@ -267,6 +205,39 @@ export function SystemsContent({
             className="mt-4"
           />
         )}
+
+        <section aria-labelledby="system-map-heading" className="mt-10">
+          <h2
+            id="system-map-heading"
+            className="mb-1 text-lg font-semibold text-foreground"
+          >
+            System map
+          </h2>
+          <p className="text-sm text-muted">
+            How this repository&apos;s systems relate.
+          </p>
+          {diagramLayout ? (
+            <div className="mt-4">
+              <AreaDependencyDiagram
+                areas={majorAreas}
+                relationships={lore.relationships}
+                owner={owner}
+                repo={repo}
+                commitSha={commitSha}
+              />
+              <Link
+                href={`/lore/${owner}/${repo}/architecture#area-dependency-diagram`}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                View full diagram <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted">
+              Not enough connected systems were detected to diagram.
+            </p>
+          )}
+        </section>
       </div>
     </LorePageFrame>
   );

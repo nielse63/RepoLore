@@ -1,12 +1,14 @@
 "use client";
 
-import { ReanalyzeButton } from "@/components/ReanalyzeButton";
+import {
+  LoreInspector,
+  useInspector,
+  type Inspector,
+} from "@/components/lore-shell/LoreInspector";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { MAX_PAGE_SIZE } from "@/components/lore-shell/PaginatedList";
 import { PaginationNav } from "@/components/lore-shell/PaginationNav";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { TopBar } from "@/components/lore-shell/TopBar";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CertaintyBadge } from "@/components/ui/CertaintyBadge";
@@ -96,13 +98,6 @@ export interface DataFlowContentProps {
   owner: string;
   repo: string;
   lore: Lore;
-  repoIdentity: {
-    statusLabel: string;
-    statusTone?: "success" | "alert";
-    updatedLabel: string;
-    branch: string;
-    language: string;
-  };
 }
 
 /**
@@ -117,12 +112,7 @@ export interface DataFlowContentProps {
  * picks the focus function; clicking any step, list row, or diagram node
  * re-focuses (the "drilldown" requirement) rather than navigating away.
  */
-export function DataFlowContent({
-  owner,
-  repo,
-  lore,
-  repoIdentity,
-}: DataFlowContentProps) {
+export function DataFlowContent({ owner, repo, lore }: DataFlowContentProps) {
   const { callableSignatures, callEdges, functionImportance, behaviorNodes } =
     lore;
   const importanceById = useMemo(
@@ -134,9 +124,13 @@ export function DataFlowContent({
   const [query, setQuery] = useState("");
   const [view, setView] = useState("list");
   const [sort, setSort] = useState("importance");
-  const [focusId, setFocusId] = useState<EntityId | undefined>(
+  // The focus drives the list's highlight from the start; the inspector
+  // opens only when a function is selected.
+  const [initialFocusId] = useState<EntityId | undefined>(
     () => rankByImportance(callableSignatures, importanceById)[0]?.id
   );
+  const inspector = useInspector(initialFocusId);
+  const focusId = inspector.selectedId;
 
   const byId = useMemo(
     () => new Map(callableSignatures.map((s) => [s.id, s])),
@@ -241,35 +235,17 @@ export function DataFlowContent({
   const sourceUrl = (location: Parameters<typeof githubBlobUrl>[3]) =>
     githubBlobUrl(owner, repo, commitSha, location);
 
-  function selectFocus(id: EntityId) {
-    setFocusId(id);
+  function selectFocus(id: EntityId, trigger?: HTMLElement) {
+    inspector.select(id, trigger);
     setQuery("");
   }
 
   return (
     <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              statusLabel={repoIdentity.statusLabel}
-              statusTone={repoIdentity.statusTone}
-              updatedLabel={repoIdentity.updatedLabel}
-              branch={repoIdentity.branch}
-              language={repoIdentity.language}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-            />
-          }
-          actions={<ReanalyzeButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        focus ? (
-          <FocusDetailRail
+      inspector={
+        inspector.open && focus ? (
+          <FocusInspector
+            inspector={inspector}
             focus={focus}
             focusImportance={focusImportance}
             stateNameById={stateNameById}
@@ -279,7 +255,7 @@ export function DataFlowContent({
             sourceUrl={sourceUrl}
             onSelect={selectFocus}
           />
-        ) : undefined
+        ) : null
       }
     >
       <div className="max-w-4xl">
@@ -293,6 +269,7 @@ export function DataFlowContent({
               which function mechanically calls which, not the values passed
               between them.
             </p>
+            <LoreStatusLine />
           </div>
           <div className="flex flex-col gap-1.5 w-full">
             <div className="flex flex-wrap items-center gap-2 w-full justify-between">
@@ -363,7 +340,7 @@ export function DataFlowContent({
                   <li key={m.id}>
                     <button
                       type="button"
-                      onClick={() => selectFocus(m.id)}
+                      onClick={(e) => selectFocus(m.id, e.currentTarget)}
                       className="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-border/10"
                     >
                       <span className="text-sm font-medium text-foreground">
@@ -412,7 +389,7 @@ interface FunctionListViewProps {
   focusId: EntityId | undefined;
   importanceById: Map<EntityId, FunctionImportance>;
   referencesFor: (id: EntityId) => number;
-  onSelect: (id: EntityId) => void;
+  onSelect: (id: EntityId, trigger?: HTMLElement) => void;
 }
 
 /**
@@ -463,7 +440,8 @@ function FunctionListView({
               <li key={s.id}>
                 <button
                   type="button"
-                  onClick={() => onSelect(s.id)}
+                  onClick={(e) => onSelect(s.id, e.currentTarget)}
+                  aria-current={active ? "true" : undefined}
                   className={
                     "flex w-full items-center gap-4 px-6 py-2.5 text-left transition-colors " +
                     (active ? "bg-tile-core-bg/40" : "hover:bg-border/10")
@@ -523,7 +501,8 @@ function FunctionListView({
   );
 }
 
-interface FocusDetailRailProps {
+interface FocusInspectorProps {
+  inspector: Inspector<EntityId>;
   focus: CallableSignature;
   focusImportance: FunctionImportance | undefined;
   stateNameById: Map<EntityId, string>;
@@ -531,11 +510,12 @@ interface FocusDetailRailProps {
   callees: CallableSignature[];
   focusEvidence: Evidence[];
   sourceUrl: (location: SourceLocation) => string;
-  onSelect: (id: EntityId) => void;
+  onSelect: (id: EntityId, trigger?: HTMLElement) => void;
 }
 
-/** The right rail for the focused function: importance, signature, direct callers/callees, and evidence. */
-function FocusDetailRail({
+/** The inspector for the focused function: importance, signature, direct callers/callees, and evidence. */
+function FocusInspector({
+  inspector,
   focus,
   focusImportance,
   stateNameById,
@@ -544,9 +524,13 @@ function FocusDetailRail({
   focusEvidence,
   sourceUrl,
   onSelect,
-}: FocusDetailRailProps) {
+}: FocusInspectorProps) {
   return (
-    <RightRailShell title={focus.name}>
+    <LoreInspector
+      inspector={inspector}
+      kind="Function relationships"
+      title={focus.name}
+    >
       <Badge variant="primary">{KIND_LABEL[focus.kind]}</Badge>
 
       <div className="mt-3">
@@ -675,7 +659,7 @@ function FocusDetailRail({
           ))}
         </ul>
       </div>
-    </RightRailShell>
+    </LoreInspector>
   );
 }
 
@@ -689,7 +673,7 @@ function RelatedFunctionList({
   label: string;
   signatures: CallableSignature[];
   emptyMessage: string;
-  onSelect: (id: EntityId) => void;
+  onSelect: (id: EntityId, trigger?: HTMLElement) => void;
 }) {
   return (
     <div className="mt-6 border-t border-border pt-4">
@@ -701,7 +685,7 @@ function RelatedFunctionList({
           <li key={c.id} className="text-sm">
             <button
               type="button"
-              onClick={() => onSelect(c.id)}
+              onClick={(e) => onSelect(c.id, e.currentTarget)}
               className="font-medium text-primary hover:underline"
             >
               {c.name}
@@ -728,7 +712,7 @@ interface ChainTreeRowProps {
   expandedPaths: Set<string>;
   onToggle: (pathKey: string) => void;
   focusId: EntityId | undefined;
-  onSelect: (id: EntityId) => void;
+  onSelect: (id: EntityId, trigger?: HTMLElement) => void;
   referencesFor: (id: EntityId) => number;
 }
 
@@ -768,8 +752,8 @@ function ChainTreeRow({
     <li>
       <button
         type="button"
-        onClick={() => {
-          onSelect(id);
+        onClick={(e) => {
+          onSelect(id, e.currentTarget);
           if (hasChildren) onToggle(pathKey);
         }}
         aria-expanded={hasChildren ? expanded : undefined}
@@ -813,7 +797,7 @@ function ChainTreeRow({
                 <li key={childId}>
                   <button
                     type="button"
-                    onClick={() => onSelect(childId)}
+                    onClick={(e) => onSelect(childId, e.currentTarget)}
                     className="flex w-full items-center gap-3 py-3 pr-6 text-left text-sm text-muted italic hover:bg-border/10"
                     style={{
                       paddingLeft: `${1.5 + Math.min(depth + 1, MAX_CHAIN_INDENT_DEPTH) * 1.5}rem`,

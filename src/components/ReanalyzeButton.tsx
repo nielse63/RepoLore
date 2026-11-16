@@ -16,9 +16,12 @@ const initialState: ReanalyzeState = { status: "idle" };
 export function ReanalyzeButton({
   owner,
   repo,
+  align = "end",
 }: {
   owner: string;
   repo: string;
+  /** Which side the button and its result message line up on. */
+  align?: "start" | "end";
 }) {
   const reanalyzeWithParams = reanalyzeRepository.bind(null, owner, repo);
   const [state, formAction, isPending] = useActionState(
@@ -27,7 +30,13 @@ export function ReanalyzeButton({
   );
 
   return (
-    <form action={formAction} className="flex flex-col items-end gap-2">
+    <form
+      action={formAction}
+      className={cn(
+        "flex flex-col gap-2",
+        align === "start" ? "items-start" : "items-end"
+      )}
+    >
       <Button type="submit" variant="secondary" disabled={isPending}>
         <RotateCw
           className={cn("h-4 w-4", isPending && "animate-spin")}

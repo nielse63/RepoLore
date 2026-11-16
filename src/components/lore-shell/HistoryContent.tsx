@@ -1,9 +1,11 @@
 "use client";
 
+import {
+  LoreInspector,
+  useInspector,
+} from "@/components/lore-shell/LoreInspector";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
-import { RepoIdentity } from "@/components/lore-shell/RepoIdentity";
-import { RightRailShell } from "@/components/lore-shell/RightRailShell";
-import { TopBar } from "@/components/lore-shell/TopBar";
+import { LoreStatusLine } from "@/components/lore-shell/LoreStatusLine";
 import { RefreshHistoryButton } from "@/components/RefreshHistoryButton";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
@@ -16,7 +18,6 @@ import { githubBlobUrl } from "@/github/urls";
 import type { HistoryChangeKind, HistoryEntry } from "@/history/model";
 import { formatPath } from "@/lib/format-path";
 import { listItemKey } from "@/lib/list-item-key";
-import type { Lore } from "@/lore/model";
 import {
   Calendar,
   ChevronDown,
@@ -87,16 +88,8 @@ export interface HistoryContentProps {
   repo: string;
   entries: HistoryEntry[];
   truncated: boolean;
-  repoIdentity: {
-    statusLabel: string;
-    statusTone?: "success" | "alert";
-    updatedLabel: string;
-    branch: string;
-    language: string;
-  };
   /** The analyzed commit SHA — used to build GitHub source links client-side (`githubBlobUrl` is a pure string builder, safe here). */
   commitSha?: string;
-  lore: Lore;
   /**
    * Reference "now" as an ISO string computed once, server-side, in
    * `history/page.tsx`. Constructing `new Date()` directly in this Client
@@ -114,13 +107,11 @@ export function HistoryContent({
   repo,
   entries,
   truncated,
-  repoIdentity,
   commitSha,
-  lore,
   nowIso,
 }: HistoryContentProps) {
   const [kind, setKind] = useState<HistoryChangeKind | "all">("all");
-  const [selectedId, setSelectedId] = useState<string>();
+  const inspector = useInspector<string>();
   const now = useMemo(() => new Date(nowIso), [nowIso]);
   const defaultRange = useMemo<DateRange>(
     () => ({
@@ -140,7 +131,7 @@ export function HistoryContent({
       return occurred >= from && occurred <= to;
     });
   }, [entries, kind, range]);
-  const selected = filtered.find((e) => e.id === selectedId) ?? filtered[0];
+  const selected = entries.find((e) => e.id === inspector.selectedId);
 
   const groupOrder = useMemo(() => {
     const seen = new Set<string>();
@@ -157,28 +148,13 @@ export function HistoryContent({
 
   return (
     <LorePageFrame
-      topBar={
-        <TopBar
-          left={
-            <RepoIdentity
-              owner={owner}
-              repo={repo}
-              statusLabel={repoIdentity.statusLabel}
-              statusTone={repoIdentity.statusTone}
-              updatedLabel={repoIdentity.updatedLabel}
-              branch={repoIdentity.branch}
-              language={repoIdentity.language}
-              visibility={
-                lore.snapshot.repository.isPrivate ? "Private" : "Public"
-              }
-            />
-          }
-          actions={<RefreshHistoryButton owner={owner} repo={repo} />}
-        />
-      }
-      rightRail={
-        selected ? (
-          <RightRailShell title={selected.title}>
+      inspector={
+        inspector.open && selected ? (
+          <LoreInspector
+            inspector={inspector}
+            kind="Change evidence"
+            title={selected.title}
+          >
             <Badge variant="primary">{KIND_LABEL[selected.kind]}</Badge>
             <div className="mt-4">
               <p className="text-sm font-semibold text-foreground">Summary</p>
@@ -242,18 +218,24 @@ export function HistoryContent({
                 <p className="text-foreground">{selected.commits.length}</p>
               </div>
             </div>
-          </RightRailShell>
-        ) : undefined
+          </LoreInspector>
+        ) : null
       }
     >
       <div className="max-w-4xl">
-        <h1 className="font-serif text-4xl font-semibold text-foreground">
-          History
-        </h1>
-        <p className="mt-2 text-base text-muted">
-          Meaningful changes to the system&apos;s structure and behavior,
-          detected from commit diffs on the default branch.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-serif text-4xl font-semibold text-foreground">
+              History
+            </h1>
+            <p className="mt-2 text-base text-muted">
+              Meaningful changes to the system&apos;s structure and behavior,
+              detected from commit diffs on the default branch.
+            </p>
+            <LoreStatusLine />
+          </div>
+          <RefreshHistoryButton owner={owner} repo={repo} />
+        </div>
 
         <div className="mb-4 mt-6 flex flex-wrap items-center gap-2">
           <div className="relative">
@@ -317,7 +299,8 @@ export function HistoryContent({
               <Card className="p-0">
                 <ul className="divide-y divide-border">
                   {groupEntries.map((entry) => {
-                    const active = entry.id === selected?.id;
+                    const active =
+                      inspector.open && entry.id === inspector.selectedId;
                     const date = new Date(entry.occurredAt);
                     const authorCommit =
                       entry.commits.find(
@@ -327,7 +310,9 @@ export function HistoryContent({
                       <li key={entry.id}>
                         <button
                           type="button"
-                          onClick={() => setSelectedId(entry.id)}
+                          onClick={(e) =>
+                            inspector.select(entry.id, e.currentTarget)
+                          }
                           aria-current={active ? "true" : undefined}
                           className={
                             "flex w-full items-start gap-4 px-6 py-4 text-left transition-colors " +
