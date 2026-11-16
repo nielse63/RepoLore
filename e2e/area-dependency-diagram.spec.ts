@@ -86,6 +86,35 @@ test.describe("Architecture page", () => {
     ).toHaveCount(0);
   });
 
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`the zoom controls follow the page's ${colorScheme} color scheme`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme });
+      await page.goto(architectureUrl);
+      const zoomIn = page
+        .locator("#area-dependency-diagram .react-flow")
+        .getByRole("button", { name: "Zoom In" });
+      await expect(zoomIn).toBeVisible();
+
+      const { background, color } = await zoomIn.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { background: style.backgroundColor, color: style.color };
+      });
+      const surface = await page.evaluate(() => {
+        const probe = document.createElement("span");
+        probe.style.backgroundColor = "var(--surface)";
+        document.body.append(probe);
+        const value = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return value;
+      });
+      // react-flow's own defaults were a fixed near-white in every scheme.
+      expect(background).toBe(surface);
+      expect(color).toBe(await resolvedColor(page, "var(--foreground)"));
+    });
+  }
+
   test("the zoom controls change the diagram's viewport", async ({ page }) => {
     await page.goto(architectureUrl);
     const diagram = page.locator("#area-dependency-diagram .react-flow");

@@ -192,6 +192,18 @@ const EDGE_TYPES = { areaEdge: AreaEdge };
 const EDGE_COLOR = "var(--muted)";
 const FOCUSED_EDGE_COLOR = "var(--primary)";
 
+// react-flow's zoom controls ship a fixed near-white palette that only
+// switches with its own `colorMode`, so they stayed light in the app's dark
+// scheme. Its override variables take the app's theme tokens instead, so
+// the controls follow `prefers-color-scheme` like the rest of the page.
+const CONTROLS_THEME = {
+  "--xy-controls-button-background-color": "var(--surface)",
+  "--xy-controls-button-background-color-hover": "var(--teal-wash)",
+  "--xy-controls-button-color": "var(--foreground)",
+  "--xy-controls-button-color-hover": "var(--foreground)",
+  "--xy-controls-button-border-color": "var(--border)",
+} as React.CSSProperties;
+
 export interface AreaDependencyDiagramProps {
   // Every Major Area, even on a System subview (`pinnedAreaId`): the map
   // scopes itself to that area's neighborhood, while the inspector lists a
@@ -463,6 +475,7 @@ export function AreaDependencyDiagram({
           edgesFocusable={false}
           onPaneClick={() => close()}
           proOptions={{ hideAttribution: true }}
+          style={CONTROLS_THEME}
         >
           <Background />
           {/* `showInteractive={false}` hides react-flow's default "Toggle
