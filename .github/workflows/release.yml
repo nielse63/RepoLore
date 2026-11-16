@@ -28,10 +28,21 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      # The main → dev push goes out as the release GitHub App, a bypass
+      # actor on dev's ruleset; GITHUB_TOKEN can't bypass, and the merge
+      # commit has no verify/e2e results of its own.
+      - id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v7
         with:
           # Full history, for the main → dev merge below.
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Check for a dev → main merge not yet tagged
         id: check
