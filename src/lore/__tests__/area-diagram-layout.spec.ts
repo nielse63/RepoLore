@@ -1,9 +1,11 @@
 import {
   areaDiagramBounds,
+  areaEdgeId,
   areaNeighborhood,
   DEFAULT_DIAGRAM_AREAS,
   deriveAreaDiagramLayout,
   deriveProductionAreaDiagramLayout,
+  deriveProductionAreaGraph,
   MAX_DIAGRAM_AREAS,
   smoothEdgePath,
   systemNeighborhoodAreas,
@@ -518,5 +520,67 @@ describe("areaDiagramBounds", () => {
       width: 0,
       height: 0,
     });
+  });
+});
+
+describe("deriveProductionAreaGraph", () => {
+  const api = area({
+    id: "area:api",
+    name: "api",
+    productionFilePaths: ["src/api/index.ts"],
+  });
+  const worker = area({
+    id: "area:worker",
+    name: "worker",
+    productionFilePaths: ["src/worker/index.ts"],
+  });
+  const tests = area({
+    id: "area:tests",
+    name: "tests",
+    productionFilePaths: [],
+  });
+
+  it("keeps areas with production files and the production edges between them", () => {
+    const graph = deriveProductionAreaGraph(
+      [api, worker, tests],
+      [
+        rel("src/api/index.ts", "src/worker/index.ts"),
+        // A test file's import isn't a production relationship.
+        rel("tests/api.spec.ts", "src/api/index.ts"),
+      ]
+    );
+
+    expect(graph.productionAreas.map((a) => a.id)).toEqual([
+      "area:api",
+      "area:worker",
+    ]);
+    expect(
+      graph.productionRelationships.map((r) => [r.fromAreaId, r.toAreaId])
+    ).toEqual([["area:api", "area:worker"]]);
+  });
+
+  it("treats an area persisted before productionFilePaths existed as having none", () => {
+    const legacy = { ...worker } as Partial<StructuralArea>;
+    delete legacy.productionFilePaths;
+
+    const graph = deriveProductionAreaGraph(
+      [api, legacy as StructuralArea],
+      [rel("src/api/index.ts", "src/worker/index.ts")]
+    );
+
+    expect(graph.productionAreas.map((a) => a.id)).toEqual(["area:api"]);
+    expect(graph.productionRelationships).toEqual([]);
+  });
+});
+
+describe("areaEdgeId", () => {
+  it("names a drawn edge by its direction, matching areaNeighborhood's edge ids", () => {
+    expect(areaEdgeId({ fromId: "a", toId: "b" })).toBe("a->b");
+    expect(areaEdgeId({ fromId: "b", toId: "a" })).toBe("b->a");
+    const { edgeIds } = areaNeighborhood(
+      [{ fromId: "a", toId: "b", points: [] }],
+      "a"
+    );
+    expect([...edgeIds]).toEqual([areaEdgeId({ fromId: "a", toId: "b" })]);
   });
 });
