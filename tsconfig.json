@@ -32,5 +32,16 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "fixtures"]
+  "exclude": [
+    "node_modules",
+    "fixtures",
+    "tmp",
+    "dist",
+    "build",
+    ".next",
+    ".tmp",
+    "coverage",
+    "perf-report",
+    "playwright-report"
+  ]
 }
