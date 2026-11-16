@@ -2,6 +2,8 @@
 
 > Repo Lore builds a living, evidence-backed mental model of a software repository so an unfamiliar engineer can understand it with justified confidence — without relying on tribal knowledge.
 
+It's built first for experienced engineers newly contributing to an open-source project, who need to get oriented quickly: what the main pieces are, where to start, how they connect, and the source behind each claim. See `docs/product/mission.md` for the full mission (including the startup / small-team audience) and `docs/product/non-goals.md` for scope boundaries.
+
 Paste a public GitHub repository URL — or just type its `owner/repo` (e.g. `nielse63/RepoLore`) — and Repo Lore produces a stable, readable "lore" page for it at `/lore/{owner}/{repo}`: what the repository contains, where to start reading and why, its major structural areas, probable entry points, and how those areas directly relate. Every important conclusion links back to the source evidence it came from and is labeled **Detected**, **Inferred**, **Unknown**, or **Unsupported**. Repo Lore does not refresh automatically — you can manually request a fresh analysis after the repository changes.
 
 Repo Lore earns confidence through evidence, not AI narration. Analysis starts with deterministic source and dependency analysis, repository configuration and metadata, and explicit heuristics. AI is not required; when introduced, it only explains and organizes findings that have already been established as fact — it never replaces the analysis itself.
