@@ -50,7 +50,7 @@ jobs:
 
       - name: Update dependency versions
         run: >-
-          npx --yes npm-check-updates@latest --packageFile package.json --dep prod,dev --target latest --upgrade
+          npx --yes npm-check-updates@latest --packageFile package.json --dep prod,dev --target latest --upgrade --reject typescript
 
       - name: Install dependencies and update lockfile
         run: npm install
