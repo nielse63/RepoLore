@@ -214,3 +214,35 @@ test.describe("at a 1440×800 viewport", () => {
     expect(viewportHeight - last.bottom).toBeLessThan(pitch + 1);
   });
 });
+
+test("in Chain view, selecting a function with callees expands it and opens its inspector", async ({
+  page,
+}) => {
+  // This fixture's chain root has resolved callees; this repository's own
+  // roots are page components with none.
+  await page.goto("/lore/nielse63/repo-lore-ts-many-areas-fixture/data-flow");
+  await page
+    .getByRole("group", { name: "View mode" })
+    .getByRole("button", { name: "Chain" })
+    .click();
+
+  const main = page.getByRole("main");
+  const expandable = main.locator('button[aria-expanded="false"]').first();
+  const name = (await expandable.locator("p").first().textContent())!;
+  const before = await main.getByRole("listitem").count();
+
+  await expandable.click();
+  const row = main
+    .locator("button[aria-expanded]")
+    .filter({ has: page.getByText(name, { exact: true }) })
+    .first();
+  await expect(row).toHaveAttribute("aria-expanded", "true");
+  expect(await main.getByRole("listitem").count()).toBeGreaterThan(before);
+  await expect(inspector(page).getByRole("heading", { level: 2 })).toHaveText(
+    name
+  );
+
+  await row.click();
+  await expect(row).toHaveAttribute("aria-expanded", "false");
+  await expect(main.getByRole("listitem")).toHaveCount(before);
+});
