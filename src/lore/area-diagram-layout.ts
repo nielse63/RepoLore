@@ -1,6 +1,7 @@
 import dagre from "@dagrejs/dagre";
 import type { AreaRelationship } from "./area-relationships";
 import { deriveProductionAreaRelationships } from "./area-relationships";
+import { compareMajorAreas } from "./major-areas";
 import type {
   EntityId,
   Relationship,
@@ -10,14 +11,21 @@ import type {
 
 /**
  * Above this many nodes, a layered diagram stops being readable at a glance
- * (see ADR-0009), so a larger graph shows only this many connected areas —
- * the ones with the most detected relationships — and the caller's caption
- * points to the full Component Connections table.
+ * (see ADR-0009), so even "Show all areas" shows at most this many connected
+ * areas, and the caller's caption points to the full Component Connections
+ * table.
  */
 export const MAX_DIAGRAM_AREAS = 30;
 
+/**
+ * How many connected areas the diagram shows before "Show all areas"
+ * (GitHub issue #79): a readable first view at full label size, rather than
+ * shrinking every label to fit the whole graph.
+ */
+export const DEFAULT_DIAGRAM_AREAS = 8;
+
 const NODE_WIDTH = 200;
-const NODE_HEIGHT = 56;
+const NODE_HEIGHT = 64;
 
 export interface AreaDiagramNode {
   id: EntityId;
@@ -63,11 +71,15 @@ export interface AreaDiagramLayout {
  * of them in the top rank beside the real roots, widening the diagram until
  * `fitView` can't fit it (GitHub issue #51).
  *
- * Above `MAX_DIAGRAM_AREAS` connected areas, only that many are laid out:
- * `pinnedAreaId` (a System subview's own area) first, then by detected
- * relationships — distinct neighbor areas, in or out, counted over these
- * same edges, so the selection can be checked against what's drawn — then
- * by name. Only edges between shown areas are kept.
+ * Above `limit` connected areas (capped at `MAX_DIAGRAM_AREAS`), only that
+ * many are laid out: `pinnedAreaId` (a System subview's own area) first,
+ * then in Major Areas order (`compareMajorAreas`, the order every Major
+ * Areas list already presents and explains — GitHub issue #79; it replaced
+ * a count of drawn production edges, so the default and "Show all" subsets
+ * share one explainable order). That order counts all detected direct
+ * relationships, test-inclusive, so a listed area can have fewer drawn
+ * arrows than its rank suggests. Only edges between shown areas are kept,
+ * and a shown area left with no edge is dropped.
  *
  * Returns `null` when there's nothing meaningful to draw (fewer than two
  * areas, or no edges between them).
@@ -75,7 +87,8 @@ export interface AreaDiagramLayout {
 export function deriveAreaDiagramLayout(
   areas: StructuralArea[],
   edges: AreaRelationship[],
-  pinnedAreaId?: EntityId
+  pinnedAreaId?: EntityId,
+  limit: number = MAX_DIAGRAM_AREAS
 ): AreaDiagramLayout | null {
   if (areas.length < 2) return null;
 
@@ -97,16 +110,14 @@ export function deriveAreaDiagramLayout(
     }
   }
   const connectedAreas = areas.filter((area) => neighbors.has(area.id));
-  const degree = (area: StructuralArea) => neighbors.get(area.id)?.size ?? 0;
   const selectedIds = new Set(
     [...connectedAreas]
       .sort(
         (a, b) =>
           Number(b.id === pinnedAreaId) - Number(a.id === pinnedAreaId) ||
-          degree(b) - degree(a) ||
-          a.name.localeCompare(b.name)
+          compareMajorAreas(a, b)
       )
-      .slice(0, MAX_DIAGRAM_AREAS)
+      .slice(0, Math.min(limit, MAX_DIAGRAM_AREAS))
       .map((area) => area.id)
   );
   const shownEdges = relevantEdges.filter(
@@ -196,18 +207,116 @@ export function deriveAreaDiagramLayout(
 export function deriveProductionAreaDiagramLayout(
   areas: StructuralArea[],
   relationships: Relationship[],
-  pinnedAreaId?: EntityId
+  pinnedAreaId?: EntityId,
+  limit?: number
 ): AreaDiagramLayout | null {
-  const productionAreas = areas.filter(
-    (area) => (area.productionFilePaths ?? []).length > 0
-  );
-  const productionRelationships = deriveProductionAreaRelationships(
-    productionAreas,
-    relationships
-  );
+  const { productionAreas, productionRelationships } =
+    deriveProductionAreaGraph(
+      pinnedAreaId ? systemNeighborhoodAreas(areas, pinnedAreaId) : areas,
+      relationships
+    );
   return deriveAreaDiagramLayout(
     productionAreas,
     productionRelationships,
-    pinnedAreaId
+    pinnedAreaId,
+    limit
   );
+}
+
+/**
+ * The areas with production files and the production-only area edges
+ * between them — the graph `deriveProductionAreaDiagramLayout` lays out, and
+ * what the diagram's inspector lists as an area's imports and importers, so
+ * the two can't disagree.
+ */
+export function deriveProductionAreaGraph(
+  areas: StructuralArea[],
+  relationships: Relationship[]
+): {
+  productionAreas: StructuralArea[];
+  productionRelationships: AreaRelationship[];
+} {
+  const productionAreas = areas.filter(
+    (area) => (area.productionFilePaths ?? []).length > 0
+  );
+  return {
+    productionAreas,
+    productionRelationships: deriveProductionAreaRelationships(
+      productionAreas,
+      relationships
+    ),
+  };
+}
+
+/**
+ * A System subview's diagram scope: the system's own area plus every area
+ * it directly depends on or is depended on by (its rolled-up, test-inclusive
+ * `directDependencyIds`/`directDependentIds`). The production layout then
+ * draws only the production edges among them.
+ */
+export function systemNeighborhoodAreas(
+  areas: StructuralArea[],
+  areaId: EntityId
+): StructuralArea[] {
+  const area = areas.find((candidate) => candidate.id === areaId);
+  if (!area) return [];
+  const ids = new Set([
+    area.id,
+    ...area.directDependencyIds,
+    ...area.directDependentIds,
+  ]);
+  return areas.filter((candidate) => ids.has(candidate.id));
+}
+
+/**
+ * An SVG path through dagre's routed edge points (GitHub issue #79): a
+ * quadratic curve bent at each interior point and joined at the midpoints
+ * between them, so it stays inside the hull of dagre's polyline — which
+ * already routes around nodes — instead of react-flow's own handle-to-handle
+ * curves, which ignore other nodes. It starts and ends exactly at dagre's
+ * end points, on the node borders, so the arrowhead lands on the target.
+ */
+export function smoothEdgePath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  const [first, ...rest] = points;
+  let path = `M ${first.x} ${first.y}`;
+  if (rest.length === 1) return `${path} L ${rest[0].x} ${rest[0].y}`;
+  for (let i = 0; i < rest.length - 1; i++) {
+    const control = rest[i];
+    const next = rest[i + 1];
+    const end =
+      i === rest.length - 2
+        ? next
+        : { x: (control.x + next.x) / 2, y: (control.y + next.y) / 2 };
+    path += ` Q ${control.x} ${control.y} ${end.x} ${end.y}`;
+  }
+  return path;
+}
+
+/** The id react-flow and `areaNeighborhood` use for a drawn edge. */
+export function areaEdgeId(edge: { fromId: EntityId; toId: EntityId }) {
+  return `${edge.fromId}->${edge.toId}`;
+}
+
+/**
+ * The one-hop neighborhood "Focus on selected area" keeps undimmed (GitHub
+ * issue #79): the selected area, every area a drawn edge connects it to in
+ * either direction, and those edges. Edges between two neighbors aren't
+ * included — the focus stays on the selected area's direct relationships,
+ * never a multi-hop or transitive view. An id with no drawn edge (or not on
+ * the map) yields just itself.
+ */
+export function areaNeighborhood(
+  edges: AreaDiagramEdge[],
+  areaId: EntityId
+): { nodeIds: Set<EntityId>; edgeIds: Set<string> } {
+  const nodeIds = new Set<EntityId>([areaId]);
+  const edgeIds = new Set<string>();
+  for (const edge of edges) {
+    if (edge.fromId !== areaId && edge.toId !== areaId) continue;
+    nodeIds.add(edge.fromId);
+    nodeIds.add(edge.toId);
+    edgeIds.add(areaEdgeId(edge));
+  }
+  return { nodeIds, edgeIds };
 }

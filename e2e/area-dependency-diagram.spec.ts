@@ -6,9 +6,10 @@ import { expect, test } from "./coverage";
  * ADR-0016 to render client-side with `@xyflow/react` instead of static
  * SVG): that the diagram actually renders real area nodes/edges as a
  * react-flow canvas on every page that embeds it, that its allowed
- * interactivity (pan/zoom/`fitView`) works, and — as a regression guard for
- * ADR-0016's guardrails — that its disabled interactivity (drag,
- * "Toggle Interactivity") stays disabled. Like `systems.spec.ts`, this
+ * interactivity (pan/zoom/`fitView`, plus issue #79's selection, focus,
+ * expand and show-all) works, and — as a regression guard for ADR-0016's
+ * guardrails — that its disabled interactivity (drag, "Toggle
+ * Interactivity") stays disabled. Like `systems.spec.ts`, this
  * needs `DATABASE_URL` (reading the already-persisted `completed` analysis
  * run for the pinned private fixture `nielse63/repo-lore-ts-react-app-fixture`,
  * see README "Fixtures") but not `GITHUB_TOKEN`. That fixture resolves to
@@ -19,6 +20,33 @@ import { expect, test } from "./coverage";
  */
 
 const repoUrl = "/lore/nielse63/repo-lore-ts-react-app-fixture";
+
+/**
+ * An area's node button on the map, by its full path. Its accessible name
+ * is its visible text, "{directory name} {path}".
+ */
+function areaNode(page: Page, path: string) {
+  return page
+    .locator("#area-dependency-diagram .react-flow")
+    .getByRole("button", {
+      name: `${path.split("/").at(-1)} ${path}`,
+      exact: true,
+    });
+}
+
+const inspector = (page: Page) => page.locator("#lore-inspector");
+
+/** A CSS color expression resolved to the computed `rgb(...)` form. */
+async function resolvedColor(page: Page, expression: string) {
+  return page.evaluate((value) => {
+    const probe = document.createElement("span");
+    probe.style.color = value;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, expression);
+}
 
 test.describe("Architecture page", () => {
   const architectureUrl = `${repoUrl}/architecture`;
@@ -33,13 +61,11 @@ test.describe("Architecture page", () => {
 
     const nodes = diagram.locator(".react-flow__node");
     await expect(nodes).toHaveCount(3);
-    await expect(nodes.filter({ hasText: "/src/components" })).toHaveCount(1);
-    await expect(nodes.filter({ hasText: "/src/utils" })).toHaveCount(1);
-    // `.filter({ hasText: "/src" })` alone would also match "/src/components"
-    // and "/src/utils", so this one is asserted by exact node text instead.
-    await expect(
-      diagram.locator(".react-flow__node", { hasText: /^\/src$/ })
-    ).toHaveCount(1);
+    for (const path of ["/src", "/src/components", "/src/utils"]) {
+      await expect(areaNode(page, path)).toHaveCount(1);
+    }
+    // Each node shows its directory name with the mono path beneath it.
+    await expect(areaNode(page, "/src/utils")).toHaveText("utils/src/utils");
 
     await expect(diagram.locator(".react-flow__edge")).toHaveCount(2);
 
@@ -79,9 +105,7 @@ test.describe("Architecture page", () => {
     await page.goto(architectureUrl);
     const diagram = page.locator("#area-dependency-diagram .react-flow");
     const viewport = diagram.locator(".react-flow__viewport");
-    const node = diagram.locator(".react-flow__node", {
-      hasText: /^\/src$/,
-    });
+    const node = areaNode(page, "/src");
 
     // `fitView` (ADR-0016) applies asynchronously shortly after mount — the
     // viewport briefly renders at its unfitted `translate(0,0) scale(1)`
@@ -122,18 +146,211 @@ test.describe("Architecture page", () => {
     expect(after!.y).toBeCloseTo(before!.y, 0);
   });
 
-  test("a node's label still links to the real GitHub location", async ({
+  test("selecting an area opens its inspector, with the GitHub link that used to be on the node", async ({
     page,
   }) => {
     await page.goto(architectureUrl);
-    const diagram = page.locator("#area-dependency-diagram .react-flow");
-    const link = diagram
-      .locator(".react-flow__node", { hasText: /^\/src\/utils$/ })
-      .getByRole("link");
+    const node = areaNode(page, "/src/utils");
 
-    await expect(link).toHaveAttribute(
+    // The node no longer competes with a link: it's a selectable button.
+    await expect(
+      page.locator("#area-dependency-diagram .react-flow").getByRole("link")
+    ).toHaveCount(0);
+    await expect(node).toHaveAttribute("aria-pressed", "false");
+    await expect(inspector(page)).toHaveCount(0);
+
+    await node.click();
+
+    await expect(node).toHaveAttribute("aria-pressed", "true");
+    await expect(inspector(page)).toBeVisible();
+    await expect(inspector(page)).toContainText("Area evidence");
+    await expect(inspector(page).getByRole("heading", { level: 2 })).toHaveText(
+      "/src/utils"
+    );
+    await expect(
+      inspector(page).getByRole("link", { name: /View on GitHub/ })
+    ).toHaveAttribute(
       "href",
       /github\.com\/nielse63\/repo-lore-ts-react-app-fixture\/tree\/.+\/src\/utils$/
+    );
+    // `/src/components` -> `/src/utils` is the fixture's only edge into it.
+    await expect(
+      inspector(page).getByRole("list", { name: "Imported by" })
+    ).toHaveText("/src/components");
+    await expect(inspector(page)).toContainText("Imports (0)");
+
+    // Selecting another area moves the selection and the inspector.
+    await areaNode(page, "/src").click();
+    await expect(node).toHaveAttribute("aria-pressed", "false");
+    await expect(inspector(page).getByRole("heading", { level: 2 })).toHaveText(
+      "/src"
+    );
+  });
+
+  test("Focus on selected area dims everything outside the selection's one-hop neighborhood", async ({
+    page,
+  }) => {
+    await page.goto(architectureUrl);
+    const focus = page.getByRole("checkbox", {
+      name: "Focus on selected area",
+    });
+    const edgePaths = page.locator(
+      "#area-dependency-diagram .react-flow__edge-path"
+    );
+    const backgroundOf = (path: string) =>
+      areaNode(page, path).evaluate(
+        (el) => getComputedStyle(el).backgroundColor
+      );
+    const surface = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = "var(--surface)";
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+
+    // Nothing to focus on until an area is selected.
+    await expect(focus).toBeDisabled();
+    await expect(page.getByText("Select an area to focus on it")).toBeVisible();
+
+    await areaNode(page, "/src/utils").click();
+    await expect(focus).toBeEnabled();
+    // Selecting alone doesn't dim anything.
+    await expect.poll(() => backgroundOf("/src")).not.toBe(surface);
+
+    await focus.check();
+
+    // `/src/utils`'s only neighbor is `/src/components`; `/src` is two hops
+    // away, so it and its edge are dimmed.
+    // (Polled: the background color transitions.)
+    await expect.poll(() => backgroundOf("/src")).toBe(surface);
+    await expect.poll(() => backgroundOf("/src/components")).not.toBe(surface);
+    await expect.poll(() => backgroundOf("/src/utils")).not.toBe(surface);
+    const opacities = await edgePaths.evaluateAll((paths) =>
+      paths.map((el) => getComputedStyle(el).opacity).sort()
+    );
+    expect(opacities).toEqual(["0.15", "1"]);
+    const primary = await resolvedColor(page, "var(--primary)");
+    const strokes = await edgePaths.evaluateAll((paths) =>
+      paths.map((el) => getComputedStyle(el).stroke)
+    );
+    expect(strokes).toContain(primary);
+
+    // Escape clears the selection, which undoes the dimming.
+    await page.keyboard.press("Escape");
+    await expect(areaNode(page, "/src/utils")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    await expect(inspector(page)).toHaveCount(0);
+    await expect(focus).toBeDisabled();
+    await expect.poll(() => backgroundOf("/src")).not.toBe(surface);
+    expect(
+      await edgePaths.evaluateAll((paths) =>
+        paths.map((el) => getComputedStyle(el).opacity)
+      )
+    ).toEqual(["1", "1"]);
+  });
+
+  test("clicking the empty canvas clears the selection", async ({ page }) => {
+    await page.goto(architectureUrl);
+    const node = areaNode(page, "/src/utils");
+    await node.click();
+    await expect(inspector(page)).toBeVisible();
+
+    const flow = page.locator("#area-dependency-diagram .react-flow");
+    const box = (await flow.boundingBox())!;
+    await page.mouse.click(box.x + 8, box.y + 8);
+
+    await expect(node).toHaveAttribute("aria-pressed", "false");
+    await expect(inspector(page)).toHaveCount(0);
+  });
+
+  test("the keyboard reaches, selects and clears areas", async ({ page }) => {
+    await page.goto(architectureUrl);
+
+    // Tab moves from the map's controls straight onto a node.
+    await page.getByRole("button", { name: "Expand map" }).focus();
+    await page.keyboard.press("Tab");
+    const focused = page.locator(
+      "#area-dependency-diagram .react-flow__node button:focus"
+    );
+    await expect(focused).toHaveCount(1);
+
+    await areaNode(page, "/src/components").focus();
+    await page.keyboard.press("Enter");
+    await expect(areaNode(page, "/src/components")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await expect(inspector(page).getByRole("heading", { level: 2 })).toHaveText(
+      "/src/components"
+    );
+
+    await areaNode(page, "/src").focus();
+    await page.keyboard.press("Space");
+    await expect(areaNode(page, "/src")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    await page.keyboard.press("Escape");
+    await expect(areaNode(page, "/src")).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+    await expect(inspector(page)).toHaveCount(0);
+  });
+
+  test("Expand map gives the map more room and keeps the selection", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(architectureUrl);
+    const figure = page.locator("#area-dependency-diagram figure");
+    const expand = page.getByRole("button", { name: "Expand map" });
+    const before = (await figure.boundingBox())!.height;
+
+    await areaNode(page, "/src/utils").click();
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expand.click();
+
+    const collapse = page.getByRole("button", {
+      name: "Return to normal view",
+    });
+    await expect(collapse).toHaveAttribute("aria-expanded", "true");
+    expect((await figure.boundingBox())!.height).toBeGreaterThan(before + 100);
+    await expect(areaNode(page, "/src/utils")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    await expect(inspector(page)).toBeVisible();
+
+    await collapse.click();
+    await expect(
+      page.getByRole("button", { name: "Expand map" })
+    ).toBeVisible();
+    expect((await figure.boundingBox())!.height).toBeCloseTo(before, 0);
+    await expect(areaNode(page, "/src/utils")).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
+  test("shows the legend and the selection hint, and no Show all control for a small map", async ({
+    page,
+  }) => {
+    await page.goto(architectureUrl);
+    const diagram = page.locator("#area-dependency-diagram");
+    await expect(
+      diagram.getByText("Arrows point to imported dependencies")
+    ).toBeVisible();
+    await expect(
+      diagram.getByText("Select an area for its evidence")
+    ).toBeVisible();
+    await expect(diagram.getByRole("button", { name: /^Show / })).toHaveCount(
+      0
     );
   });
 });
@@ -224,6 +441,30 @@ test.describe("on a wide area graph", () => {
     expect(await clippedNodeLabels(page)).toEqual([]);
   });
 
+  test("the map re-fits when the inspector opens beside it, keeping every node inside", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${wideRepoUrl}/architecture`);
+    const node = page
+      .locator("#area-dependency-diagram .react-flow__node button")
+      .first();
+    await expect(node).toBeVisible();
+    await waitForSettledViewport(page);
+
+    // At 1440px the inspector takes its own column, narrowing the canvas.
+    const flow = page.locator("#area-dependency-diagram .react-flow");
+    const widthBefore = (await flow.boundingBox())!.width;
+    await node.click();
+    await expect(inspector(page)).toBeVisible();
+    await expect
+      .poll(async () => (await flow.boundingBox())!.width)
+      .toBeLessThan(widthBefore);
+    await waitForSettledViewport(page);
+
+    expect(await clippedNodeLabels(page)).toEqual([]);
+  });
+
   test("every node is fully inside the Systems rail's System map on load", async ({
     page,
   }) => {
@@ -243,10 +484,37 @@ test.describe("on a wide area graph", () => {
     );
   });
 
+  test("shows 8 areas by default, and every connected area after Show all areas", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`${wideRepoUrl}/architecture`);
+    const diagram = page.locator("#area-dependency-diagram");
+    const nodes = diagram.locator(".react-flow__node");
+
+    await expect(nodes).toHaveCount(8);
+    await expect(
+      diagram.getByText(
+        /^Showing 8 of \d+ connected areas, in Major Areas order\./
+      )
+    ).toBeVisible();
+
+    await diagram.getByRole("button", { name: "Show all areas" }).click();
+    await expect.poll(() => nodes.count()).toBeGreaterThan(8);
+    await expect(diagram.getByText(/^Showing \d+ of/)).toHaveCount(0);
+    await waitForSettledViewport(page);
+    // Labels keep their size; the canvas re-fits instead.
+    expect(await clippedNodeLabels(page)).toEqual([]);
+
+    await diagram.getByRole("button", { name: "Show fewer areas" }).click();
+    await expect(nodes).toHaveCount(8);
+  });
+
   test("areas with no edges are listed under the diagram, not drawn as nodes", async ({
     page,
   }) => {
     await page.goto(`${wideRepoUrl}/architecture`);
+    await page.getByRole("button", { name: "Show all areas" }).click();
     const unconnected = page.getByRole("list", {
       name: "Not connected to other areas",
     });
@@ -255,8 +523,11 @@ test.describe("on a wide area graph", () => {
     expect(names.length).toBeGreaterThan(0);
 
     const nodeNames = await page
-      .locator("#area-dependency-diagram .react-flow__node")
-      .allTextContents();
+      .locator("#area-dependency-diagram .react-flow__node button")
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getAttribute("title"))
+      );
+    expect(nodeNames.length).toBeGreaterThan(8);
     for (const name of names) expect(nodeNames).not.toContain(name.trim());
   });
 
@@ -292,18 +563,18 @@ test("a fully connected diagram lists no unconnected areas", async ({
 });
 
 /**
- * Above `MAX_DIAGRAM_AREAS` (30) connected areas the diagram shows only the
- * 30 with the most detected relationships, instead of no diagram at all.
- * Against the seeded `nielse63/repo-lore-ts-many-areas-fixture`
- * (`fixtures/ts-many-areas`): `/src/hub` imports `/src/module-01` through
- * `/src/module-33`, and `/src/standalone` imports nothing. So 34 areas are
- * connected, the hub has the most relationships and every module ties at
- * one, and the name tie-break shows modules 01–29.
+ * The default subset and the `MAX_DIAGRAM_AREAS` (30) ceiling, against the
+ * seeded `nielse63/repo-lore-ts-many-areas-fixture` (`fixtures/ts-many-areas`):
+ * `/src/hub` imports `/src/module-01` through `/src/module-33`, and
+ * `/src/standalone` imports nothing. So 34 areas are connected; in Major
+ * Areas order the hub has the most relationships and every module ties at
+ * one, so the name tie-break shows modules 01–07 by default and 01–29 at
+ * the ceiling.
  */
-test.describe("above the diagram size ceiling", () => {
+test.describe("above the default subset and the size ceiling", () => {
   const manyAreasUrl = "/lore/nielse63/repo-lore-ts-many-areas-fixture";
 
-  test("Architecture shows the 30 areas with the most detected relationships and says so", async ({
+  test("Architecture shows 8 areas in Major Areas order, then up to 30, and says so", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -311,19 +582,29 @@ test.describe("above the diagram size ceiling", () => {
     const diagram = page.locator("#area-dependency-diagram");
     const nodes = diagram.locator(".react-flow__node");
 
-    await expect(nodes).toHaveCount(30);
-    await expect(nodes.filter({ hasText: /^\/src\/hub$/ })).toHaveCount(1);
-    await expect(nodes.filter({ hasText: /^\/src\/module-29$/ })).toHaveCount(
-      1
-    );
-    await expect(
-      nodes.filter({ hasText: /^\/src\/module-3[0-3]$/ })
-    ).toHaveCount(0);
-    await expect(diagram.locator(".react-flow__edge")).toHaveCount(29);
-
+    await expect(nodes).toHaveCount(8);
+    await expect(areaNode(page, "/src/hub")).toHaveCount(1);
+    await expect(areaNode(page, "/src/module-07")).toHaveCount(1);
+    await expect(areaNode(page, "/src/module-08")).toHaveCount(0);
+    await expect(diagram.locator(".react-flow__edge")).toHaveCount(7);
     await expect(
       diagram.getByText(
-        "Showing the 30 areas with the most detected relationships, of 34 connected areas."
+        "Showing 8 of 34 connected areas, in Major Areas order."
+      )
+    ).toBeVisible();
+
+    // 34 connected areas is over the ceiling, so the control says how many.
+    await diagram.getByRole("button", { name: "Show 30 areas" }).click();
+
+    await expect(nodes).toHaveCount(30);
+    await expect(areaNode(page, "/src/module-29")).toHaveCount(1);
+    await expect(
+      nodes.filter({ hasText: /\/src\/module-3[0-3]$/ })
+    ).toHaveCount(0);
+    await expect(diagram.locator(".react-flow__edge")).toHaveCount(29);
+    await expect(
+      diagram.getByText(
+        "Showing 30 of 34 connected areas, in Major Areas order."
       )
     ).toBeVisible();
     await expect(
@@ -340,17 +621,37 @@ test.describe("above the diagram size ceiling", () => {
     ).toHaveCount(0);
   });
 
-  test("the Overview and the Systems rail render the truncated diagram instead of a fallback", async ({
+  test("the inspector lists every import, marking those not on the map", async ({
+    page,
+  }) => {
+    await page.goto(`${manyAreasUrl}/architecture`);
+    await areaNode(page, "/src/hub").click();
+
+    const imports = inspector(page).getByRole("list", { name: "Imports" });
+    await expect(imports.getByRole("listitem")).toHaveCount(33);
+    // Modules 01–07 are drawn; the other 26 are listed and marked.
+    await expect(
+      imports.getByRole("listitem").filter({ hasText: "not on the map" })
+    ).toHaveCount(26);
+    await expect(
+      imports.getByRole("listitem").filter({ hasText: "/src/module-07" })
+    ).not.toContainText("not on the map");
+    await expect(
+      imports.getByRole("listitem").filter({ hasText: "/src/module-33" })
+    ).toContainText("not on the map");
+  });
+
+  test("the Overview and the Systems rail render the default subset instead of a fallback", async ({
     page,
   }) => {
     await page.goto(manyAreasUrl);
     await expect(
       page.getByRole("heading", { name: "How Areas Connect" })
     ).toBeVisible();
-    await expect(page.locator(".react-flow__node")).toHaveCount(30);
+    await expect(page.locator(".react-flow__node")).toHaveCount(8);
 
     await page.goto(`${manyAreasUrl}/systems`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(30);
+    await expect(page.locator(".react-flow__node")).toHaveCount(8);
     await expect(
       page.getByText("Not enough connected systems were detected to diagram.")
     ).toHaveCount(0);
@@ -359,16 +660,33 @@ test.describe("above the diagram size ceiling", () => {
   test("a System subview always shows its own area and counts neighbors", async ({
     page,
   }) => {
-    await page.goto(`${manyAreasUrl}/systems/src-hub`);
+    await page.goto(`${manyAreasUrl}/systems/src-module-33`);
     const diagram = page.locator("#area-dependency-diagram");
     const nodes = diagram.locator(".react-flow__node");
 
-    await expect(nodes).toHaveCount(30);
-    await expect(nodes.filter({ hasText: /^\/src\/hub$/ })).toHaveCount(1);
+    // module-33's only neighbor is the hub, so it's fully drawn.
+    await expect(nodes).toHaveCount(2);
+    await expect(areaNode(page, "/src/module-33")).toHaveCount(1);
+
+    await page.goto(`${manyAreasUrl}/systems/src-hub`);
+    await expect(nodes).toHaveCount(8);
+    await expect(areaNode(page, "/src/hub")).toHaveCount(1);
     await expect(
       diagram.getByText(
-        "Showing this system and the 29 neighbors with the most detected relationships, of 33 connected neighbors."
+        "Showing this system and 7 of its 33 connected neighbors, in Major Areas order."
       )
     ).toBeVisible();
+  });
+
+  test("a System subview's inspector lists a neighbor's relationships beyond the subview", async ({
+    page,
+  }) => {
+    await page.goto(`${manyAreasUrl}/systems/src-module-01`);
+    await areaNode(page, "/src/hub").click();
+    await expect(
+      inspector(page)
+        .getByRole("list", { name: "Imports" })
+        .getByRole("listitem")
+    ).toHaveCount(33);
   });
 });

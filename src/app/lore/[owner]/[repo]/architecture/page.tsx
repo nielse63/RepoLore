@@ -1,6 +1,6 @@
 import { ArchitectureContent } from "@/components/lore-shell/ArchitectureContent";
+import { AreaMapFrame } from "@/components/lore-shell/AreaMapFrame";
 import { FailedRunPanel } from "@/components/lore-shell/FailedRunPanel";
-import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import { getLatestAnalysisRunForRepo } from "@/db/analysis-runs";
 import { githubBlobUrl, githubTreeUrl } from "@/github/urls";
 import { redirectToStoredSpelling } from "@/lib/redirect-to-stored-spelling";
@@ -51,13 +51,13 @@ export default async function ArchitecturePage({
     githubTreeUrl(owner, repo, lore.snapshot.commitSha, location);
 
   return (
-    <LorePageFrame>
+    <AreaMapFrame>
       <ArchitectureContent
         lore={lore}
         repo={repo}
         sourceUrl={sourceUrl}
         areaUrl={areaUrl}
       />
-    </LorePageFrame>
+    </AreaMapFrame>
   );
 }
