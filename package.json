@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint --fix --cache",
+    "lint:check": "eslint --cache",
     "format": "prettier --write --cache",
     "format:check": "prettier --check .",
     "test": "npm run test:unit:coverage && npm run test:e2e:coverage",
