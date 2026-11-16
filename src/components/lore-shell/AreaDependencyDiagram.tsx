@@ -2,13 +2,15 @@
 
 import { AreaInspector } from "@/components/lore-shell/AreaInspector";
 import { useAreaMapInspector } from "@/components/lore-shell/AreaMapFrame";
+import {
+  MAX_ZOOM,
+  useAreaMapZoom,
+} from "@/components/lore-shell/use-area-map-zoom";
 import { Button } from "@/components/ui/Button";
 import { githubTreeUrl } from "@/github/urls";
 import { cn } from "@/lib/cn";
 import { formatPath } from "@/lib/format-path";
-import { wheelZoom } from "@/lib/wheel-zoom";
 import {
-  areaDiagramBounds,
   areaEdgeId,
   areaNeighborhood,
   DEFAULT_DIAGRAM_AREAS,
@@ -16,6 +18,7 @@ import {
   deriveProductionAreaGraph,
   MAX_DIAGRAM_AREAS,
   smoothEdgePath,
+  type AreaDiagramLayout,
 } from "@/lore/area-diagram-layout";
 import type { EntityId, Relationship, StructuralArea } from "@/lore/model";
 import {
@@ -23,7 +26,6 @@ import {
   BaseEdge,
   Controls,
   getBezierPath,
-  getViewportForBounds,
   Handle,
   MarkerType,
   Position,
@@ -36,15 +38,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
-import {
-  useEffect,
-  useEffectEvent,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type ResponsibilityVariant = "core" | "supporting" | "data" | "neutral";
@@ -203,11 +197,6 @@ const EDGE_TYPES = { areaEdge: AreaEdge };
 const EDGE_COLOR = "var(--muted)";
 const FOCUSED_EDGE_COLOR = "var(--primary)";
 
-// react-flow's own defaults: how far `fitView` pads the nodes, and how far
-// Zoom In goes.
-const FIT_VIEW_PADDING = 0.1;
-const MAX_ZOOM = 2;
-
 // react-flow's zoom controls ship a fixed near-white palette that only
 // switches with its own `colorMode`, so they stayed light in the app's dark
 // scheme. Its override variables take the app's theme tokens instead, so
@@ -246,164 +235,15 @@ export interface AreaDependencyDiagramProps {
 }
 
 /**
- * Renders the area dependency diagram client-side with `@xyflow/react`
- * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
- * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
- * product owner found larger diagrams didn't fit the fixed viewport. Node
- * positions and edge routes still come exclusively from
- * `deriveProductionAreaDiagramLayout` (dagre) — react-flow is a renderer here, never a
- * second layout engine.
- *
- * GitHub issue #79 amends ADR-0016, after `product-scope-guardian` review,
- * to allow exactly this, as local view state (never in the URL or storage):
- * selecting one area at a time, which opens the shared inspector
- * (`AreaInspector`, rendered into `AreaMapFrame`'s slot) and moves the
- * node's GitHub link there; "Focus on selected area", dimming everything
- * outside its one-hop neighborhood (`areaNeighborhood`); "Expand map", a
- * taller in-page canvas; "Show all areas", from `DEFAULT_DIAGRAM_AREAS` up
- * to `MAX_DIAGRAM_AREAS`; and a custom edge drawn smoothly along dagre's
- * routed points. Hover only restyles a node; it doesn't preview the focus.
- *
- * Still deliberately NOT enabled, per ADR-0016's guardrails against the
- * "since it's already there" interactivity creep ADR-0009 originally warned
- * about: node dragging, node/edge connecting, react-flow element selection,
- * a minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
- * `elementsSelectable` below are explicitly set to `false` rather than left
- * at react-flow's defaults. Anything beyond the list above — hover
- * previews, path/impact tracing, multi-hop focus, filters, search in the
- * map, layout persistence, deep-linking a selection — needs its own ADR and
- * `product-scope-guardian` review, same as ADR-0009's own item 7 required.
+ * react-flow nodes and edges for a layout, styled for the current
+ * selection and, with focus on, its one-hop `neighborhood`.
  */
-export function AreaDependencyDiagram({
-  areas,
-  relationships,
-  owner,
-  repo,
-  commitSha,
-  pinnedAreaId,
-}: AreaDependencyDiagramProps) {
-  const { inspector, slot } = useAreaMapInspector();
-  const [showAll, setShowAll] = useState(false);
-  const [expanded, setExpanded] = useState(false);
-  // On by default (GitHub issue #79): selecting an area focuses on it.
-  const [focus, setFocus] = useState(true);
-  const focusHintId = useId();
-  const figureRef = useRef<HTMLElement>(null);
-  const flowRef = useRef<ReactFlowInstance<
-    Node<AreaNodeData>,
-    Edge<AreaEdgeData>
-  > | null>(null);
-
-  const [canvasSize, setCanvasSize] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
-
-  // The canvas's size, measured before paint and kept current, for the
-  // fitted zoom below.
-  useLayoutEffect(() => {
-    const figure = figureRef.current;
-    if (!figure) return;
-    const measure = () =>
-      setCanvasSize((previous) => {
-        const { clientWidth: width, clientHeight: height } = figure;
-        return previous?.width === width && previous.height === height
-          ? previous
-          : { width, height };
-      });
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(figure);
-    return () => observer.disconnect();
-  }, []);
-
-  // Re-fit whenever the canvas changes size after mount — "Expand map", or
-  // the inspector opening beside it and narrowing the page — since
-  // react-flow only applies `fitView` on mount. A frame later, so the new
-  // zoom-out limit below is already in place.
-  const mountedSize = useRef(true);
-  useEffect(() => {
-    if (mountedSize.current) {
-      mountedSize.current = false;
-      return;
-    }
-    const frame = requestAnimationFrame(() => flowRef.current?.fitView());
-    return () => cancelAnimationFrame(frame);
-  }, [canvasSize]);
-
-  const graph = useMemo(
-    () => deriveProductionAreaGraph(areas, relationships),
-    [areas, relationships]
-  );
-  // The same function each page gates on, so the gate and what renders
-  // can't disagree.
-  const layout = useMemo(
-    () =>
-      deriveProductionAreaDiagramLayout(
-        areas,
-        relationships,
-        pinnedAreaId,
-        showAll ? MAX_DIAGRAM_AREAS : DEFAULT_DIAGRAM_AREAS
-      ),
-    [areas, relationships, pinnedAreaId, showAll]
-  );
-
-  // The zoom at which the whole drawn map fits — the zoom-out limit (GitHub
-  // issue #79), so zooming out stops where the map is fully in view
-  // rather than shrinking it to a speck.
-  const fitZoom =
-    layout && canvasSize
-      ? getViewportForBounds(
-          areaDiagramBounds(layout),
-          canvasSize.width,
-          canvasSize.height,
-          0,
-          MAX_ZOOM,
-          FIT_VIEW_PADDING
-        ).zoom
-      : undefined;
-
-  // The mouse wheel zooms the map only while it can still zoom in that
-  // direction; at a limit it's left to scroll the page, so scrolling down a
-  // page past the map isn't "caught" on it (GitHub issue #79). react-flow's
-  // own wheel zoom always swallowed the event, so it's off
-  // (`preventScrolling={false}` below) apart from trackpad pinch.
-  const onWheel = useEffectEvent((event: WheelEvent) => {
-    const flow = flowRef.current;
-    const pane = figureRef.current?.querySelector(".react-flow");
-    // A pinch arrives as a Ctrl-modified wheel; react-flow handles that.
-    if (!flow || fitZoom === undefined || !pane || event.ctrlKey) return;
-    const rect = pane.getBoundingClientRect();
-    const next = wheelZoom({
-      viewport: flow.getViewport(),
-      pointer: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-      deltaY: event.deltaY,
-      deltaMode: event.deltaMode,
-      minZoom: fitZoom,
-      maxZoom: MAX_ZOOM,
-    });
-    if (!next) return;
-    event.preventDefault();
-    flow.setViewport(next);
-  });
-  useEffect(() => {
-    const figure = figureRef.current;
-    if (!figure) return;
-    const listener = (event: WheelEvent) => onWheel(event);
-    figure.addEventListener("wheel", listener, { passive: false });
-    return () => figure.removeEventListener("wheel", listener);
-  }, []);
-
-  const selectedId = inspector.open ? inspector.selectedId : undefined;
-  const selectedArea = graph.productionAreas.find(
-    (area) => area.id === selectedId
-  );
-  const neighborhood =
-    focus && selectedId && layout
-      ? areaNeighborhood(layout.edges, selectedId)
-      : null;
-  const { select, close } = inspector;
-
+function useAreaMapElements(
+  layout: AreaDiagramLayout | null,
+  selectedId: EntityId | undefined,
+  neighborhood: ReturnType<typeof areaNeighborhood> | null,
+  onSelect: AreaNodeData["onSelect"]
+) {
   const nodes: Node<AreaNodeData>[] = useMemo(
     () =>
       (layout?.nodes ?? []).map((node) => ({
@@ -416,10 +256,10 @@ export function AreaDependencyDiagram({
           responsibility: node.responsibility,
           selected: node.id === selectedId,
           dimmed: !!neighborhood && !neighborhood.nodeIds.has(node.id),
-          onSelect: select,
+          onSelect,
         },
       })),
-    [layout, selectedId, neighborhood, select]
+    [layout, selectedId, neighborhood, onSelect]
   );
 
   const edges: Edge<AreaEdgeData>[] = useMemo(
@@ -445,20 +285,93 @@ export function AreaDependencyDiagram({
     [layout, neighborhood]
   );
 
-  if (!layout) return null;
+  return { nodes, edges };
+}
 
-  const shownIds = new Set(layout.nodes.map((node) => node.id));
-  const truncated = layout.connectedAreaCount > layout.nodes.length;
-  const canShowMore =
-    layout.connectedAreaCount > DEFAULT_DIAGRAM_AREAS || showAll;
+/** The bar above the map: focus, show all/fewer areas, and expand. */
+function AreaMapControls({
+  connectedAreaCount,
+  hasSelection,
+  focus,
+  onFocusChange,
+  showAll,
+  onShowAllChange,
+  expanded,
+  onExpandedChange,
+}: {
+  connectedAreaCount: number;
+  hasSelection: boolean;
+  focus: boolean;
+  onFocusChange: (focus: boolean) => void;
+  showAll: boolean;
+  onShowAllChange: (showAll: boolean) => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+}) {
+  const focusHintId = useId();
+  const canShowMore = connectedAreaCount > DEFAULT_DIAGRAM_AREAS || showAll;
   const showMoreLabel =
-    layout.connectedAreaCount > MAX_DIAGRAM_AREAS
+    connectedAreaCount > MAX_DIAGRAM_AREAS
       ? `Show ${MAX_DIAGRAM_AREAS} areas`
       : "Show all areas";
-  const height = expanded
-    ? "max(640px, calc(100dvh - 10rem))"
-    : Math.min(Math.max(layout.height + 80, 320), 600);
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <label className="flex items-center gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          checked={focus}
+          onChange={(event) => onFocusChange(event.target.checked)}
+          aria-describedby={focusHintId}
+          className="h-4 w-4 accent-primary"
+        />
+        Focus on selected area
+      </label>
+      <span id={focusHintId} className="text-xs text-muted">
+        {hasSelection
+          ? "Dims areas not directly connected to the selection"
+          : "Select an area to focus on it"}
+      </span>
+      <div className="ml-auto flex flex-wrap gap-2">
+        {canShowMore && (
+          <Button
+            variant="secondary"
+            className="px-3 py-1.5"
+            onClick={() => onShowAllChange(!showAll)}
+          >
+            {showAll ? "Show fewer areas" : showMoreLabel}
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          className="px-3 py-1.5"
+          aria-expanded={expanded}
+          onClick={() => onExpandedChange(!expanded)}
+        >
+          {expanded ? "Return to normal view" : "Expand map"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
+/**
+ * Everything under the map: the arrow legend and selection hint, the
+ * subset caption, unconnected areas, and the responsibility legend.
+ */
+function AreaMapNotes({
+  layout,
+  pinned,
+  owner,
+  repo,
+  commitSha,
+}: {
+  layout: AreaDiagramLayout;
+  pinned: boolean;
+  owner: string;
+  repo: string;
+  commitSha: string;
+}) {
+  const truncated = layout.connectedAreaCount > layout.nodes.length;
   const legendEntries = Array.from(
     new Map(
       layout.nodes.map((node) => {
@@ -475,98 +388,7 @@ export function AreaDependencyDiagram({
   );
 
   return (
-    <div
-      id="area-dependency-diagram"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && selectedId) close();
-      }}
-    >
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <label className="flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={focus}
-            onChange={(event) => setFocus(event.target.checked)}
-            aria-describedby={focusHintId}
-            className="h-4 w-4 accent-primary"
-          />
-          Focus on selected area
-        </label>
-        <span id={focusHintId} className="text-xs text-muted">
-          {selectedId
-            ? "Dims areas not directly connected to the selection"
-            : "Select an area to focus on it"}
-        </span>
-        <div className="ml-auto flex flex-wrap gap-2">
-          {canShowMore && (
-            <Button
-              variant="secondary"
-              className="px-3 py-1.5"
-              onClick={() => setShowAll(!showAll)}
-            >
-              {showAll ? "Show fewer areas" : showMoreLabel}
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            className="px-3 py-1.5"
-            aria-expanded={expanded}
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? "Return to normal view" : "Expand map"}
-          </Button>
-        </div>
-      </div>
-      <figure
-        ref={figureRef}
-        className="w-full overflow-hidden rounded-lg border border-border"
-        style={{ height }}
-        aria-label="Diagram of how major areas depend on each other"
-      >
-        <ReactFlow
-          // Remounting re-applies `fitView` to a new node set; the selection
-          // lives outside, so it's kept.
-          key={String(showAll)}
-          onInit={(instance) => {
-            flowRef.current = instance;
-          }}
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={NODE_TYPES}
-          edgeTypes={EDGE_TYPES}
-          fitView
-          // The fitted zoom (GitHub issue #79), so neither the wheel, the
-          // Zoom Out button nor a pinch shrinks the map past fully in view.
-          // Until the canvas is measured, a floor low enough not to clamp
-          // `fitView` itself: react-flow's default (0.5) clipped wide graphs
-          // (GitHub issue #51).
-          minZoom={fitZoom ?? 0.05}
-          maxZoom={MAX_ZOOM}
-          // Plain wheel events reach the page unless the handler above zooms.
-          preventScrolling={false}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          // Each node's own button takes focus instead (Tab, then Enter or
-          // Space selects), so react-flow's node/edge wrappers don't add a
-          // second, inert tab stop.
-          nodesFocusable={false}
-          edgesFocusable={false}
-          onPaneClick={() => close()}
-          proOptions={{ hideAttribution: true }}
-          style={CONTROLS_THEME}
-        >
-          <Background />
-          {/* `showInteractive={false}` hides react-flow's default "Toggle
-              Interactivity" button, whose only purpose is to re-enable
-              nodesDraggable/nodesConnectable/elementsSelectable — the exact
-              capabilities ADR-0016 disables above. The explicit props above
-              already win even if it were clicked, but a control whose sole
-              function is to undo a deliberate guardrail shouldn't be
-              offered at all. */}
-          <Controls showInteractive={false} />
-        </ReactFlow>
-      </figure>
+    <>
       <div className="mt-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-muted">
         <span>Arrows point to imported dependencies</span>
         <span>Select an area for its evidence</span>
@@ -576,7 +398,7 @@ export function AreaDependencyDiagram({
           areas (ADR-0014). */}
       {truncated && (
         <p className="mt-3 text-xs text-muted">
-          {pinnedAreaId
+          {pinned
             ? `Showing this system and ${layout.nodes.length - 1} of its ${layout.connectedAreaCount - 1} connected neighbors, in Major Areas order.`
             : `Showing ${layout.nodes.length} of ${layout.connectedAreaCount} connected areas, in Major Areas order.`}{" "}
           Arrows include only imports resolved to a file in this repository;
@@ -637,6 +459,172 @@ export function AreaDependencyDiagram({
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+/**
+ * Renders the area dependency diagram client-side with `@xyflow/react`
+ * (react-flow), per ADR-0016, which narrowly amends ADR-0009's original
+ * "static, non-interactive" decision to allow pan/zoom/`fitView` once the
+ * product owner found larger diagrams didn't fit the fixed viewport. Node
+ * positions and edge routes still come exclusively from
+ * `deriveProductionAreaDiagramLayout` (dagre) — react-flow is a renderer here, never a
+ * second layout engine.
+ *
+ * GitHub issue #79 amends ADR-0016, after `product-scope-guardian` review,
+ * to allow exactly this, as local view state (never in the URL or storage):
+ * selecting one area at a time, which opens the shared inspector
+ * (`AreaInspector`, rendered into `AreaMapFrame`'s slot) and moves the
+ * node's GitHub link there; "Focus on selected area", dimming everything
+ * outside its one-hop neighborhood (`areaNeighborhood`); "Expand map", a
+ * taller in-page canvas; "Show all areas", from `DEFAULT_DIAGRAM_AREAS` up
+ * to `MAX_DIAGRAM_AREAS`; and a custom edge drawn smoothly along dagre's
+ * routed points. Hover only restyles a node; it doesn't preview the focus.
+ *
+ * Still deliberately NOT enabled, per ADR-0016's guardrails against the
+ * "since it's already there" interactivity creep ADR-0009 originally warned
+ * about: node dragging, node/edge connecting, react-flow element selection,
+ * a minimap, or multi-select. `nodesDraggable`/`nodesConnectable`/
+ * `elementsSelectable` below are explicitly set to `false` rather than left
+ * at react-flow's defaults. Anything beyond the list above — hover
+ * previews, path/impact tracing, multi-hop focus, filters, search in the
+ * map, layout persistence, deep-linking a selection — needs its own ADR and
+ * `product-scope-guardian` review, same as ADR-0009's own item 7 required.
+ */
+export function AreaDependencyDiagram({
+  areas,
+  relationships,
+  owner,
+  repo,
+  commitSha,
+  pinnedAreaId,
+}: AreaDependencyDiagramProps) {
+  const { inspector, slot } = useAreaMapInspector();
+  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  // On by default (GitHub issue #79): selecting an area focuses on it.
+  const [focus, setFocus] = useState(true);
+  const figureRef = useRef<HTMLElement>(null);
+  const flowRef = useRef<ReactFlowInstance<
+    Node<AreaNodeData>,
+    Edge<AreaEdgeData>
+  > | null>(null);
+
+  const graph = useMemo(
+    () => deriveProductionAreaGraph(areas, relationships),
+    [areas, relationships]
+  );
+  // The same function each page gates on, so the gate and what renders
+  // can't disagree.
+  const layout = useMemo(
+    () =>
+      deriveProductionAreaDiagramLayout(
+        areas,
+        relationships,
+        pinnedAreaId,
+        showAll ? MAX_DIAGRAM_AREAS : DEFAULT_DIAGRAM_AREAS
+      ),
+    [areas, relationships, pinnedAreaId, showAll]
+  );
+  const fitZoom = useAreaMapZoom(figureRef, flowRef, layout);
+
+  const selectedId = inspector.open ? inspector.selectedId : undefined;
+  const neighborhood =
+    focus && selectedId && layout
+      ? areaNeighborhood(layout.edges, selectedId)
+      : null;
+  const { select, close } = inspector;
+  const { nodes, edges } = useAreaMapElements(
+    layout,
+    selectedId,
+    neighborhood,
+    select
+  );
+
+  if (!layout) return null;
+
+  const selectedArea = graph.productionAreas.find(
+    (area) => area.id === selectedId
+  );
+  const height = expanded
+    ? "max(640px, calc(100dvh - 10rem))"
+    : Math.min(Math.max(layout.height + 80, 320), 600);
+
+  return (
+    <div
+      id="area-dependency-diagram"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && selectedId) close();
+      }}
+    >
+      <AreaMapControls
+        connectedAreaCount={layout.connectedAreaCount}
+        hasSelection={!!selectedId}
+        focus={focus}
+        onFocusChange={setFocus}
+        showAll={showAll}
+        onShowAllChange={setShowAll}
+        expanded={expanded}
+        onExpandedChange={setExpanded}
+      />
+      <figure
+        ref={figureRef}
+        className="w-full overflow-hidden rounded-lg border border-border"
+        style={{ height }}
+        aria-label="Diagram of how major areas depend on each other"
+      >
+        <ReactFlow
+          // Remounting re-applies `fitView` to a new node set; the selection
+          // lives outside, so it's kept.
+          key={String(showAll)}
+          onInit={(instance) => {
+            flowRef.current = instance;
+          }}
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
+          fitView
+          // The fitted zoom (`useAreaMapZoom`, GitHub issue #79), so neither
+          // the wheel, the Zoom Out button nor a pinch shrinks the map past
+          // fully in view. Until the canvas is measured, a floor low enough
+          // not to clamp `fitView` itself: react-flow's default (0.5)
+          // clipped wide graphs (GitHub issue #51).
+          minZoom={fitZoom ?? 0.05}
+          maxZoom={MAX_ZOOM}
+          // Plain wheel events reach the page unless `useAreaMapZoom` zooms.
+          preventScrolling={false}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          // Each node's own button takes focus instead (Tab, then Enter or
+          // Space selects), so react-flow's node/edge wrappers don't add a
+          // second, inert tab stop.
+          nodesFocusable={false}
+          edgesFocusable={false}
+          onPaneClick={() => close()}
+          proOptions={{ hideAttribution: true }}
+          style={CONTROLS_THEME}
+        >
+          <Background />
+          {/* `showInteractive={false}` hides react-flow's default "Toggle
+              Interactivity" button, whose only purpose is to re-enable
+              nodesDraggable/nodesConnectable/elementsSelectable — the exact
+              capabilities ADR-0016 disables above. The explicit props above
+              already win even if it were clicked, but a control whose sole
+              function is to undo a deliberate guardrail shouldn't be
+              offered at all. */}
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </figure>
+      <AreaMapNotes
+        layout={layout}
+        pinned={!!pinnedAreaId}
+        owner={owner}
+        repo={repo}
+        commitSha={commitSha}
+      />
       {slot &&
         selectedArea &&
         createPortal(
@@ -645,7 +633,7 @@ export function AreaDependencyDiagram({
             area={selectedArea}
             areas={graph.productionAreas}
             relationships={graph.productionRelationships}
-            shownIds={shownIds}
+            shownIds={new Set(layout.nodes.map((node) => node.id))}
             owner={owner}
             repo={repo}
             commitSha={commitSha}

@@ -6,7 +6,7 @@ import {
 } from "@/components/lore-shell/LoreInspector";
 import { LorePageFrame } from "@/components/lore-shell/LorePageFrame";
 import type { EntityId } from "@/lore/model";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
 interface AreaMapContextValue {
   inspector: Inspector<EntityId>;
@@ -27,9 +27,10 @@ const AreaMapContext = createContext<AreaMapContextValue | null>(null);
 export function AreaMapFrame({ children }: { children: React.ReactNode }) {
   const inspector = useInspector<EntityId>();
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const value = useMemo(() => ({ inspector, slot }), [inspector, slot]);
 
   return (
-    <AreaMapContext.Provider value={{ inspector, slot }}>
+    <AreaMapContext.Provider value={value}>
       <LorePageFrame
         inspector={
           inspector.open ? <div ref={setSlot} className="contents" /> : null
