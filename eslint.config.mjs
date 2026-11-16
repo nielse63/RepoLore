@@ -29,6 +29,8 @@ const eslintConfig = defineConfig([
     "test-results",
     ".repomap",
     ".swc",
+    "tmp/",
+    "docs/**/*.html",
   ]),
 ]);
 
